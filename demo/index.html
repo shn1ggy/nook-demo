@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-density="compact" data-style="modern">
+<head>
+  <meta charset="utf-8">
+  <!-- only Nook's own scripts run here: text, files and embeds from a workspace can never bring code along -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http: asset: http://asset.localhost; media-src 'self' data: blob: https: http: asset: http://asset.localhost; font-src 'self' data:; connect-src 'self' https: http://localhost:* http://127.0.0.1:* ipc: http://ipc.localhost; frame-src https: blob:; object-src 'self' blob: https:; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Nook Demo</title>
+  <meta name="nook-demo" content="demo.json">
+  <!-- on a phone: "Add to Home Screen" opens Nook full screen, with its own icon -->
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="icon" type="image/png" href="icon-256.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Nook">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0e0e0e">
+  <link rel="stylesheet" href="styles.css?v=282a965055">
+  <!-- preload -->
+  <link rel="modulepreload" href="app/config.js">
+  <link rel="modulepreload" href="app/exporter/export.js">
+  <link rel="modulepreload" href="app/format/embed.js">
+  <link rel="modulepreload" href="app/format/frontmatter.js">
+  <link rel="modulepreload" href="app/format/inline.js">
+  <link rel="modulepreload" href="app/format/page.js">
+  <link rel="modulepreload" href="app/formula.js">
+  <link rel="modulepreload" href="app/importer/notion.js">
+  <link rel="modulepreload" href="app/importer/zipwrite.js">
+  <link rel="modulepreload" href="app/layout.js">
+  <link rel="modulepreload" href="app/links.js">
+  <link rel="modulepreload" href="app/pagewidth.js">
+  <link rel="modulepreload" href="app/recur.js">
+  <link rel="modulepreload" href="app/storage/dropbox.js">
+  <link rel="modulepreload" href="app/storage/merge.js">
+  <link rel="modulepreload" href="app/storage/storage.js">
+  <link rel="modulepreload" href="app/sync/calsync.js">
+  <link rel="modulepreload" href="app/sync/holidays.js">
+  <link rel="modulepreload" href="app/sync/ical.js">
+  <link rel="modulepreload" href="app/sync/net.js">
+  <link rel="modulepreload" href="app/sync/service.js">
+  <link rel="modulepreload" href="app/sync/sources.js">
+  <link rel="modulepreload" href="app/ui/app.js">
+  <link rel="modulepreload" href="app/ui/backlinks.js">
+  <link rel="modulepreload" href="app/ui/buttons.js">
+  <link rel="modulepreload" href="app/ui/calsettings.js">
+  <link rel="modulepreload" href="app/ui/colorpicker.js">
+  <link rel="modulepreload" href="app/ui/commands.js">
+  <link rel="modulepreload" href="app/ui/comments.js">
+  <link rel="modulepreload" href="app/ui/compress.js">
+  <link rel="modulepreload" href="app/ui/confirm.js">
+  <link rel="modulepreload" href="app/ui/dropboxui.js">
+  <link rel="modulepreload" href="app/ui/editor.js">
+  <link rel="modulepreload" href="app/ui/find.js">
+  <link rel="modulepreload" href="app/ui/formatbar.js">
+  <link rel="modulepreload" href="app/ui/iconpicker.js">
+  <link rel="modulepreload" href="app/ui/icons.js">
+  <link rel="modulepreload" href="app/ui/kbdebug.js">
+  <link rel="modulepreload" href="app/ui/keep.js">
+  <link rel="modulepreload" href="app/ui/notify.js">
+  <link rel="modulepreload" href="app/ui/pdf.js">
+  <link rel="modulepreload" href="app/ui/pickers.js">
+  <link rel="modulepreload" href="app/ui/pop.js">
+  <link rel="modulepreload" href="app/ui/reminders.js">
+  <link rel="modulepreload" href="app/ui/settings.js">
+  <link rel="modulepreload" href="app/ui/settingsdialog.js">
+  <link rel="modulepreload" href="app/ui/sourcesettings.js">
+  <link rel="modulepreload" href="app/ui/touchdrag.js">
+  <link rel="modulepreload" href="app/ui/viewer.js">
+  <link rel="modulepreload" href="app/ui/widthcontrol.js">
+  <link rel="modulepreload" href="app/ui/win.js">
+  <link rel="modulepreload" href="app/ui/zoomcal.js">
+  <link rel="modulepreload" href="app/util.js">
+  <link rel="modulepreload" href="app/views/board.js">
+  <link rel="modulepreload" href="app/views/calendar.js">
+  <link rel="modulepreload" href="app/views/cells.js">
+  <link rel="modulepreload" href="app/views/chart.js">
+  <link rel="modulepreload" href="app/views/days.js">
+  <link rel="modulepreload" href="app/views/drill.js">
+  <link rel="modulepreload" href="app/views/dupes.js">
+  <link rel="modulepreload" href="app/views/gallery.js">
+  <link rel="modulepreload" href="app/views/list.js">
+  <link rel="modulepreload" href="app/views/propmenu.js">
+  <link rel="modulepreload" href="app/views/repeat.js">
+  <link rel="modulepreload" href="app/views/rowmenu.js">
+  <link rel="modulepreload" href="app/views/rowselect.js">
+  <link rel="modulepreload" href="app/views/table.js">
+  <link rel="modulepreload" href="app/views/timegrid.js">
+  <link rel="modulepreload" href="app/views/trends.js">
+  <link rel="modulepreload" href="app/views/view.js">
+  <link rel="modulepreload" href="app/views/vieworder.js">
+  <link rel="modulepreload" href="app/views/viewpanel.js">
+  <link rel="modulepreload" href="app/when.js">
+  <link rel="modulepreload" href="app/widgets/api.js">
+  <link rel="modulepreload" href="app/widgets/builtins.js">
+  <link rel="modulepreload" href="app/widgets/prompt.js">
+  <link rel="modulepreload" href="app/widgets/runtime.js">
+  <link rel="modulepreload" href="app/workspace.js">
+  <!-- /preload -->
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="app/main.js"></script>
+</body>
+</html>
