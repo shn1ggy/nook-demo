@@ -4953,7 +4953,10 @@ html.phone .np.phone .np-head > b { color: inherit; }
 html.phone .np-ev-tx b { font-weight: 400; }
 html.phone .np-sec { font-weight: 500; }
 /* phone: page and database titles match the Settings / Library / Notifications titles */
-html.phone:root .page-head { padding-top: 36px; padding-left: 4px; align-items: center; }
+html.phone:root .page-head { padding-top: 36px; padding-left: 4px; align-items: flex-start; }
+/* a title over two lines keeps its first line where a one-line title sits (next to the icon); the next line simply follows */
+html.phone:root .page-head .page-title { margin-top: 4px; }
+html.phone:root .page-head .page-icon { align-self: flex-start; }
 /* dense workspaces have a smaller top padding of their own: the title moves down, the content stays */
 html.phone:root[data-density="dense"] .page-head { margin-bottom: -12px; }
 html.phone .page-title { font-size: 32px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; color: var(--fg); }
