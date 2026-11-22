@@ -4808,7 +4808,7 @@ html.phone:not(.kb-open) .pop { padding-bottom: calc(var(--bar-gap) + 76px) !imp
 html.phone .overlay.phone-page:has(.np) { align-items: flex-start; padding-top: 0 !important; }
 html.phone .overlay.phone-page > .dialog:has(> .np.phone) { width: 100vw !important; padding: env(safe-area-inset-top, 0px) 0 0 !important; display: flex; flex-direction: column; overflow: hidden; }
 html.phone .np.phone { display: flex !important; flex-direction: column; height: 100%; max-height: none; min-height: 0; overflow: hidden !important; background: var(--bg) !important; }
-html.phone .np.phone .np-head { display: block; padding: 51px 16px 3px 20px !important; }
+html.phone .np.phone .np-head { display: block; padding: 48px 16px 6px 20px !important; }
 html.phone .np.phone > .np-head { display: none !important; }
 html.phone .np.phone .np-head-in { margin: 0 -16px; }
 html.phone .np.phone .np-body { flex: 1 1 auto; min-height: 0; overflow-y: auto !important; overscroll-behavior: contain; padding: 0 16px 16px !important; }
