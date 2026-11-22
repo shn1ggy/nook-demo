@@ -1688,4 +1688,25 @@ async function openDemo(url) {
     }
     await openStorage(st);
 }
+// TEMPORARY layout readout (title positions on the phone) – remove after the check
+{
+    const box = document.createElement('div');
+    box.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top,0px) + 2px);z-index:99999;font:11px/1.35 ui-monospace,monospace;color:#9f9;background:rgba(0,0,0,.75);padding:4px 6px;border-radius:6px;pointer-events:none;white-space:pre-wrap';
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top);visibility:hidden';
+    const tick = () => {
+        if (!document.documentElement.classList.contains('phone')) {
+            box.remove();
+            return;
+        }
+        if (!box.isConnected)
+            document.body.append(box, probe);
+        const r = (s) => { const e = [...document.querySelectorAll(s)].find((x) => x.offsetParent || x.getClientRects().length); return e ? Math.round(e.getBoundingClientRect().top) : '-'; };
+        const sc = document.querySelector('.main > .scroll');
+        box.textContent = `env ${probe.offsetHeight} · scrollY ${Math.round(scrollY)} · main.scroll ${sc ? Math.round(sc.scrollTop) : '-'} · inner ${innerHeight} · screen ${screen.height}\n` +
+            `page-title ${r('.main .page-title')} · page-head ${r('.main .page-head')} · main ${r('.main')} · scroll ${r('.main > .scroll')}\n` +
+            `settings ${r('.pset-big')} · library ${r('.mp-big')} · notif ${r('.np-head > b')} · html.${document.documentElement.className}`;
+    };
+    setInterval(tick, 500);
+}
 //# sourceMappingURL=main.js.map
