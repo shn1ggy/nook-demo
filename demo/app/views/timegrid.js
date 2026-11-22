@@ -229,6 +229,32 @@ export function renderTimeGrid(env, dateProp, mode) {
             if (t)
                 t.textContent = `${fmtTime(hhmm(na))} – ${fmtTime(hhmm(Math.min(nb, 1439)))}`;
         };
+        // the redraw after a drop keeps every scroll position (the page and the time grid) where it was
+        const redrawHere = () => {
+            const kept = [];
+            for (let p = el.parentElement; p; p = p.parentElement)
+                if (p.scrollTop)
+                    kept.push([p, p.scrollTop]);
+            const wy = scrollY;
+            const sel = (p) => p.classList.contains('tg-scroll') ? '.tg-scroll' : null;
+            const grid = kept.find(([p]) => sel(p));
+            env.redraw();
+            const back = () => {
+                for (const [p, t] of kept)
+                    if (p.isConnected && p.scrollTop !== t)
+                        p.scrollTop = t;
+                if (grid && !grid[0].isConnected) {
+                    const g = document.querySelector('.tg-scroll');
+                    if (g)
+                        g.scrollTop = grid[1];
+                }
+                if (scrollY !== wy)
+                    scrollTo(0, wy);
+            };
+            back();
+            requestAnimationFrame(back);
+            setTimeout(back, 80);
+        };
         const up = async (m) => {
             document.removeEventListener('mousemove', move);
             document.removeEventListener('mouseup', up);
@@ -250,13 +276,13 @@ export function renderTimeGrid(env, dateProp, mode) {
             const copy = kind === 'move' && m.altKey;
             if (keys.length > 1 || copy) {
                 await shiftEntries(env, keys, dateProp, nday - day, { minutes: na - a, copy, exact: { key, date: next } });
-                env.redraw();
+                redrawHere();
                 return;
             }
             if (x.occ && row.repeat) {
                 menu({ x: m.clientX, y: m.clientY }, [
                     { section: 'Repeating entry' },
-                    { label: 'Change only this date', run: async () => { const c = await detachOccurrence(env, row, x.occ, dateProp, iso); c.values[dateProp] = next; await ctx.ws.saveRow(db, c); env.redraw(); } },
+                    { label: 'Change only this date', run: async () => { const c = await detachOccurrence(env, row, x.occ, dateProp, iso); c.values[dateProp] = next; await ctx.ws.saveRow(db, c); redrawHere(); } },
                     { label: 'Change all dates', run: async () => {
                             const shift = nday - dayNum(x.occ);
                             const base = asDate(row.values[dateProp]);
@@ -266,16 +292,16 @@ export function renderTimeGrid(env, dateProp, mode) {
                             row.values[dateProp] = { start: `${s2}T${hhmm(na)}`, end: nb >= 1440 ? `${addDays(s2, 1)}T00:00` : `${s2}T${hhmm(nb)}` };
                             row.except = row.except?.map((e2) => addDays(e2, shift));
                             await ctx.ws.saveRow(db, row);
-                            env.redraw();
+                            redrawHere();
                         } },
-                    { label: 'Cancel', run: () => env.redraw() },
+                    { label: 'Cancel', run: () => redrawHere() },
                 ]);
                 return;
             }
             ctx.ws.boundary();
             row.values[dateProp] = next;
             await ctx.ws.saveRow(db, row);
-            env.redraw();
+            redrawHere();
         };
         document.addEventListener('mousemove', move);
         document.addEventListener('mouseup', up);

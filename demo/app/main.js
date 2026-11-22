@@ -1688,4 +1688,17 @@ async function openDemo(url) {
     }
     await openStorage(st);
 }
+// search fields (Library, Settings): the list below changes with every letter – the field keeps the keyboard
+// unless you tapped somewhere else
+{
+    let touched = 0;
+    document.addEventListener('touchstart', () => { touched = Date.now(); }, true);
+    document.addEventListener('focusout', (e) => {
+        const f = e.target;
+        if (!f.matches?.('.pset-search-in') || e.relatedTarget || Date.now() - touched < 600)
+            return;
+        requestAnimationFrame(() => { if (f.isConnected && !document.activeElement?.matches?.('input, textarea, [contenteditable="true"]'))
+            f.focus({ preventScroll: true }); });
+    }, true);
+}
 //# sourceMappingURL=main.js.map

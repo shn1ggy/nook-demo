@@ -142,6 +142,8 @@ function phoneSettings(sections, start) {
     const bar = h('div', { class: 'pset-bar' });
     const draw = () => {
         const keep = body.scrollTop;
+        // the search box is put back into the new list: it must keep the keyboard while you type
+        const typing = document.activeElement === search;
         body.textContent = '';
         if (page) {
             const p = page;
@@ -154,6 +156,9 @@ function phoneSettings(sections, start) {
         }
         bar.replaceChildren(h('span'), h('span', { class: 'pset-title faded' }, 'Settings'), h('span'));
         const inner = h('div', { class: 'set-inner pset-home' }, h('h1', { class: 'pset-big' }, 'Settings'), searchBox);
+        if (typing)
+            queueMicrotask(() => { if (document.activeElement !== search)
+                search.focus({ preventScroll: true }); });
         if (query) {
             let any = false;
             for (const s of sections) {
