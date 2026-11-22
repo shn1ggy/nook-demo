@@ -754,6 +754,9 @@ document.addEventListener('touchstart', (e) => {
     const sheet = (t.closest?.('.pop') ?? t.closest?.('.dialog'));
     if (!sheet)
         return;
+    // full pages (Settings, Notifications) are tabs, not sheets: pulling them down does nothing
+    if (sheet.parentElement?.classList.contains('phone-page'))
+        return;
     const isPop = sheet.classList.contains('pop');
     // inside something that is scrolled down, the finger scrolls it back up first
     for (let el = t; el && el !== sheet.parentElement; el = el.parentElement) {
