@@ -1644,7 +1644,8 @@ new MutationObserver(pixelSnap).observe(document.documentElement, { attributes: 
         const bar = document.querySelector('.tab-bar .tab-pill');
         if (!bar)
             return;
-        const h = Math.max(0, Math.round(window.innerHeight - bar.getBoundingClientRect().top));
+        // measured from the bottom of the page (body), the same box the bar itself sits in
+        const h = Math.max(0, Math.round(document.body.getBoundingClientRect().bottom - bar.getBoundingClientRect().top));
         document.documentElement.style.setProperty('--bar-top', h + 'px');
     };
     measureBar();

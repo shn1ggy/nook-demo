@@ -4945,7 +4945,9 @@ html.phone :is(.keep-window, .ws-window) .sheet-head .sheet-close { visibility: 
 html.phone .overlay > .dialog:has(> :is(.keep-window, .ws-window)) { height: calc(var(--full-h, 100dvh) - env(safe-area-inset-top) - 10px); }
 html.phone :is(.keep-window, .ws-window) { height: 100% !important; }
 /* New reminder: pinned 10pt above the measured bar top, independent of the page's own height */
-html.phone .np.phone .np-foot { position: fixed !important; left: 0; right: 0; bottom: calc(var(--bar-top, 90px) + 10px); padding: 6px 16px 0 !important; background: none; }
+html.phone .overlay.phone-page > .dialog:has(> .np.phone) { position: relative; }
+html.phone .overlay.phone-page .np.phone { position: static !important; }
+html.phone .np.phone .np-foot { position: absolute !important; left: 0; right: 0; bottom: calc(var(--bar-top, 90px) + 10px); padding: 6px 16px 0 !important; background: none; }
 html.phone .np.phone .np-foot::before { display: none; }
 html.phone .np.phone .np-body { padding-bottom: calc(var(--bar-top, 90px) + 80px) !important; }
 /* phone pages: Notifications uses the same text colours and weights as Library and Settings */
