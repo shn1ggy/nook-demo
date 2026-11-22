@@ -1647,10 +1647,14 @@ new MutationObserver(pixelSnap).observe(document.documentElement, { attributes: 
         // measured from the bottom of the page (body), the same box the bar itself sits in
         const h = Math.max(0, Math.round(document.body.getBoundingClientRect().bottom - bar.getBoundingClientRect().top));
         document.documentElement.style.setProperty('--bar-top', h + 'px');
+        // the Notifications page: measured from its own bottom edge, wherever that ends
+        const np = document.querySelector('.np.phone');
+        if (np)
+            np.style.setProperty('--bar-top', Math.max(0, Math.round(np.getBoundingClientRect().bottom - bar.getBoundingClientRect().top)) + 'px');
     };
     measureBar();
     addEventListener('resize', measureBar);
-    new MutationObserver(() => requestAnimationFrame(measureBar)).observe(document.body, { childList: true });
+    new MutationObserver(() => { requestAnimationFrame(measureBar); setTimeout(measureBar, 450); }).observe(document.body, { childList: true });
     setTimeout(measureBar, 300);
 }
 /** Demo workspace: starts from demo.json, edits are kept in this browser (localStorage). */
