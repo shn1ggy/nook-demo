@@ -4956,3 +4956,7 @@ html.phone .np-sec { font-weight: 500; }
 html.phone .page-head { padding-top: 35px; padding-left: 4px; align-items: center; }
 html.phone .page-title { font-size: 32px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; color: var(--fg); }
 html.phone .np.phone { padding-bottom: 0 !important; }
+/* repeat mark and bell on an entry: a real gap between them */
+.ev > .ev-trail ~ .ev-trail { margin-left: 4px; }
+html.phone .ev > .ev-trail ~ .ev-trail { margin-left: 8px; }
+html.phone .ev > .ev-trail svg { width: 13px; height: 13px; }
