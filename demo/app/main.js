@@ -251,7 +251,8 @@ function reloadWhenIdle() {
     const a = app;
     if (!a)
         return;
-    const busy = document.querySelector('.overlay, .pop') || Date.now() - lastTyped < 2500 || document.documentElement.classList.contains('touch-dragging');
+    // Settings / Notifications are pages, not windows: they don't hold back a reload
+    const busy = document.querySelector('.overlay:not(.phone-page), .pop') || Date.now() - lastTyped < 2500 || document.documentElement.classList.contains('touch-dragging');
     if (busy) {
         setTimeout(() => { if (app === a)
             reloadWhenIdle(); }, 1500);

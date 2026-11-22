@@ -154,7 +154,7 @@ export class App {
             // storages that report changes themselves (Dropbox) need no re-read here
             if (!this.ws.storage.readAll || this.ws.storage.watch)
                 return;
-            const busy = document.querySelector('.overlay, .pop') || (document.activeElement && document.activeElement !== document.body);
+            const busy = document.querySelector('.overlay:not(.phone-page), .pop') || (document.activeElement && document.activeElement !== document.body);
             if (!busy)
                 this.reload(true);
         };
@@ -2136,7 +2136,7 @@ export class App {
             const h0 = this.ws.homePage();
             this.route = h0 ? { kind: 'page', id: h0.id } : null;
         }
-        if (document.querySelector('.overlay'))
+        if (document.querySelector('.overlay:not(.phone-page)'))
             document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
         this.render();
     }
