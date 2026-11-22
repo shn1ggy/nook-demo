@@ -4808,7 +4808,7 @@ html.phone:not(.kb-open) .pop { padding-bottom: calc(var(--bar-gap) + 76px) !imp
 html.phone .overlay.phone-page:has(.np) { align-items: flex-start; padding-top: 0 !important; }
 html.phone .overlay.phone-page > .dialog:has(> .np.phone) { width: 100vw !important; padding: env(safe-area-inset-top, 0px) 0 0 !important; display: flex; flex-direction: column; overflow: hidden; }
 html.phone .np.phone { display: flex !important; flex-direction: column; height: 100%; max-height: none; min-height: 0; overflow: hidden !important; background: var(--bg) !important; }
-html.phone .np.phone .np-head { display: block; padding: 48px 16px 6px 20px !important; }
+html.phone .np.phone .np-head { display: block; padding: 51px 16px 3px 20px !important; }
 html.phone .np.phone > .np-head { display: none !important; }
 html.phone .np.phone .np-head-in { margin: 0 -16px; }
 html.phone .np.phone .np-body { flex: 1 1 auto; min-height: 0; overflow-y: auto !important; overscroll-behavior: contain; padding: 0 16px 16px !important; }
@@ -4953,7 +4953,9 @@ html.phone .np.phone .np-head > b { color: inherit; }
 html.phone .np-ev-tx b { font-weight: 400; }
 html.phone .np-sec { font-weight: 500; }
 /* phone: page and database titles match the Settings / Library / Notifications titles */
-html.phone .page-head { padding-top: 47px; margin-bottom: -12px; padding-left: 4px; align-items: center; }
+html.phone:root .page-head { padding-top: 36px; padding-left: 4px; align-items: center; }
+/* dense workspaces have a smaller top padding of their own: the title moves down, the content stays */
+html.phone:root[data-density="dense"] .page-head { margin-bottom: -12px; }
 html.phone .page-title { font-size: 32px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; color: var(--fg); }
 html.phone .np.phone { padding-bottom: 0 !important; }
 /* repeat mark and bell on an entry: a real gap between them */
