@@ -5393,3 +5393,8 @@ html.phone body:has(.select-bar) .fdb-li.is-selected::before { background: var(-
 .mvp.audio .mvp-cover { width: min(86vw, calc(100dvh - 380px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)), 420px); min-width: 120px; }
 .mvp.audio .mvp-cover { margin-top: auto; margin-bottom: auto; }
 .mvp.audio .mvp-atitle { margin-top: 0; }
+/* songs, layout A: even gaps, the cover centred in what is left */
+.mvp.audio .mvp-stage { gap: 26px; padding-top: calc(env(safe-area-inset-top, 0px) + 74px); padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); }
+.mvp.audio .mvp-song-ctl { display: flex; flex-direction: column; gap: 26px; margin: 0; }
+.mvp.audio .mvp-ctl2, .mvp.audio .mvp-chips { padding: 0; }
+.mvp.audio .mvp-cover { width: min(86vw, calc(100dvh - 430px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)), 420px); margin: auto; }
