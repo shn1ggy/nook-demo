@@ -467,7 +467,7 @@ export class Notifications {
         let anchorEl = chip;
         const whenVal = h('span', { class: 'og-v og-when' });
         const pills = [];
-        const drawChip = () => {
+        let drawChip = () => {
             chip.textContent = '';
             chip.append(iconSvg('bell', 12), h('span', null, fmtWhen(at)));
             const sw = shortWhen(at);
@@ -531,22 +531,48 @@ export class Notifications {
             this.panel?.draw();
             confirmReminder(next.text, at, () => this.ownForm(next));
         };
+        // phone: day row, time tiles and repeat switch right in the sheet – nothing opens on top
         const phoneBody = () => {
             title.placeholder = 'Title';
-            notes.placeholder = 'Notes';
-            const chev = () => svgIcon(ICONS.chevronR, 13);
-            const whenRow = h('button', { class: 'og-row', onclick: () => other() }, iconSvg('clock', 16), h('span', { class: 'og-k' }, 'When'), whenVal, chev());
-            anchorEl = whenRow;
-            const repRow = h('div', { class: 'og-row', role: 'button', tabindex: 0, onclick: (e) => { if (!repVal.contains(e.target))
-                    repVal.click(); } }, iconSvg('repeat', 16), h('span', { class: 'og-k' }, 'Repeat'), h('span', { class: 'og-v' }, repVal), chev());
-            const chips = h('div', { class: 'og-chips' }, ...quickTimes().map(([l, d]) => { const b = h('button', { class: 'og-chip', onclick: () => { at = d; drawChip(); } }, { 'This evening (19:00)': 'This evening', 'Tomorrow (9:00)': 'Tomorrow 9:00', 'Next week (Mon 9:00)': 'Next week' }[l] ?? l); pills.push([b, d]); return b; }));
-            drawChip();
-            return h('div', { class: 'own-body own-body-phone' }, h('div', { class: 'og' }, title, notes), h('div', { class: 'og' }, whenRow, repRow), h('div', { class: 'og-cap' }, 'Quick'), chips);
+            notes.placeholder = 'Add a note';
+            notes.rows = 1;
+            const ymd = (d) => localIso(d).slice(0, 10);
+            const hm = () => localIso(at).slice(11, 16);
+            const setDay = (d) => { const [H, M] = hm().split(':').map(Number); at = new Date(d.getFullYear(), d.getMonth(), d.getDate(), H, M); draw(); };
+            const setTime = (t) => { const [H, M] = t.split(':').map(Number); at = new Date(at.getFullYear(), at.getMonth(), at.getDate(), H, M); draw(); };
+            const days = h('div', { class: 'ogb-days' });
+            const times = h('div', { class: 'ogb-times' });
+            const reps = h('div', { class: 'ogb-seg' });
+            const TIMES = ['09:00', '12:00', '19:00'];
+            const REPS = [[undefined, 'Once'], ['daily', 'Daily'], ['weekly', 'Weekly'], ['monthly', 'Monthly']];
+            const draw = () => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const sel = new Date(at);
+                sel.setHours(0, 0, 0, 0);
+                const start = (sel.getTime() - today.getTime()) / 864e5 > 6 ? sel : today;
+                days.replaceChildren(...Array.from({ length: 7 }, (_, i) => {
+                    const d = new Date(start);
+                    d.setDate(start.getDate() + i);
+                    return h('button', { class: 'ogb-day' + (ymd(d) === ymd(at) ? ' on' : ''), onclick: () => setDay(d) }, h('span', null, d.toLocaleDateString(undefined, { weekday: 'short' }).replace('.', '')), h('b', null, String(d.getDate())));
+                }));
+                const own = !TIMES.includes(hm());
+                times.replaceChildren(...TIMES.map((t) => h('button', { class: 'ogb-time' + (t === hm() ? ' on' : ''), onclick: () => setTime(t) }, fmtTime(t))), h('button', { class: 'ogb-time' + (own ? ' on' : ''), onclick: () => other() }, own ? fmtTime(hm()) : 'Other…'));
+                reps.replaceChildren(...REPS.map(([k, l]) => h('button', { class: 'ogb-rep' + (rep === k ? ' on' : ''), onclick: () => { rep = k; draw(); } }, l)));
+                orig();
+            };
+            anchorEl = times;
+            // a time typed or picked in "Other…" redraws the tiles too
+            const orig = drawChip;
+            drawChip = draw;
+            draw();
+            return h('div', { class: 'own-body own-body-phone ogb' }, h('div', { class: 'ogb-head' }, edit ? 'REMINDER' : 'NEW REMINDER'), title, notes, days, times, reps);
         };
         const prop = (icon, name, ...v) => h('div', { class: 'own-prop' }, h('span', { class: 'own-k' }, iconSvg(icon, 15), name), h('div', { class: 'own-v' }, ...v));
         const close = dialog(h('div', { class: 'bwindow own-window' }, phone()
-            ? h('div', { class: 'own-head own-head-phone' }, h('button', { class: 'set-btn', onclick: () => close() }, 'Cancel'), h('b', null, 'Reminder'), h('button', { class: 'btn-new', onclick: () => save() }, 'Done'))
-            : h('div', { class: 'own-head' }, iconSvg('bell', 14), h('span', null, 'Reminder'), h('span', { style: { flex: '1' } }), h('button', { class: 'icon-btn mclose', 'aria-label': 'Close', onclick: () => close() }, svgClose())), phone() ? phoneBody() : h('div', { class: 'own-body' }, title, prop('clock', 'When', chip), quick, prop('repeat', 'Repeat', repVal), notes), h('div', { class: 'own-foot' + (phone() ? ' own-foot-phone' : '') }, edit ? h('button', { class: 'set-btn own-del', onclick: () => { this.own = this.own.filter((x) => x.id !== o.id); this.saveOwn(); close(); this.panel?.draw(); this.undoHint('Reminder deleted'); } }, phone() ? null : iconSvg('trash', 13), phone() ? 'Delete reminder' : 'Delete') : null, h('span', { style: { flex: '1' } }), h('button', { class: 'set-btn', onclick: () => close() }, 'Cancel'), h('button', { class: 'btn-new', onclick: save }, 'Done'))), { wide: true });
+            ? null
+            : h('div', { class: 'own-head' }, iconSvg('bell', 14), h('span', null, 'Reminder'), h('span', { style: { flex: '1' } }), h('button', { class: 'icon-btn mclose', 'aria-label': 'Close', onclick: () => close() }, svgClose())), phone() ? phoneBody() : h('div', { class: 'own-body' }, title, prop('clock', 'When', chip), quick, prop('repeat', 'Repeat', repVal), notes), phone() ? h('div', { class: 'ogb-foot' }, h('button', { class: 'ogb-save', onclick: save }, 'Save'), edit ? h('button', { class: 'ogb-del', onclick: () => { this.own = this.own.filter((x) => x.id !== o.id); this.saveOwn(); close(); this.panel?.draw(); this.undoHint('Reminder deleted'); } }, 'Delete reminder') : null) :
+            h('div', { class: 'own-foot' }, edit ? h('button', { class: 'set-btn own-del', onclick: () => { this.own = this.own.filter((x) => x.id !== o.id); this.saveOwn(); close(); this.panel?.draw(); this.undoHint('Reminder deleted'); } }, phone() ? null : iconSvg('trash', 13), phone() ? 'Delete reminder' : 'Delete') : null, h('span', { style: { flex: '1' } }), h('button', { class: 'set-btn', onclick: () => close() }, 'Cancel'), h('button', { class: 'btn-new', onclick: save }, 'Done'))), { wide: true });
         title.addEventListener('keydown', (e) => { if (e.key === 'Enter') {
             e.preventDefault();
             save();
