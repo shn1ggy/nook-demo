@@ -332,7 +332,8 @@ export function renderTable(env, res) {
             // its place right away; the selected cell comes along (and the keys stay with the table)
             const affects = view.sorts?.some((x) => x.prop === p.name) || view.groupBy?.prop === p.name || JSON.stringify(view.filter ?? '').includes(JSON.stringify(p.name)) || view.period?.prop === p.name;
             if (affects) {
-                state.cell = { row: row.id, prop: p.name };
+                if (!db.schema.files)
+                    state.cell = { row: row.id, prop: p.name };
                 env.redraw();
                 return;
             }
@@ -340,8 +341,14 @@ export function renderTable(env, res) {
             // picker that saves while open (dates) may call this several times
             const fresh = rowEl(row);
             (table.querySelector(`tr.row[data-id="${CSS.escape(row.id)}"]`) ?? td.closest('tr'))?.replaceWith(fresh);
-            fresh.querySelector(`td[data-prop="${CSS.escape(p.name)}"]`)?.classList.add('sel');
             updateFooter();
+            // a database of files: after a rename the file stays selected as a whole (arrows go on from it), no cell frame
+            if (db.schema.files) {
+                table.querySelectorAll('td.sel').forEach((x) => x.classList.remove('sel'));
+                fresh.querySelector('.td-grip .grip, .td-grip > *')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                return;
+            }
+            fresh.querySelector(`td[data-prop="${CSS.escape(p.name)}"]`)?.classList.add('sel');
             // the keys stay with the table (arrows, Enter, Tab, typing)
             if (!document.querySelector('.pop:not(.pop-closing)'))
                 table.focus({ preventScroll: true });
