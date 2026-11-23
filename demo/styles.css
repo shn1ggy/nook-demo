@@ -5198,3 +5198,4 @@ html.phone .trp-row .dayv-combo { width: 100%; }
 html.phone .trp-row > * { height: auto !important; }
 html.phone .trp-row :is(.seg, .segmented) { height: auto !important; min-height: 0 !important; align-items: center !important; padding: 3px !important; box-sizing: border-box; }
 html.phone .trp-row :is(.seg, .segmented) > * { height: 34px !important; margin: 0 !important; }
+html.phone .trv .trgrid { margin-top: 0 !important; }

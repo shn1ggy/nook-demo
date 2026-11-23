@@ -106,7 +106,11 @@ export function renderTrends(env, mode, combo) {
     const root = h('div', { class: 'trv' });
     const step = (n) => { st.day = n < 0 ? from - 1 : to; env.redraw(); };
     const l = label(from);
-    const title = st.unit === 'year' ? String(l.year) : st.unit === 'month' ? `${l.month} ${l.year}` : `${l.day} ${l.month.slice(0, 3)} – ${label(to - 1).day} ${label(to - 1).month.slice(0, 3)} ${label(to - 1).year}`;
+    const le = label(to - 1);
+    // a week on the phone in its short form (16–22 Nov), so it fits next to ‹ Today ›
+    const title = st.unit === 'year' ? String(l.year) : st.unit === 'month' ? `${l.month} ${l.year}`
+        : document.documentElement.classList.contains('phone') ? (l.month === le.month ? `${l.day}–${le.day} ${le.month.slice(0, 3)}` : `${l.day} ${l.month.slice(0, 3)} – ${le.day} ${le.month.slice(0, 3)}`)
+            : `${l.day} ${l.month.slice(0, 3)} – ${le.day} ${le.month.slice(0, 3)} ${le.year}`;
     const n = to - from;
     const recorded = [...index.keys()].filter((d) => d >= from && d < to).length;
     const unitSeg = () => segmented([['week', 'Week'], ['month', 'Month'], ['year', 'Year']], st.unit, (u) => { st.unit = u; env.redraw(); }, 'Period', 'small dayv-unit');
