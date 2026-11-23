@@ -2523,8 +2523,10 @@ export class Workspace {
             }
         };
         await walk('assets', 0);
+        // what already sits in "Unused files" (moved there by Nook: deleted files, leftovers when tidying)
+        const parked = [...this.files].filter((f) => f.startsWith(UNUSED + '/') && !baseOf(f).startsWith('.')).sort();
         if (!files.length)
-            return [];
+            return parked;
         const texts = [];
         for (const p of this.pages.values())
             texts.push(serializePage(p.blocks), p.icon ?? '', p.cover ?? '');
@@ -2554,11 +2556,11 @@ export class Workspace {
         await readDir(APP.workspaceDir, 'json');
         const all = texts.join('\n');
         const variants = (s) => [s, encodeURI(s), encodeURIComponent(s), JSON.stringify(s).slice(1, -1)];
-        return files.filter((f) => {
-            const rel = f.slice('assets/'.length);
-            const name = f.split('/').pop();
-            return ![...variants(f), ...variants(rel), ...variants(name)].some((v) => all.includes(v));
-        }).sort();
+        return [...files.filter((f) => {
+                const rel = f.slice('assets/'.length);
+                const name = f.split('/').pop();
+                return ![...variants(f), ...variants(rel), ...variants(name)].some((v) => all.includes(v));
+            }).sort(), ...parked];
     }
     /** is a file in assets/ used by any page or entry other than `skipFile` (the one it is being removed from)? */
     assetUsedElsewhere(path, skipFile) {
@@ -2588,9 +2590,10 @@ export class Workspace {
     async deleteUnusedFiles(paths) {
         let n = 0;
         for (const p of paths) {
-            if (!p.startsWith('assets/'))
+            if (!p.startsWith('assets/') && !p.startsWith(UNUSED + '/'))
                 continue;
             await this.storage.remove(p);
+            this.files.delete(p);
             n++;
         }
         return n;
@@ -2599,12 +2602,15 @@ export class Workspace {
     async moveUnusedFiles(paths) {
         if (!this.storage.move)
             throw new Error('This storage cannot move files.');
-        const base = `${APP.workspaceDir}/unused-files/${todayISO()}`;
+        const base = this.layout2 ? `${UNUSED}/${todayISO()}` : `${APP.workspaceDir}/unused-files/${todayISO()}`;
         let n = 0;
         for (const p of paths) {
             if (!p.startsWith('assets/'))
                 continue;
-            await this.storage.move(p, `${base}/${p.slice('assets/'.length)}`);
+            const to = `${base}/${p.slice('assets/'.length)}`;
+            await this.storage.move(p, to);
+            this.files.delete(p);
+            this.files.add(to);
             n++;
         }
         return n;

@@ -208,7 +208,7 @@ export function openSettings(app, start) {
                 finally {
                     b.disabled = false;
                 } } }, 'Repair'), keywords: 'file missing broken links attachments pdf images repair relink moved' },
-        { title: 'Unused files', desc: 'Nothing points at them any more – delete or move aside', control: h('button', { class: 'set-btn', onclick: (e) => unusedFiles(e.currentTarget) }, 'Find…'), keywords: 'unused files assets images clean up orphaned attachments storage' },
+        { title: 'Unused files', desc: 'Files nothing points at, and what is in the folder “Unused files” – delete or move aside', control: h('button', { class: 'set-btn', onclick: (e) => unusedFiles(e.currentTarget) }, 'Find…'), keywords: 'unused files assets images clean up orphaned attachments storage' },
     ];
     const missingFiles = async (btn) => {
         const st = ws.storage;
@@ -326,9 +326,10 @@ export function openSettings(app, start) {
             return;
         }
         const n = list.length, files = n === 1 ? 'file' : 'files';
-        const moveBtn = h('button', { class: 'set-btn', title: 'Move to .workspace/unused-files' }, 'Move aside');
+        const loose = list.filter((f) => f.startsWith('assets/'));
+        const moveBtn = h('button', { class: 'set-btn', title: 'Into the folder “Unused files”', disabled: !loose.length }, 'Move aside');
         const delBtn = h('button', { class: 'btn-new danger-btn' }, `Delete ${n} ${files}`);
-        const close = dialog(h('div', { class: 'bwindow unused-box' }, h('div', { class: 'dialog-head' }, h('strong', { style: { padding: '0 6px' } }, 'Unused files')), h('div', { class: 'dialog-body bwin' }, wsum(`${n} ${files} nothing points at`), wcard(null, ...list.map((f) => { const rel = f.slice('assets/'.length); const i = rel.lastIndexOf('/'); return wrow(rel.slice(i + 1), null, i > 0 ? rel.slice(0, i) : 'assets'); }))), h('div', { class: 'bfooter' }, h('button', { class: 'set-btn', onclick: () => close() }, 'Cancel'), moveBtn, delBtn)));
+        const close = dialog(h('div', { class: 'bwindow unused-box' }, h('div', { class: 'dialog-head' }, h('strong', { style: { padding: '0 6px' } }, 'Unused files')), h('div', { class: 'dialog-body bwin' }, wsum(loose.length ? `${loose.length} ${loose.length === 1 ? 'file' : 'files'} nothing points at${n > loose.length ? `, ${n - loose.length} in Unused files` : ''}` : `${n} ${files} in Unused files`), wcard(null, ...list.map((f) => { const i = f.lastIndexOf('/'); return wrow(f.slice(i + 1), null, f.slice(0, i)); }))), h('div', { class: 'bfooter' }, h('button', { class: 'set-btn', onclick: () => close() }, 'Cancel'), moveBtn, delBtn)));
         const act = async (run, done) => {
             moveBtn.disabled = delBtn.disabled = true;
             try {
@@ -341,7 +342,7 @@ export function openSettings(app, start) {
                 toast(`Could not finish: ${err.message}`, 4000);
             }
         };
-        moveBtn.addEventListener('click', () => act(() => ws.moveUnusedFiles(list), (k) => `Moved ${k} ${k === 1 ? 'file' : 'files'} to .workspace/unused-files`));
+        moveBtn.addEventListener('click', () => act(() => ws.moveUnusedFiles(loose), (k) => `Moved ${k} ${k === 1 ? 'file' : 'files'} to Unused files`));
         delBtn.addEventListener('click', () => confirmDialog({ title: `Delete ${n} ${files}?`, lines: ['They can’t be restored.'], ok: 'Delete', danger: true, onOk: () => act(() => ws.deleteUnusedFiles(list), (k) => `Deleted ${k} ${k === 1 ? 'file' : 'files'}`) }));
         requestAnimationFrame(() => delBtn.focus());
     };
