@@ -413,7 +413,27 @@ function phoneViewer(ctx, items, at) {
             const r = b.getBoundingClientRect();
             menu({ x: r.left, y: r.top }, [{ section: playMode.shuffle ? 'Up next · shuffled' : 'Up next' }, ...list.map((k) => ({ label: fileName(items[k].path).replace(/\.[^.]+$/, ''), icon: menuIcon('music'), checked: k === i, run: () => { i = k; show(); } }))]);
         });
-        const share = chip('share', 'Share', () => void shareMedia(ctx, it.path));
+        // the iPhone shares only right on the tap: the first tap fetches the song, the second shares it
+        let ready = null;
+        const share = chip('share', 'Share', (b) => {
+            if (ready) {
+                void navigator.share({ files: [ready], title: ready.name }).catch(() => { });
+                return;
+            }
+            const lab = b.lastElementChild;
+            lab.textContent = 'Preparing…';
+            void blobOf(ctx, it.path).then((bl) => {
+                ready = new File([bl], fileName(it.path), { type: bl.type || 'audio/mpeg' });
+                if (!navigator.canShare?.({ files: [ready] })) {
+                    lab.textContent = 'Share';
+                    void downloadMedia(ctx, it.path);
+                    ready = null;
+                    return;
+                }
+                lab.textContent = 'Tap to share';
+                b.classList.add('on');
+            }).catch((e) => { lab.textContent = 'Share'; toast(e.message); });
+        });
         stage.append(h('div', { class: 'mvp-song-ctl' }, h('div', { class: 'mvp-seek2' }, track, h('div', { class: 'mvp-times' }, cur, left)), h('div', { class: 'mvp-ctl2' }, shuf, prev, play, next, rep), h('div', { class: 'mvp-chips' }, speed, upNext, share)));
         // the lock screen and Control Center: title, play / pause, previous / next, seeking
         const ms = navigator.mediaSession;
@@ -553,7 +573,7 @@ function phoneViewer(ctx, items, at) {
                 return;
             }
             lastTap = now;
-            if (!e.target.closest('video'))
+            if (!e.target.closest('video') && !box.classList.contains('audio'))
                 tapTimer = window.setTimeout(() => box.classList.toggle('bare'), zoomEl ? 300 : 0);
             return;
         }
