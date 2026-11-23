@@ -21,8 +21,12 @@ const saveMode = () => { try {
     localStorage.setItem(MODE, JSON.stringify(playMode));
 }
 catch { /* only a convenience */ } };
-const audio = new Audio();
+const audio = document.createElement('audio');
 audio.preload = 'auto';
+audio.setAttribute('playsinline', '');
+// in the page (hidden): the iPhone's lock screen and Control Center follow an element that is part of the page
+audio.style.display = 'none';
+document.body.append(audio);
 let ctx = null;
 let queue = [];
 let cur = -1;
@@ -56,13 +60,13 @@ async function load(k, play = true) {
             return;
         audio.src = u;
         audio.playbackRate = playMode.rate;
+        session();
         if (play)
             await audio.play().catch(() => { });
     }
     catch (e) {
         toast(e.message);
     }
-    session();
 }
 /** play these songs, starting with one of them (the folder they're in is the queue) */
 export function playSongs(c, songs, at) {
@@ -132,7 +136,11 @@ audio.addEventListener('ended', () => { if (!stepSong(1, true)) {
     emit('state');
 } });
 for (const ev of ['play', 'pause', 'ratechange'])
-    audio.addEventListener(ev, () => emit('state'));
+    audio.addEventListener(ev, () => { emit('state'); try {
+        if (navigator.mediaSession)
+            navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
+    }
+    catch { /* fine */ } });
 audio.addEventListener('loadedmetadata', () => { emit('state'); position(); });
 audio.addEventListener('seeked', () => position());
 /** the lock screen and Control Center: title, play / pause, previous / next, seeking */
@@ -142,10 +150,10 @@ function session() {
         return;
     try {
         m.metadata = new MediaMetadata({ title: titleOf(it.path), artist: it.place || 'Nook', album: (it.place ?? '').split(' › ').pop() ?? '', artwork: [{ src: new URL('icon-512.png', location.href).href, sizes: '512x512', type: 'image/png' }] });
-        m.setActionHandler('play', () => void audio.play());
+        m.setActionHandler('play', () => { void audio.play(); });
         m.setActionHandler('pause', () => audio.pause());
-        m.setActionHandler('previoustrack', () => stepSong(-1));
-        m.setActionHandler('nexttrack', queue.length > 1 ? () => stepSong(1) : null);
+        m.setActionHandler('previoustrack', () => { stepSong(-1); });
+        m.setActionHandler('nexttrack', queue.length > 1 ? () => { stepSong(1); } : null);
         m.setActionHandler('seekto', (d) => { if (d.seekTime != null)
             audio.currentTime = d.seekTime; });
     }
@@ -189,25 +197,29 @@ function speedChip() {
     return b;
 }
 /** Share: the iPhone shares only right on the tap – the first tap fetches the song, the second shares it */
+const MIME = { mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac', wav: 'audio/wav', aif: 'audio/aiff', aiff: 'audio/aiff', flac: 'audio/flac', ogg: 'audio/ogg', opus: 'audio/ogg' };
 function shareChip(it) {
     let ready = null;
     return chip('share', 'Share', (b) => {
+        const lab = b.lastElementChild;
         if (ready) {
-            void navigator.share({ files: [ready], title: ready.name }).catch(() => { });
+            const f = ready;
+            void navigator.share({ files: [f] }).catch((e) => { if (e.name !== 'AbortError') {
+                toast('This phone can’t share the file – downloading it instead');
+                void downloadMedia(ctx, it.path);
+            } });
             return;
         }
         if (!ctx)
             return;
-        const lab = b.lastElementChild;
+        if (!navigator.share) {
+            void downloadMedia(ctx, it.path);
+            return;
+        }
         lab.textContent = 'Preparing…';
         void blobOf(ctx, it.path).then((bl) => {
-            ready = new File([bl], fileName(it.path), { type: bl.type || 'audio/mpeg' });
-            if (!navigator.canShare?.({ files: [ready] })) {
-                lab.textContent = 'Share';
-                void downloadMedia(ctx, it.path);
-                ready = null;
-                return;
-            }
+            const ext = (fileName(it.path).split('.').pop() ?? '').toLowerCase();
+            ready = new File([bl], fileName(it.path), { type: MIME[ext] ?? 'application/octet-stream' });
             lab.textContent = 'Tap to share';
             b.classList.add('on');
         }).catch((e) => { lab.textContent = 'Share'; toast(e.message); });
@@ -232,6 +244,12 @@ function moreMenu(at, close) {
     ]);
 }
 // ---------- the full player ----------
+/** when a finger last touched a menu (pulling a menu down must not close the player under it) */
+let lastMenuTouch = 0;
+document.addEventListener('touchstart', (e) => { if (e.target.closest?.('.pop'))
+    lastMenuTouch = Date.now(); }, { capture: true, passive: true });
+document.addEventListener('touchend', (e) => { if (e.target.closest?.('.pop') || !e.target.isConnected)
+    lastMenuTouch = Date.now(); }, { capture: true, passive: true });
 let openView = null;
 export function openFullPlayer() {
     if (!nowPlaying())
@@ -283,11 +301,12 @@ function phoneFull() {
     stage.addEventListener('touchmove', (e) => { const d = e.touches[0].clientY - y0; if (d > 0 && d > Math.abs(e.touches[0].clientX - x0)) {
         box.style.transform = `translateY(${d}px)`;
     } }, { passive: true });
-    stage.addEventListener('touchend', (e) => { const d = e.changedTouches[0].clientY - y0; box.style.transform = ''; if (d > 110)
+    stage.addEventListener('touchend', (e) => { const d = e.changedTouches[0].clientY - y0; box.style.transform = ''; if (Date.now() - lastMenuTouch < 900)
+        return; if (d > 110)
         close();
     else if (Math.abs(e.changedTouches[0].clientX - x0) > 70 && Math.abs(d) < 40 && queue.length > 1)
         stepSong(e.changedTouches[0].clientX < x0 ? 1 : -1); });
-    const key = (e) => { if (e.key === 'Escape' && !document.querySelector('.pop')) {
+    const key = (e) => { if (e.key === 'Escape' && !document.querySelector('.pop') && Date.now() - lastMenuTouch > 900) {
         e.preventDefault();
         e.stopPropagation();
         close();
@@ -301,7 +320,14 @@ function phoneFull() {
 }
 function desktopFull() {
     const left = h('div', { class: 'spl-left' }), list = h('div', { class: 'spl-list' }), head = h('span', { class: 'spl-place' });
-    const more = h('button', { class: 'icon-btn', 'aria-label': 'More', title: 'More', onclick: () => moreMenu(more, close) }, pi('more', 18));
+    const more = h('button', { class: 'icon-btn', 'aria-label': 'More', title: 'More' }, pi('more', 18));
+    let wasOpenD = false;
+    more.addEventListener('pointerdown', () => { wasOpenD = !!document.querySelector('.pop:not(.pop-closing)'); }, true);
+    more.addEventListener('click', () => { if (wasOpenD || document.querySelector('.pop:not(.pop-closing)')) {
+        wasOpenD = false;
+        closePop();
+        return;
+    } moreMenu(more, close); });
     const win = h('div', { class: 'spl-win', role: 'dialog', 'aria-label': 'Player' }, h('div', { class: 'spl-head' }, pi('music', 15), head, h('span', { style: { flex: '1' } }), more, h('button', { class: 'icon-btn', 'aria-label': 'Shrink to the small player', title: 'Shrink (the music goes on)', onclick: () => close() }, pi('down', 18))), h('div', { class: 'spl-body' }, left, h('div', { class: 'spl-right' }, h('div', { class: 'spl-rh' }, h('span', { class: 'spl-rt' }), h('span', { class: 'spl-n' })), list)));
     const box = h('div', { class: 'overlay spl', onclick: (e) => { if (e.target === box)
             close(); } }, win);
@@ -392,11 +418,11 @@ export function mountPhoneBar(nav, onPlus) {
     pill.classList.add('tb-face', 'tb-tabs');
     const t = h('span', { class: 'tbp-t' }), sub = h('small', { class: 'tbp-s' });
     const pp = h('button', { class: 'tbp-b tbp-pp', 'aria-label': 'Play or pause', onclick: (e) => { e.stopPropagation(); togglePlay(); } });
-    const face = h('div', { class: 'tab-pill tb-face tb-player' }, h('button', { class: 'tbp-b tbp-back', 'aria-label': 'Back to the tabs', onclick: (e) => { e.stopPropagation(); flip(false); } }, pi('grid', 15)), h('span', { class: 'tbp-c' }, pi('music', 18)), h('span', { class: 'tbp-tx' }, t, sub), pp, h('button', { class: 'tbp-b', 'aria-label': 'Next', onclick: (e) => { e.stopPropagation(); stepSong(1); } }, pi('next', 22)));
+    const face = h('div', { class: 'tab-pill tb-face tb-player' }, h('button', { class: 'tbp-b tbp-back', 'aria-label': 'Back to the tabs', onclick: (e) => { e.stopPropagation(); flip(false); } }, pi('rollDown', 17)), h('span', { class: 'tbp-c' }, pi('music', 18)), h('span', { class: 'tbp-tx' }, t, sub), pp, h('button', { class: 'tbp-b', 'aria-label': 'Next', onclick: (e) => { e.stopPropagation(); stepSong(1); } }, pi('next', 22)));
     face.addEventListener('click', () => openFullPlayer());
     // hold: open, back to the tabs, stop
     let timer = 0;
-    face.addEventListener('touchstart', () => { timer = window.setTimeout(() => { timer = 0; const it = nowPlaying(); menu(face, [{ section: it ? titleOf(it.path) : 'Player' }, { label: 'Open player', icon: menuIcon('maximize'), run: openFullPlayer }, { label: 'Back to tabs', icon: menuIcon('layout'), run: () => flip(false) }, 'sep', { label: 'Stop', icon: menuIcon('square'), danger: true, run: stopPlayer }]); }, 480); }, { passive: true });
+    face.addEventListener('touchstart', () => { timer = window.setTimeout(() => { timer = 0; const it = nowPlaying(); menu(face, [{ section: it ? titleOf(it.path) : 'Player' }, { label: 'Open player', icon: menuIcon('maximize'), run: openFullPlayer }, { label: 'Back to tabs', icon: menuIcon('chevron-down'), run: () => flip(false) }, 'sep', { label: 'Stop', icon: menuIcon('square'), danger: true, run: stopPlayer }]); }, 480); }, { passive: true });
     face.addEventListener('touchend', (e) => { if (timer)
         clearTimeout(timer);
     else

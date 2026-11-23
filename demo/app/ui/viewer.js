@@ -157,6 +157,7 @@ export function openViewer(ctx, items, at) {
 // ---------- the phone viewer: full screen over everything (the tab bar too), round buttons on top, the actions in
 // one floating bar at the bottom; photos zoom with two fingers or a double tap, one tap hides the bars ----------
 export const P = {
+    rollDown: '<path d="M6 4h12"/><path d="M12 8v11"/><path d="M7.5 14.5 12 19l4.5-4.5"/>',
     grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
     down: '<path d="M6 9l6 6 6-6"/>', list: '<path d="M4 6h16M4 12h10M4 18h7M17 15v6l4-3z"/>',
     shuffle: '<path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>', repeat: '<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',

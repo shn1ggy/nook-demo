@@ -3,7 +3,7 @@
 export const APP = {
     name: 'Nook',
     /** shown in Settings → General; same as package.json and src-tauri */
-    version: '0.9.106',
+    version: '0.9.107',
     released: '2026-11-17',
     id: 'app.nook.desktop',
     /** Hidden folder inside every workspace that holds its settings. */
