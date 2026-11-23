@@ -5053,3 +5053,14 @@ html.phone .ogb-head { font-size: 13px; font-weight: 600; text-transform: upperc
 html.phone .ogb-label { font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: normal; color: var(--fg-faint); margin: 16px -10px 0; padding: 10px 12px 8px; border-top: 1px solid var(--border); }
 html.phone .ogb-card { margin-top: 4px; }
 html.phone .ogb-foot { padding-top: 20px; }
+html.phone.kb-open .overlay > .dialog:has(> .own-window) { padding-bottom: calc(var(--bar-gap) + 66px) !important; }
+/* new reminder: one type scale – controls 15px (400, chosen 600), day numbers 18px, Save as New reminder (16/500) */
+html.phone .ogb-day span { font-size: 12px; font-weight: 500; color: var(--fg-muted); }
+html.phone .ogb-day.on span { color: var(--fg); }
+html.phone .ogb-day b { font-weight: 500; }
+html.phone .ogb-day.on b { font-weight: 600; }
+html.phone :is(.ogb-time, .ogb-rep, .ogb-typed) { font-size: 15px; font-weight: 400; }
+html.phone :is(.ogb-time, .ogb-rep).on { font-weight: 600; }
+html.phone .ogb-rep { color: var(--fg-muted); }
+html.phone .ogb-rep.on { color: var(--fg); }
+html.phone .ogb-save { font-size: 16px; font-weight: 500; }
