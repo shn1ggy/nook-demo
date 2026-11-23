@@ -1,0 +1,451 @@
+// The music player: one for the whole app, so a song keeps playing while you go anywhere in Nook.
+// Opening a song shows the full player (phone: full screen; desktop: a window with the song on the left and the
+// folder as "Up next" on the right). Closed, it stays as the phone's bottom bar turned player (the round button
+// switches, the bar turns like a cube) and on the desktop as a small pill in the top bar.
+import { h } from '../util.js';
+import { closePop, menu, menuIcon, toast } from './pop.js';
+import { P, pi, fileName, blobOf, downloadMedia } from './viewer.js';
+void P;
+const phone = () => document.documentElement.classList.contains('phone');
+const dur = (s) => `${Math.floor((s || 0) / 60)}:${String(Math.floor((s || 0) % 60)).padStart(2, '0')}`;
+const titleOf = (p) => fileName(p).replace(/\.[^.]+$/, '');
+// ---------- the engine ----------
+const MODE = 'nook:play-mode';
+export const playMode = (() => { try {
+    return { shuffle: false, repeat: 'off', rate: 1, ...JSON.parse(localStorage.getItem(MODE) ?? '{}') };
+}
+catch {
+    return { shuffle: false, repeat: 'off', rate: 1 };
+} })();
+const saveMode = () => { try {
+    localStorage.setItem(MODE, JSON.stringify(playMode));
+}
+catch { /* only a convenience */ } };
+const audio = new Audio();
+audio.preload = 'auto';
+let ctx = null;
+let queue = [];
+let cur = -1;
+let order = [];
+const listeners = new Set();
+const emit = (kind) => listeners.forEach((f) => f(kind));
+export const onPlayer = (f) => { listeners.add(f); return () => listeners.delete(f); };
+export const nowPlaying = () => (cur >= 0 ? queue[cur] ?? null : null);
+export const isPlaying = () => !audio.paused;
+export const playerAudio = audio;
+function makeOrder() {
+    order = queue.map((_, k) => k);
+    if (playMode.shuffle) {
+        const rest = order.filter((k) => k !== cur);
+        for (let x = rest.length - 1; x > 0; x--) {
+            const y = Math.floor(Math.random() * (x + 1));
+            [rest[x], rest[y]] = [rest[y], rest[x]];
+        }
+        order = [cur, ...rest];
+    }
+}
+async function load(k, play = true) {
+    cur = k;
+    const it = queue[k];
+    if (!it || !ctx)
+        return;
+    emit('song');
+    try {
+        const u = await ctx.assetUrl(it.path);
+        if (queue[cur] !== it)
+            return;
+        audio.src = u;
+        audio.playbackRate = playMode.rate;
+        if (play)
+            await audio.play().catch(() => { });
+    }
+    catch (e) {
+        toast(e.message);
+    }
+    session();
+}
+/** play these songs, starting with one of them (the folder they're in is the queue) */
+export function playSongs(c, songs, at) {
+    ctx = c;
+    const same = queue.length === songs.length && queue.every((x, k) => x.path === songs[k].path);
+    if (same && cur === at && audio.src) {
+        if (audio.paused)
+            void audio.play();
+        return;
+    }
+    queue = songs;
+    makeOrder();
+    cur = at;
+    makeOrder();
+    void load(at);
+}
+/** next / previous in the playing order; `auto`: the song ended (repeat and the end of the list count) */
+export function stepSong(dir, auto = false) {
+    if (cur < 0)
+        return false;
+    if (auto && playMode.repeat === 'one') {
+        audio.currentTime = 0;
+        void audio.play();
+        return true;
+    }
+    if (!auto && dir < 0 && audio.currentTime > 3) {
+        audio.currentTime = 0;
+        return true;
+    }
+    if (!order.includes(cur))
+        makeOrder();
+    let k = order.indexOf(cur) + dir;
+    if (k >= order.length || k < 0) {
+        if (!auto || playMode.repeat === 'all')
+            k = (k + order.length) % order.length;
+        else
+            return false;
+    }
+    void load(order[k]);
+    return true;
+}
+export function playAt(k) { void load(k); }
+export function togglePlay() { if (audio.paused)
+    void audio.play();
+else
+    audio.pause(); }
+export function stopPlayer() {
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    queue = [];
+    cur = -1;
+    order = [];
+    try {
+        const m = navigator.mediaSession;
+        if (m) {
+            m.metadata = null;
+            for (const a of ['play', 'pause', 'previoustrack', 'nexttrack', 'seekto'])
+                m.setActionHandler(a, null);
+        }
+    }
+    catch { /* fine */ }
+    emit('song');
+}
+audio.addEventListener('ended', () => { if (!stepSong(1, true)) {
+    audio.currentTime = 0;
+    emit('state');
+} });
+for (const ev of ['play', 'pause', 'ratechange'])
+    audio.addEventListener(ev, () => emit('state'));
+audio.addEventListener('loadedmetadata', () => { emit('state'); position(); });
+audio.addEventListener('seeked', () => position());
+/** the lock screen and Control Center: title, play / pause, previous / next, seeking */
+function session() {
+    const m = navigator.mediaSession, it = nowPlaying();
+    if (!m || !it)
+        return;
+    try {
+        m.metadata = new MediaMetadata({ title: titleOf(it.path), artist: it.place || 'Nook', album: (it.place ?? '').split(' › ').pop() ?? '', artwork: [{ src: new URL('icon-512.png', location.href).href, sizes: '512x512', type: 'image/png' }] });
+        m.setActionHandler('play', () => void audio.play());
+        m.setActionHandler('pause', () => audio.pause());
+        m.setActionHandler('previoustrack', () => stepSong(-1));
+        m.setActionHandler('nexttrack', queue.length > 1 ? () => stepSong(1) : null);
+        m.setActionHandler('seekto', (d) => { if (d.seekTime != null)
+            audio.currentTime = d.seekTime; });
+    }
+    catch { /* an older system: play / pause only */ }
+}
+function position() { try {
+    if (navigator.mediaSession && audio.duration)
+        navigator.mediaSession.setPositionState({ duration: audio.duration, position: Math.min(audio.currentTime, audio.duration), playbackRate: audio.playbackRate });
+}
+catch { /* fine */ } }
+// ---------- parts used by every view ----------
+function seekBar() {
+    const fill = h('i'), track = h('div', { class: 'mvp-track' }, fill), a = h('span'), b = h('span');
+    const paint = () => { const d = audio.duration || 0; fill.style.width = `${d ? (audio.currentTime / d) * 100 : 0}%`; a.textContent = dur(audio.currentTime); b.textContent = `−${dur(Math.max(0, d - audio.currentTime))}`; };
+    const seek = (e) => { const r = track.getBoundingClientRect(); if (audio.duration)
+        audio.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * audio.duration; paint(); };
+    track.addEventListener('pointerdown', (e) => { e.stopPropagation(); track.setPointerCapture(e.pointerId); seek(e); const mv = (ev) => seek(ev); track.addEventListener('pointermove', mv); track.addEventListener('pointerup', () => track.removeEventListener('pointermove', mv), { once: true }); });
+    track.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+    return { el: h('div', { class: 'mvp-seek2' }, track, h('div', { class: 'mvp-times' }, a, b)), paint };
+}
+function controls(big) {
+    const play = h('button', { class: 'mvp-play', 'aria-label': 'Play or pause', onclick: togglePlay });
+    const shuf = h('button', { class: 'mvp-mode', 'aria-label': 'Shuffle', onclick: () => { playMode.shuffle = !playMode.shuffle; saveMode(); makeOrder(); paint(); emit('state'); toast(playMode.shuffle ? 'Shuffle on' : 'Shuffle off', 1200); } });
+    const rep = h('button', { class: 'mvp-mode', 'aria-label': 'Repeat', onclick: () => { playMode.repeat = playMode.repeat === 'off' ? 'all' : playMode.repeat === 'all' ? 'one' : 'off'; saveMode(); paint(); toast(playMode.repeat === 'off' ? 'Repeat off' : playMode.repeat === 'all' ? 'Repeat the folder' : 'Repeat this song', 1200); } });
+    const paint = () => {
+        play.replaceChildren(pi(audio.paused ? 'play' : 'pause', big));
+        shuf.replaceChildren(pi('shuffle', 22));
+        shuf.classList.toggle('on', playMode.shuffle);
+        rep.replaceChildren(pi(playMode.repeat === 'one' ? 'repeat1' : 'repeat', 22));
+        rep.classList.toggle('on', playMode.repeat !== 'off');
+    };
+    paint();
+    return { el: h('div', { class: 'mvp-ctl2' }, shuf, h('button', { class: 'mvp-skip', 'aria-label': 'Previous', onclick: () => stepSong(-1) }, pi('prev', big)), play, h('button', { class: 'mvp-skip', 'aria-label': 'Next', onclick: () => { if (queue.length > 1)
+                stepSong(1); } }, pi('next', big)), rep), paint };
+}
+const chip = (icon, label, run) => { const b = h('button', { class: 'mvp-chip' }, pi(icon, 16), h('span', null, label)); b.addEventListener('click', () => run(b)); return b; };
+function speedChip() {
+    const rates = [1, 1.25, 1.5, 2, 0.75];
+    const b = chip('speed', `${playMode.rate}×`.replace('.', ','), (el) => { playMode.rate = rates[(rates.indexOf(playMode.rate) + 1) % rates.length]; audio.playbackRate = playMode.rate; saveMode(); el.lastElementChild.textContent = `${playMode.rate}×`.replace('.', ','); el.classList.toggle('on', playMode.rate !== 1); });
+    b.classList.toggle('on', playMode.rate !== 1);
+    return b;
+}
+/** Share: the iPhone shares only right on the tap – the first tap fetches the song, the second shares it */
+function shareChip(it) {
+    let ready = null;
+    return chip('share', 'Share', (b) => {
+        if (ready) {
+            void navigator.share({ files: [ready], title: ready.name }).catch(() => { });
+            return;
+        }
+        if (!ctx)
+            return;
+        const lab = b.lastElementChild;
+        lab.textContent = 'Preparing…';
+        void blobOf(ctx, it.path).then((bl) => {
+            ready = new File([bl], fileName(it.path), { type: bl.type || 'audio/mpeg' });
+            if (!navigator.canShare?.({ files: [ready] })) {
+                lab.textContent = 'Share';
+                void downloadMedia(ctx, it.path);
+                ready = null;
+                return;
+            }
+            lab.textContent = 'Tap to share';
+            b.classList.add('on');
+        }).catch((e) => { lab.textContent = 'Share'; toast(e.message); });
+    });
+}
+const upNextOrder = () => { if (!order.includes(cur))
+    makeOrder(); const from = order.indexOf(cur); return [...order.slice(from), ...order.slice(0, from)]; };
+function upNextMenu(at) {
+    const r = at.getBoundingClientRect();
+    menu({ x: r.left, y: r.top }, [{ section: playMode.shuffle ? 'Up next · shuffled' : 'Up next' }, ...upNextOrder().map((k) => ({ label: titleOf(queue[k].path), icon: menuIcon('music'), checked: k === cur, run: () => playAt(k) }))]);
+}
+function moreMenu(at, close) {
+    const it = nowPlaying();
+    if (!it || !ctx)
+        return;
+    const r = at.getBoundingClientRect();
+    menu({ x: r.right, y: r.bottom }, [
+        ...(it.open ? [{ label: it.entryName ? `Info · ${it.entryName}` : 'Info', icon: menuIcon('info'), run: () => { close(); it.open(); } }] : []),
+        { label: 'Download', icon: menuIcon('download'), run: () => void downloadMedia(ctx, it.path) },
+        'sep',
+        { label: 'Stop', icon: menuIcon('square'), danger: true, run: () => { close(); stopPlayer(); } },
+    ]);
+}
+// ---------- the full player ----------
+let openView = null;
+export function openFullPlayer() {
+    if (!nowPlaying())
+        return;
+    openView?.remove();
+    if (phone())
+        phoneFull();
+    else
+        desktopFull();
+}
+export const closeFullPlayer = () => { closePop(); openView?.remove(); openView = null; };
+function phoneFull() {
+    const name = h('span', { class: 'mvp-name' });
+    const stage = h('div', { class: 'mvp-stage' });
+    const more = h('button', { class: 'mvp-rb', 'aria-label': 'More' }, pi('more'));
+    const box = h('div', { class: 'overlay mv mvp audio' }, stage, h('div', { class: 'mvp-top' }, h('button', { class: 'mvp-rb', 'aria-label': 'Close', onclick: () => close() }, pi('down')), h('div', { class: 'mvp-title' }, name), more));
+    let wasOpen = false;
+    more.addEventListener('pointerdown', () => { wasOpen = !!document.querySelector('.pop:not(.pop-closing)'); }, true);
+    more.addEventListener('click', () => { if (wasOpen || document.querySelector('.pop:not(.pop-closing)')) {
+        wasOpen = false;
+        closePop();
+        return;
+    } moreMenu(more, close); });
+    let seek = null, ctl = null;
+    const draw = () => {
+        const it = nowPlaying();
+        if (!it) {
+            close();
+            return;
+        }
+        const place = it.place ?? '', ext = (fileName(it.path).split('.').pop() ?? '').toLowerCase();
+        name.textContent = place;
+        seek = seekBar();
+        ctl = controls(30);
+        stage.replaceChildren(h('div', { class: 'mvp-cover' }, pi('music', 64)), h('div', { class: 'mvp-atitle' }, titleOf(it.path), h('small', null, [ext, queue.length > 1 ? `${cur + 1} of ${queue.length}${place ? ` in ${place.split(' › ').pop()}` : ''}` : ''].filter(Boolean).join(' · '))), h('div', { class: 'mvp-song-ctl' }, seek.el, ctl.el, h('div', { class: 'mvp-chips' }, speedChip(), chip('list', 'Up next', (b) => upNextMenu(b)), shareChip(it))));
+        seek.paint();
+    };
+    const tick = () => seek?.paint();
+    const off = onPlayer((k) => { if (k === 'song')
+        draw();
+    else {
+        ctl?.paint();
+        seek?.paint();
+    } });
+    audio.addEventListener('timeupdate', tick);
+    // pull down to close (the music goes on)
+    let y0 = 0, x0 = 0;
+    stage.addEventListener('touchstart', (e) => { y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; }, { passive: true });
+    stage.addEventListener('touchmove', (e) => { const d = e.touches[0].clientY - y0; if (d > 0 && d > Math.abs(e.touches[0].clientX - x0)) {
+        box.style.transform = `translateY(${d}px)`;
+    } }, { passive: true });
+    stage.addEventListener('touchend', (e) => { const d = e.changedTouches[0].clientY - y0; box.style.transform = ''; if (d > 110)
+        close();
+    else if (Math.abs(e.changedTouches[0].clientX - x0) > 70 && Math.abs(d) < 40 && queue.length > 1)
+        stepSong(e.changedTouches[0].clientX < x0 ? 1 : -1); });
+    const key = (e) => { if (e.key === 'Escape' && !document.querySelector('.pop')) {
+        e.preventDefault();
+        e.stopPropagation();
+        close();
+    } };
+    document.addEventListener('keydown', key, true);
+    function close() { off(); audio.removeEventListener('timeupdate', tick); document.removeEventListener('keydown', key, true); box.classList.add('mvp-leaving'); setTimeout(() => box.remove(), 220); if (openView === box)
+        openView = null; emit('state'); }
+    document.body.append(box);
+    openView = box;
+    draw();
+}
+function desktopFull() {
+    const left = h('div', { class: 'spl-left' }), list = h('div', { class: 'spl-list' }), head = h('span', { class: 'spl-place' });
+    const more = h('button', { class: 'icon-btn', 'aria-label': 'More', title: 'More', onclick: () => moreMenu(more, close) }, pi('more', 18));
+    const win = h('div', { class: 'spl-win', role: 'dialog', 'aria-label': 'Player' }, h('div', { class: 'spl-head' }, pi('music', 15), head, h('span', { style: { flex: '1' } }), more, h('button', { class: 'icon-btn', 'aria-label': 'Shrink to the small player', title: 'Shrink (the music goes on)', onclick: () => close() }, pi('down', 18))), h('div', { class: 'spl-body' }, left, h('div', { class: 'spl-right' }, h('div', { class: 'spl-rh' }, h('span', { class: 'spl-rt' }), h('span', { class: 'spl-n' })), list)));
+    const box = h('div', { class: 'overlay spl', onclick: (e) => { if (e.target === box)
+            close(); } }, win);
+    let seek = null, ctl = null;
+    const drawList = () => {
+        win.querySelector('.spl-rt').textContent = playMode.shuffle ? 'UP NEXT · SHUFFLED' : 'UP NEXT';
+        win.querySelector('.spl-n').textContent = `${queue.length} song${queue.length === 1 ? '' : 's'}`;
+        list.replaceChildren(...upNextOrder().map((k, n) => h('button', { class: 'spl-q' + (k === cur ? ' cur' : ''), onclick: () => playAt(k) }, h('span', { class: 'spl-qn' }, k === cur ? pi(audio.paused ? 'play' : 'pause', 12) : String(n + 1)), h('span', { class: 'spl-qt' }, titleOf(queue[k].path)))));
+    };
+    const draw = () => {
+        const it = nowPlaying();
+        if (!it) {
+            close();
+            return;
+        }
+        const place = it.place ?? '', ext = (fileName(it.path).split('.').pop() ?? '').toLowerCase();
+        head.textContent = place || 'Player';
+        seek = seekBar();
+        ctl = controls(26);
+        left.replaceChildren(h('div', { class: 'spl-cover' }, pi('music', 72)), h('div', { class: 'spl-title' }, titleOf(it.path)), h('div', { class: 'spl-sub' }, [ext, queue.length > 1 ? `${cur + 1} of ${queue.length}${place ? ` in ${place.split(' › ').pop()}` : ''}` : ''].filter(Boolean).join(' · ')), seek.el, ctl.el, h('div', { class: 'mvp-chips' }, speedChip(), chip('save', 'Download', () => void downloadMedia(ctx, it.path))));
+        seek.paint();
+        drawList();
+    };
+    const tick = () => seek?.paint();
+    const off = onPlayer((k) => { if (k === 'song')
+        draw();
+    else {
+        ctl?.paint();
+        seek?.paint();
+        drawList();
+    } });
+    audio.addEventListener('timeupdate', tick);
+    const key = (e) => {
+        if (document.querySelector('.pop'))
+            return;
+        if (e.key === 'Escape')
+            close();
+        else if (e.key === ' ')
+            togglePlay();
+        else if (e.key === 'ArrowRight' && (e.metaKey || e.ctrlKey))
+            stepSong(1);
+        else if (e.key === 'ArrowLeft' && (e.metaKey || e.ctrlKey))
+            stepSong(-1);
+        else
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+    };
+    document.addEventListener('keydown', key, true);
+    function close() { off(); audio.removeEventListener('timeupdate', tick); document.removeEventListener('keydown', key, true); box.remove(); if (openView === box)
+        openView = null; emit('state'); }
+    document.body.append(box);
+    openView = box;
+    draw();
+}
+// ---------- desktop: the pill in the top bar ----------
+/** cover, title (opens the full player), play / pause, next, ✕ – only while something plays */
+export function playerPill() {
+    const t = h('button', { class: 'ppill-t', title: 'Open the player', onclick: openFullPlayer });
+    const pp = h('button', { class: 'ppill-pp', 'aria-label': 'Play or pause', onclick: togglePlay });
+    const el = h('div', { class: 'ppill' }, h('button', { class: 'ppill-c', 'aria-label': 'Open the player', onclick: openFullPlayer }, pi('music', 14)), t, pp, h('button', { class: 'ppill-b', 'aria-label': 'Next', title: 'Next', onclick: () => stepSong(1) }, pi('next', 15)), h('button', { class: 'ppill-b', 'aria-label': 'Stop', title: 'Stop', onclick: stopPlayer }, pi('x', 14)));
+    const paint = () => {
+        if (!el.isConnected && el.dataset.drawn) {
+            off();
+            return;
+        }
+        el.dataset.drawn = '1';
+        const it = nowPlaying();
+        el.hidden = !it;
+        if (!it)
+            return;
+        t.textContent = titleOf(it.path);
+        pp.replaceChildren(pi(audio.paused ? 'play' : 'pause', 13));
+    };
+    const off = onPlayer(paint);
+    paint();
+    return el;
+}
+// ---------- phone: the bottom bar turns into the player ----------
+let flipped = false;
+/** the tab bar of the phone: a player face behind the tabs; the round button switches while music plays */
+export function mountPhoneBar(nav, onPlus) {
+    const pill = nav.querySelector('.tab-pill'), fab = nav.querySelector('.tab-fab');
+    if (!pill || !fab)
+        return;
+    const stage = h('div', { class: 'tb-stage' });
+    pill.replaceWith(stage);
+    pill.classList.add('tb-face', 'tb-tabs');
+    const t = h('span', { class: 'tbp-t' }), sub = h('small', { class: 'tbp-s' });
+    const pp = h('button', { class: 'tbp-b tbp-pp', 'aria-label': 'Play or pause', onclick: (e) => { e.stopPropagation(); togglePlay(); } });
+    const face = h('div', { class: 'tab-pill tb-face tb-player' }, h('button', { class: 'tbp-b tbp-back', 'aria-label': 'Back to the tabs', onclick: (e) => { e.stopPropagation(); flip(false); } }, pi('grid', 15)), h('span', { class: 'tbp-c' }, pi('music', 18)), h('span', { class: 'tbp-tx' }, t, sub), pp, h('button', { class: 'tbp-b', 'aria-label': 'Next', onclick: (e) => { e.stopPropagation(); stepSong(1); } }, pi('next', 22)));
+    face.addEventListener('click', () => openFullPlayer());
+    // hold: open, back to the tabs, stop
+    let timer = 0;
+    face.addEventListener('touchstart', () => { timer = window.setTimeout(() => { timer = 0; const it = nowPlaying(); menu(face, [{ section: it ? titleOf(it.path) : 'Player' }, { label: 'Open player', icon: menuIcon('maximize'), run: openFullPlayer }, { label: 'Back to tabs', icon: menuIcon('layout'), run: () => flip(false) }, 'sep', { label: 'Stop', icon: menuIcon('square'), danger: true, run: stopPlayer }]); }, 480); }, { passive: true });
+    face.addEventListener('touchend', (e) => { if (timer)
+        clearTimeout(timer);
+    else
+        e.preventDefault(); });
+    face.addEventListener('touchmove', () => clearTimeout(timer), { passive: true });
+    // swipe the bar: up → player, down → tabs
+    let y0 = null;
+    stage.addEventListener('touchstart', (e) => { y0 = e.touches[0].clientY; }, { passive: true });
+    stage.addEventListener('touchend', (e) => { if (y0 == null)
+        return; const d = e.changedTouches[0].clientY - y0; y0 = null; if (d < -18)
+        flip(true);
+    else if (d > 18)
+        flip(false); });
+    stage.append(pill, face);
+    const plus = fab.innerHTML;
+    fab.addEventListener('click', (e) => { if (nowPlaying() && !flipped) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        flip(true);
+    } }, true);
+    void onPlus;
+    const tick = () => { const d = audio.duration || 0; sub.textContent = `${nowPlaying()?.place?.split(' › ').pop() ?? ''} · ${dur(audio.currentTime)}${d ? ` / ${dur(d)}` : ''}`; };
+    const paint = () => {
+        if (!nav.isConnected && nav.dataset.drawn) {
+            off();
+            audio.removeEventListener('timeupdate', tick);
+            return;
+        }
+        nav.dataset.drawn = '1';
+        const it = nowPlaying();
+        if (!it)
+            flipped = false;
+        nav.classList.toggle('tb-music', !!it);
+        stage.classList.toggle('flipped', !!it && flipped);
+        fab.innerHTML = it && !flipped ? '<span class="tb-eq"><i></i><i></i><i></i><i></i></span>' : plus;
+        fab.classList.toggle('tb-eq-on', !!it && !flipped);
+        nav.querySelector('.tb-eq')?.classList.toggle('paused', audio.paused);
+        if (!it)
+            return;
+        t.textContent = titleOf(it.path);
+        pp.replaceChildren(pi(audio.paused ? 'play' : 'pause', 22));
+        tick();
+    };
+    const flip = (to) => { if (!nowPlaying())
+        return; flipped = to; paint(); };
+    const off = onPlayer((k) => { if (k === 'song' && nowPlaying() && !openView) { /* a song started from a list: show the player bar */ } paint(); });
+    audio.addEventListener('timeupdate', tick);
+    paint();
+}
+/** a song was started: on the phone the bar shows the player once the full player is closed */
+export function showPlayerBar() { flipped = true; emit('state'); }
+//# sourceMappingURL=player.js.map

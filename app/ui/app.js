@@ -39,6 +39,7 @@ import { calendars } from '../sync/service.js';
 import { entryIcon, editValue, renderValue, setAssetResolver, setRowOpener, typeIcon } from '../views/cells.js';
 import { openFileEntry, fileActions } from '../views/fileview.js';
 import { FILE_KINDS } from '../filedb.js';
+import { mountPhoneBar, playerPill } from './player.js';
 import { renderViewBlock } from '../views/view.js';
 /** font presets: id, label, CSS font stack */
 export const FONTS = [
@@ -1248,7 +1249,7 @@ export class App {
             crumbs.appendChild(h('span', { class: 'crumb-sep' }, '/'));
             crumbs.appendChild(h('span', { class: 'crumb' }, row?.icon ? renderIcon(row.icon, 15) : null, h('span', { class: 'crumb-t', 'data-name': db && row ? `row:${db.key}:${row.id}` : undefined }, db && row ? db.rowLabel(row) : 'Untitled')));
         }
-        const right = h('div', { style: { display: 'flex', gap: '4px', alignItems: 'center' } }, r?.kind === 'row' ? h('button', { class: 'icon-btn', 'aria-label': 'History', title: 'History of this entry', onclick: () => this.openHistory(this.rowFile(r.db, r.id)) }, iconSvg('clock', 16)) : null, r?.kind === 'row' ? h('button', { class: 'icon-btn', 'aria-label': 'Delete entry', title: 'Delete entry', onclick: async () => {
+        const right = h('div', { style: { display: 'flex', gap: '4px', alignItems: 'center' } }, playerPill(), r?.kind === 'row' ? h('button', { class: 'icon-btn', 'aria-label': 'History', title: 'History of this entry', onclick: () => this.openHistory(this.rowFile(r.db, r.id)) }, iconSvg('clock', 16)) : null, r?.kind === 'row' ? h('button', { class: 'icon-btn', 'aria-label': 'Delete entry', title: 'Delete entry', onclick: async () => {
                 const db = this.ws.dbs.get(r.db);
                 const row = db?.rows.find((x) => x.id === r.id);
                 if (!db || !row)
@@ -1924,7 +1925,7 @@ export class App {
             } }, typeof icon === 'string' ? iconSvg(icon, 22) : icon, h('span', null, label));
         // the tabs float in a frosted capsule; ＋ is its own round button beside it
         const add = h('button', { class: 'tab-fab', 'aria-label': 'Quick buttons and new page', onclick: () => this.quickMenu(add) }, svgIcon(ICONS.plus, 24));
-        return h('nav', { class: 'tab-bar', 'aria-label': 'Main' }, h('div', { class: 'tab-pill' }, tab('Home', 'home', () => {
+        const nav = h('nav', { class: 'tab-bar', 'aria-label': 'Main' }, h('div', { class: 'tab-pill' }, tab('Home', 'home', () => {
             if (!home)
                 return;
             if (this.libraryOn) {
@@ -1986,6 +1987,9 @@ export class App {
             b.appendChild(nbDot());
             return b;
         })(), tab('Settings', 'settings', () => this.settingsDialog())), add);
+        // music playing: the bar turns into the player (the round button switches)
+        mountPhoneBar(nav, (at) => this.quickMenu(at));
+        return nav;
     }
     toggleSidebar() {
         if (isPhone() && this.sidebarOpen) {

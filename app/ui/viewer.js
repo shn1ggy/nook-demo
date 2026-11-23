@@ -7,11 +7,11 @@ import { iconSvg } from './icons.js';
 import { closePop, menu, menuIcon, toast } from './pop.js';
 import { openPdfFull, pdfUrl } from './pdf.js';
 export const mediaType = (p) => /\.(png|jpe?g|gif|webp|avif|svg|heic)$/i.test(p) ? 'image' : /\.(mp4|mov|m4v|webm)$/i.test(p) ? 'video' : /\.pdf$/i.test(p) ? 'pdf' : /\.(mp3|m4a|wav|aac|ogg|flac)$/i.test(p) ? 'audio' : null;
-const fileName = (p) => p.split('/').pop() ?? p;
+export const fileName = (p) => p.split('/').pop() ?? p;
 export const sizeLabel = (n) => n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
 const phone = () => document.documentElement.classList.contains('phone');
 const dur = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-async function blobOf(ctx, p) { const r = await fetch(await ctx.assetUrl(p)); if (!r.ok)
+export async function blobOf(ctx, p) { const r = await fetch(await ctx.assetUrl(p)); if (!r.ok)
     throw new Error(`Could not load ${fileName(p)}`); return r.blob(); }
 export async function downloadMedia(ctx, p) {
     try {
@@ -57,6 +57,12 @@ export function mediaMenu(ctx, items, i, at) {
 export function openViewer(ctx, items, at) {
     if (!items.length)
         return;
+    // a song: the music player (it keeps playing when closed); its folder's songs are the queue
+    if (mediaType(items[at]?.path ?? '') === 'audio') {
+        const songs = items.filter((x) => mediaType(x.path) === 'audio');
+        void import('./player.js').then((pl) => { pl.playSongs(ctx, songs, songs.indexOf(items[at])); pl.showPlayerBar(); pl.openFullPlayer(); });
+        return;
+    }
     if (phone()) {
         phoneViewer(ctx, items, at);
         return;
@@ -150,7 +156,8 @@ export function openViewer(ctx, items, at) {
 }
 // ---------- the phone viewer: full screen over everything (the tab bar too), round buttons on top, the actions in
 // one floating bar at the bottom; photos zoom with two fingers or a double tap, one tap hides the bars ----------
-const P = {
+export const P = {
+    grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
     down: '<path d="M6 9l6 6 6-6"/>', list: '<path d="M4 6h16M4 12h10M4 18h7M17 15v6l4-3z"/>',
     shuffle: '<path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>', repeat: '<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
     repeat1: '<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/><path d="M11 10h1v5"/>',
@@ -164,7 +171,7 @@ const P = {
     speed: '<path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 12l4-4"/>', play: '<path d="M7 4l13 8-13 8z" fill="currentColor" stroke="none"/>', pause: '<path d="M7 4h4v16H7zM13 4h4v16h-4z" fill="currentColor" stroke="none"/>',
     music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
 };
-const pi = (k, n = 21) => { const t = document.createElement('template'); t.innerHTML = `<svg viewBox="0 0 24 24" width="${n}" height="${n}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P[k]}</svg>`; return t.content.firstChild; };
+export const pi = (k, n = 21) => { const t = document.createElement('template'); t.innerHTML = `<svg viewBox="0 0 24 24" width="${n}" height="${n}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P[k]}</svg>`; return t.content.firstChild; };
 export async function shareMedia(ctx, p) {
     try {
         const b = await blobOf(ctx, p);
