@@ -5323,3 +5323,15 @@ html.phone body:has(.mvp) .pop { padding-bottom: calc(env(safe-area-inset-bottom
 .fdb-actions { display: flex; gap: 8px; margin: 18px 0 8px; }
 .g-cover.fdb-cover { display: grid; place-items: center; color: var(--fg-muted); }
 .file-ico { color: var(--fg-muted); }
+.file-ico.fk-folder { color: var(--fk-folder); }
+.file-ico.fk-audio { color: var(--fk-audio); }
+.file-ico.fk-video { color: var(--fk-video); }
+.file-ico.fk-image { color: var(--fk-image); }
+.file-ico.fk-document { color: var(--fk-document); }
+.file-ico.fk-sheet { color: var(--fk-sheet); }
+.file-ico.fk-archive { color: var(--fk-archive); }
+.file-ico.fk-other { color: var(--fk-other); }
+.fk-set-ico { display: inline-flex; }
+.fdb-crumb-b { display: inline-flex; align-items: center; gap: 6px; }
+.fdb-crumb .fdb-up { width: 26px; height: 26px; margin-right: 4px; }
+.fdb-crumb .fdb-up:disabled { opacity: .35; }

@@ -14,7 +14,6 @@ export const isFileDb = (db) => !!db?.schema.files;
 export const filesDir = (db) => `${db.dir}/files`;
 const sidecarPath = (db) => `${db.dir}/files.json`;
 const sides = new WeakMap();
-const metas = new WeakMap();
 const side = (db) => { let s = sides.get(db); if (!s) {
     s = {};
     sides.set(db, s);
@@ -95,7 +94,6 @@ export function buildRows(ws, db) {
 }
 function fileRow(db, rel, isDir, keep) {
     const s = side(db)[rel];
-    const m = metas.get(db)?.get(rel);
     const name = baseOf(rel);
     const values = { ...(s?.v ?? {}) };
     values[db.titleProp] = name;
@@ -107,9 +105,9 @@ function fileRow(db, rel, isDir, keep) {
     } };
     set('type', isDir ? 'Folder' : kindOf(name));
     if (!isDir) {
-        set('size', m?.size);
-        set('created', m?.created ? { start: local(m.created) } : undefined);
-        set('modified', m?.modified ? { start: local(m.modified) } : undefined);
+        set('size', s?.size);
+        set('created', s?.created ? { start: s.created } : undefined);
+        set('modified', s?.modified ? { start: s.modified } : undefined);
         set('added', s?.added ? { start: s.added } : undefined);
         set('length', s?.length);
     }
@@ -123,47 +121,60 @@ function fileRow(db, rel, isDir, keep) {
 }
 /** the folder an entry is in ('' at the top) */
 export const parentOf = (r) => dirOf(r.rel ?? '');
-/** sizes and dates (and the "Added" date of files seen for the first time), then the length of sounds and videos */
+/** sizes and dates, read once per file and kept in files.json; read again only when a file's content changed
+ *  (a rename isn't a change); then the length of sounds and videos */
 export async function refreshFileInfo(ws, db, assetUrl) {
     const st = ws.storage;
-    if (!st.fileInfo)
-        return;
-    let list;
-    try {
-        list = await st.fileInfo(filesDir(db));
+    let list = [];
+    if (st.fileInfo) {
+        try {
+            list = await st.fileInfo(filesDir(db));
+        }
+        catch {
+            list = [];
+        }
     }
-    catch {
-        return;
-    }
-    const base = filesDir(db) + '/';
-    const m = new Map();
-    const had = metas.get(db);
-    for (const f of list) {
-        const p = f.path.toLowerCase().startsWith(base.toLowerCase()) ? f.path.slice(base.length) : null;
-        if (p)
-            m.set(p, { ...had?.get(p), ...Object.fromEntries(Object.entries(f).filter(([, v]) => v != null)) });
-    }
-    // Dropbox gives the folder's case only for the last part: match by lower case
-    const lower = new Map([...m].map(([k, v]) => [k.toLowerCase(), v]));
-    const byRel = new Map();
-    let added = false;
+    const base = (filesDir(db) + '/').toLowerCase();
+    // Dropbox gives the folder's case only for the last part: matched by lower case
+    const byLower = new Map();
+    for (const f of list)
+        if (f.path.toLowerCase().startsWith(base))
+            byLower.set(f.path.slice(base.length).toLowerCase(), f);
+    let changed = false;
     const s = side(db);
     for (const r of db.rows) {
         if (r.isDir || !r.rel)
             continue;
-        const info = m.get(r.rel) ?? lower.get(r.rel.toLowerCase());
-        if (info)
-            byRel.set(r.rel, info);
-        if (!s[r.rel]?.added) {
-            (s[r.rel] ??= {}).added = local(info?.modified ?? info?.created) ?? local(new Date().toISOString());
-            added = true;
+        const info = byLower.get(r.rel.toLowerCase());
+        const e = (s[r.rel] ??= {});
+        if (!e.added) {
+            e.added = local(info?.modified ?? info?.created) ?? local(new Date().toISOString());
+            changed = true;
         }
+        if (!info)
+            continue;
+        const fp = info.hash ?? `${info.size}:${info.modified ?? ''}`;
+        if (e.h === fp && e.size != null)
+            continue;
+        // new to Nook, or its content changed: read again (and the length too, if it had one)
+        if (e.h && e.h !== fp)
+            delete e.length;
+        e.h = fp;
+        e.size = info.size;
+        e.created = local(info.created);
+        e.modified = local(info.modified);
+        if (!e.created)
+            delete e.created;
+        if (!e.modified)
+            delete e.modified;
+        changed = true;
     }
-    metas.set(db, byRel);
-    buildRows(ws, db);
-    ws.emit();
-    if (added && ws.storage.writable)
-        await saveSidecar(ws, db);
+    if (changed) {
+        buildRows(ws, db);
+        ws.emit();
+        if (ws.storage.writable)
+            await saveSidecar(ws, db);
+    }
     void probeLengths(ws, db, assetUrl);
 }
 /** the length of sounds and videos: read once from the file's start, then kept in files.json */
@@ -270,18 +281,12 @@ export async function moveInside(ws, db, from, to) {
             ws.files.delete(f);
             ws.files.add(b + f.slice(a.length));
         }
-    const s = side(db), m = metas.get(db);
+    const s = side(db);
     for (const k of Object.keys(s))
         if (k === from || k.startsWith(from + '/')) {
             s[to + k.slice(from.length)] = s[k];
             delete s[k];
         }
-    if (m)
-        for (const k of [...m.keys()])
-            if (k === from || k.startsWith(from + '/')) {
-                m.set(to + k.slice(from.length), m.get(k));
-                m.delete(k);
-            }
 }
 /** "Delete": the file (or folder) goes to "Unused files" – Nook never deletes files */
 export async function removeFileRow(ws, db, row) {
@@ -316,14 +321,11 @@ export async function uploadFiles(ws, db, files, folder = folderOf(db)) {
         await ws.storage.writeBinary(path, new Uint8Array(await f.arrayBuffer()));
         ws.files.add(path);
         const rel = path.slice(filesDir(db).length + 1);
-        (s[rel] ??= {}).added = local(new Date().toISOString());
-        let m = metas.get(db);
-        if (!m) {
-            m = new Map();
-            metas.set(db, m);
-        }
-        const at = new Date(f.lastModified || Date.now()).toISOString();
-        m.set(rel, { size: f.size, created: at, modified: new Date().toISOString() });
+        const e = (s[rel] ??= {});
+        e.added = local(new Date().toISOString());
+        e.size = f.size;
+        e.created = local(new Date(f.lastModified || Date.now()).toISOString());
+        e.modified = e.added;
         n++;
     }
     buildRows(ws, db);
@@ -382,5 +384,34 @@ export async function switchFiles(ws, db, on) {
     }
     db.invalidate();
     ws.emit();
+}
+/** the kinds whose icons have a colour (Settings → Colors → File icons), with their defaults */
+export const FILE_KINDS = [
+    { key: 'folder', label: 'Folders', icon: 'folder', color: '#e0a930' },
+    { key: 'audio', label: 'Audio', icon: 'music', color: '#9b7be0' },
+    { key: 'video', label: 'Video', icon: 'video', color: '#e0607e' },
+    { key: 'image', label: 'Images', icon: 'image', color: '#3fae7a' },
+    { key: 'document', label: 'Documents & PDFs', icon: 'file-text', color: '#4f8fe0' },
+    { key: 'sheet', label: 'Spreadsheets', icon: 'table', color: '#2fa37f' },
+    { key: 'archive', label: 'Archives', icon: 'file', color: '#c08a52' },
+    { key: 'other', label: 'Other files', icon: 'file', color: '#8b9096' },
+];
+/** a file's kind for its icon */
+export function iconKind(name, dir = false) {
+    if (dir)
+        return 'folder';
+    if (/\.(mp3|m4a|wav|aiff?|aac|ogg|flac|opus)$/i.test(name))
+        return 'audio';
+    if (/\.(mp4|mov|m4v|webm|mkv|avi|mxf)$/i.test(name))
+        return 'video';
+    if (/\.(png|jpe?g|gif|webp|avif|heic|svg|tiff?|bmp)$/i.test(name))
+        return 'image';
+    if (/\.(pdf|docx?|pages|odt|rtf|txt|md|pptx?|key)$/i.test(name))
+        return 'document';
+    if (/\.(xlsx?|numbers|csv|ods)$/i.test(name))
+        return 'sheet';
+    if (/\.(zip|rar|7z|tar|gz)$/i.test(name))
+        return 'archive';
+    return 'other';
 }
 //# sourceMappingURL=filedb.js.map

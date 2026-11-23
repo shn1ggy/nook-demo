@@ -3168,9 +3168,14 @@ function sortKey(db, row, prop) {
  */
 export function nestRows(db, rows, open, addRows = false) {
     const p = db.schema.subItems?.parent;
-    if (!p)
+    const files = !!db.schema.files, top = files ? folderOf(db) : '';
+    if (!p && !files)
         return rows.map((row) => ({ row, depth: 0, kids: 0 }));
-    const parentRaw = (r) => { const v = r.values[p]; const id = Array.isArray(v) ? v[0] : typeof v === 'string' ? v : undefined; return id && id !== r.id ? String(id) : undefined; };
+    if (files)
+        addRows = false;
+    // a database of files: a file's parent is its folder (above the folder the view shows: none)
+    const parentRaw = files ? (r) => { const d = parentOf(r); return d && d !== top ? `d:${d}` : undefined; }
+        : (r) => { const v = r.values[p]; const id = Array.isArray(v) ? v[0] : typeof v === 'string' ? v : undefined; return id && id !== r.id ? String(id) : undefined; };
     // the rows of the view plus the parents above them that the view leaves out
     const pos = new Map();
     const ghost = new Set();
@@ -3259,9 +3264,10 @@ export function query(db, view, offset = 0, search = '', keep) {
     const kept = (r) => !!keep?.has(r.id);
     let rows = db.rows.filter((r) => kept(r) || matchFilter(db, r, view.filter));
     // a database of files shows one folder at a time
+    // (tables and lists show the folders inside as a tree: everything below it, opened folder by folder)
     if (db.schema.files) {
-        const f = folderOf(db);
-        rows = rows.filter((r) => parentOf(r) === f);
+        const f = folderOf(db), tree = view.type === 'table' || view.type === 'list';
+        rows = rows.filter((r) => tree ? (!f || (r.rel ?? '').startsWith(f + '/')) : parentOf(r) === f);
     }
     const range = view.period ? periodRange(view.period, offset) : null;
     if (range && view.period) {

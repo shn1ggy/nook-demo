@@ -1,4 +1,5 @@
 import { deviceStorage, clearAssets, assetLimitMB, setAssetLimitMB, DropboxStorage } from '../storage/dropbox.js';
+import { FILE_KINDS } from '../filedb.js';
 import { kbDebugOn, setKbDebug } from './kbdebug.js';
 import { phonePref, setPhonePref } from './app.js';
 import { wcard, wrow, wsum } from './win.js';
@@ -525,8 +526,18 @@ export function openSettings(app, start) {
                 save();
                 redraw();
             } });
+        // icons of databases of files
+        items.push({ heading: 'File icons' });
+        for (const k of FILE_KINDS) {
+            const cur = s.fileColors?.[k.key] ?? k.color;
+            const ico = h('span', { class: 'fk-set-ico', style: { color: cur } }, iconSvg(k.icon, 17));
+            items.push({ title: k.label, desc: 'In databases whose entries are files', icon: ico, keywords: 'file icon colour folder audio video image document',
+                control: colorButton({ value: cur, original: k.color, label: k.label, onInput: (c) => { (s.fileColors ??= {})[k.key] = c; ico.style.color = c; app.applySettings(); }, onDone: () => { if (s.fileColors && s.fileColors[k.key]?.toLowerCase() === k.color.toLowerCase())
+                        delete s.fileColors[k.key]; if (s.fileColors && !Object.keys(s.fileColors).length)
+                        delete s.fileColors; ws.saveSettings(); redraw(); } }) });
+        }
         // resets: always the last group of a tab, every button called “Reset”
-        items.push({ heading: 'Reset' }, { title: 'All colors', desc: 'Saturation, brightness, shades and contrast back to normal', control: h('button', { class: 'set-btn', disabled: !s.colorSat && !s.colorLight && !s.contrast && !s.colorShade, onclick: () => { delete s.colorSat; delete s.colorLight; delete s.contrast; delete s.colorShade; ws.saveSettings(); app.applySettings(); app.render(); redraw(); } }, 'Reset') }, { title: 'Built-in colors', desc: 'Back to the original colors; yours stay', control: h('button', { class: 'set-btn', disabled: !cfg.overrides || !Object.keys(cfg.overrides).length, onclick: () => { delete cfg.overrides; save(); redraw(); } }, 'Reset') });
+        items.push({ heading: 'Reset' }, { title: 'All colors', desc: 'Saturation, brightness, shades and contrast back to normal', control: h('button', { class: 'set-btn', disabled: !s.colorSat && !s.colorLight && !s.contrast && !s.colorShade, onclick: () => { delete s.colorSat; delete s.colorLight; delete s.contrast; delete s.colorShade; ws.saveSettings(); app.applySettings(); app.render(); redraw(); } }, 'Reset') }, { title: 'File icons', desc: 'Back to the original colors', control: h('button', { class: 'set-btn', disabled: !s.fileColors, onclick: () => { delete s.fileColors; ws.saveSettings(); app.applySettings(); redraw(); } }, 'Reset'), keywords: 'file icons reset' }, { title: 'Built-in colors', desc: 'Back to the original colors; yours stay', control: h('button', { class: 'set-btn', disabled: !cfg.overrides || !Object.keys(cfg.overrides).length, onclick: () => { delete cfg.overrides; save(); redraw(); } }, 'Reset') });
         return items;
     };
     // ----- keyboard shortcuts -----

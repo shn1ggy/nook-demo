@@ -1286,7 +1286,7 @@ export class DropboxStorage {
             if (e['.tag'] === 'file') {
                 const rel = this.rel(e.path_display ?? e.path_lower ?? '');
                 if (rel)
-                    out.push({ path: rel, size: e.size ?? 0, created: e.client_modified, modified: e.server_modified });
+                    out.push({ path: rel, size: e.size ?? 0, created: e.client_modified, modified: e.server_modified, hash: e.content_hash });
             } };
         try {
             let r = await rpc('/2/files/list_folder', { path: this.abs(dir), recursive: true, limit: 2000 });

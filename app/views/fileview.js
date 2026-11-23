@@ -13,20 +13,22 @@ export function fileInfoOnce(ctx, db) {
     void ctx.ws.whenFresh().then(() => refreshFileInfo(ctx.ws, db, (p) => ctx.assetUrl(p)));
 }
 export function go(ctx, db, rel) { setFolder(db, rel); ctx.ws.emit(); }
-/** "Musik › 2026 › Mixes": each part goes back up; only inside a subfolder */
+/** the path bar of a database of files: always there (nothing below jumps when a folder opens), like a file
+ *  manager's address bar – ↑ goes one folder up, each part of the path opens that folder */
 export function fileCrumb(ctx, db) {
     const cur = folderOf(db);
-    if (!cur)
-        return null;
-    const parts = cur.split('/');
-    const el = h('div', { class: 'fdb-crumb' });
+    const parts = cur ? cur.split('/') : [];
+    const up = parts.length ? parts.slice(0, -1).join('/') : null;
+    const el = h('div', { class: 'fdb-crumb' }, h('button', { class: 'icon-btn fdb-up', 'aria-label': 'Up one folder', title: 'Up one folder', disabled: up == null, onclick: () => { if (up != null)
+            go(ctx, db, up); } }, iconSvg('arrow-up', 14)));
     const add = (label, rel, last) => {
-        const b = h('button', { class: 'fdb-crumb-b' + (last ? ' cur' : ''), onclick: () => go(ctx, db, rel) }, label);
+        const b = h('button', { class: 'fdb-crumb-b' + (last ? ' cur' : ''), onclick: () => { if (!last)
+                go(ctx, db, rel); } }, rel === '' ? iconSvg('folder', 14) : null, label);
         if (!last)
             dropTarget(ctx, db, b, rel);
         el.append(b);
     };
-    add(db.schema.name, '', false);
+    add(db.schema.name, '', !parts.length);
     parts.forEach((p, i) => { el.append(h('span', { class: 'fdb-sep' }, svgIcon(ICONS.chevron, 11))); add(p, parts.slice(0, i + 1).join('/'), i === parts.length - 1); });
     return el;
 }
@@ -131,8 +133,9 @@ async function moveTo(ctx, db, rels, folder) {
 }
 /** the whole view takes files dropped from the computer: into the folder it shows */
 export function viewDrop(ctx, db, root) {
+    // capture: the page around the view must not take the files as well (they'd land in the page's folder)
     root.addEventListener('dragover', (e) => { if (!hasFiles(e))
-        return; e.preventDefault(); root.classList.add('fdb-drop'); });
+        return; e.preventDefault(); e.stopPropagation(); root.classList.add('fdb-drop'); });
     root.addEventListener('dragleave', (e) => { if (!root.contains(e.relatedTarget))
         root.classList.remove('fdb-drop'); });
     root.addEventListener('drop', (e) => {
@@ -140,6 +143,7 @@ export function viewDrop(ctx, db, root) {
         if (!hasFiles(e))
             return;
         e.preventDefault();
+        e.stopPropagation();
         const fs = [...(e.dataTransfer?.files ?? [])];
         if (fs.length)
             void upload(ctx, db, fs);

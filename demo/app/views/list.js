@@ -62,7 +62,7 @@ export function renderList(env, res) {
         treeOf.set(m, v);
     } return v; };
     const lead = (r, rowInfo = info) => {
-        if (!db.schema.subItems)
+        if (!db.schema.subItems && !db.schema.files)
             return null;
         // no entry here has sub-items: no empty column in front of the names
         if (!hasTree(rowInfo))

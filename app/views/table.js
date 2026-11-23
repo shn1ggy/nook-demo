@@ -187,7 +187,10 @@ export function renderTable(env, res) {
     const limit = state.limit || 100; // shown now
     const chunk = view.limit || 100; // "Load more" adds this many
     // sub-items: each entry followed by its sub-items (open ones), indented under it
-    const sub = db.schema.subItems;
+    const sub = db.schema.subItems || db.schema.files;
+    /** a database of files: when each name was last clicked (a slow second click renames) */
+    const fileClick = new Map();
+    let renameTimer;
     const info = new Map();
     const tree = (rows) => { const t = nestRows(db, rows, (id, ghost) => subOpen(`${db.key}:${id}`, ghost), true); for (const n of t)
         if (!n.add)
@@ -200,7 +203,7 @@ export function renderTable(env, res) {
         const open = subOpen(key, !!n.ghost);
         const pad = h('span', { class: 'sub-indent', style: { width: `${n.depth * 24}px` } });
         const btn = n.kids
-            ? h('button', { class: 'sub-toggle' + (open ? ' open' : ''), 'aria-label': open ? 'Hide sub-items' : `Show ${n.kids} sub-items`, title: open ? 'Hide sub-items' : `${n.kids} sub-item${n.kids === 1 ? '' : 's'}`, onclick: (e) => { e.stopPropagation(); toggleSub(key, !!n.ghost); env.redraw(); } }, h('span', { class: 'sub-tri' }))
+            ? h('button', { class: 'sub-toggle' + (open ? ' open' : ''), 'aria-label': db.schema.files ? (open ? 'Close folder' : `Show ${n.kids} items`) : open ? 'Hide sub-items' : `Show ${n.kids} sub-items`, title: db.schema.files ? (open ? 'Close folder' : `${n.kids} item${n.kids === 1 ? '' : 's'}`) : open ? 'Hide sub-items' : `${n.kids} sub-item${n.kids === 1 ? '' : 's'}`, onclick: (e) => { e.stopPropagation(); toggleSub(key, !!n.ghost); env.redraw(); } }, h('span', { class: 'sub-tri' }))
             : h('span', { class: 'sub-toggle none' });
         return h('span', { class: 'sub-lead' }, pad, btn);
     };
@@ -278,6 +281,31 @@ export function renderTable(env, res) {
             if (p.name === db.labelProp)
                 td.appendChild(h('button', { class: 'open-btn', onclick: (e) => { e.stopPropagation(); ctx.openRow(db, row); } }, 'Open'));
             // ⇧ / ⌘ / Ctrl-click selects rows (handled by the row); a plain click edits the cell
+            // a database of files, the name: a click selects, a double-click opens, a slow second click renames (as in a file manager)
+            if (db.schema.files && p.name === db.labelProp) {
+                td.addEventListener('click', (e) => {
+                    if (td.querySelector('.cell-edit') || e.target.closest('button'))
+                        return;
+                    e.stopPropagation();
+                    if (e.shiftKey || e.metaKey || e.ctrlKey) {
+                        grip.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey }));
+                        return;
+                    }
+                    const now = Date.now(), last = fileClick.get(row.id) ?? 0;
+                    if (isRowSelected(env, row.id) && now - last > 500 && now - last < 4000) {
+                        clearTimeout(renameTimer);
+                        renameTimer = setTimeout(() => startEdit(td, row, p), 450);
+                        fileClick.set(row.id, 0);
+                        return;
+                    }
+                    grip.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                    fileClick.set(row.id, now);
+                });
+                td.addEventListener('dblclick', () => { clearTimeout(renameTimer); if (td.querySelector('.cell-edit'))
+                    return; ctx.openRow(db, row); });
+                r.appendChild(td);
+                continue;
+            }
             td.addEventListener('click', (e) => { if (td.querySelector('.cell-edit'))
                 return; if (e.shiftKey || e.metaKey || e.ctrlKey) {
                 grip.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey }));

@@ -196,9 +196,7 @@ export function renderViewBlock(ctx, b, savePage, fullPage = false) {
         };
         if (db.schema.files) {
             fileInfoOnce(ctx, db);
-            const crumb = fileCrumb(ctx, db);
-            if (crumb)
-                root.appendChild(crumb);
+            root.appendChild(fileCrumb(ctx, db));
             if (!root.dataset.fdb) {
                 root.dataset.fdb = '1';
                 viewDrop(ctx, db, root);

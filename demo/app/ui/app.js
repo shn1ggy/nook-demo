@@ -38,6 +38,7 @@ import { openFind, closeFind } from './find.js';
 import { calendars } from '../sync/service.js';
 import { entryIcon, editValue, renderValue, setAssetResolver, setRowOpener, typeIcon } from '../views/cells.js';
 import { openFileEntry, fileActions } from '../views/fileview.js';
+import { FILE_KINDS } from '../filedb.js';
 import { renderViewBlock } from '../views/view.js';
 /** font presets: id, label, CSS font stack */
 export const FONTS = [
@@ -199,6 +200,9 @@ export class App {
         if (s.density === 'comfortable')
             s.density = 'compact'; // removed option
         document.documentElement.dataset.density = s.density;
+        // icons in databases of files (Settings → Colors → File icons)
+        for (const k of FILE_KINDS)
+            root.style.setProperty(`--fk-${k.key}`, s.fileColors?.[k.key] ?? k.color);
         document.documentElement.toggleAttribute('data-blur', !!s.blur);
         // Appearance → Scale
         // the system's bars (iPhone status bar, the fades at the screen edges) take the page's colour

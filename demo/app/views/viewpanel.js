@@ -1072,51 +1072,61 @@ export function openViewSettings(env, anchor, selectTab, start) {
             if ((!env.fullPage && view.simplified) || env.narrow?.())
                 rows.push({ label: 'Search', icon: menuIcon('search'), run: () => { env.state.searchOpen = true; env.redraw(); } });
             // everything that changes the whole database (every view): one page
-            const dbRows = [];
-            // "Entries are files": only while there's nothing to lose (no entries; or, once on, no files yet)
-            {
-                const sw = canSwitch(db);
-                let why = false;
-                const files = !!db.schema.files;
-                dbRows.push({ el: h('div', { class: 'fdb-toggle' + (sw.ok ? '' : ' locked') }, h('div', { class: 'fdb-toggle-row', role: 'button', tabindex: 0, onclick: async (e) => {
-                            const box = e.currentTarget.parentElement;
-                            if (!sw.ok) {
-                                why = !why;
-                                box.querySelector('.fdb-why')?.toggleAttribute('hidden', !why);
-                                return;
-                            }
+            const dbRowsOf = (nav) => {
+                const dbRows = [];
+                // "Entries are files": only while there's nothing to lose (no entries; or, once on, no files yet); drawn again in place
+                {
+                    const box = h('div', { class: 'fdb-toggle' });
+                    const draw = () => {
+                        const sw = canSwitch(db), files = !!db.schema.files;
+                        box.className = 'fdb-toggle' + (sw.ok ? '' : ' locked');
+                        const why = sw.ok ? null : h('div', { class: 'fdb-why', hidden: true }, h('b', null, sw.why === 'entries' ? 'Already has entries' : 'Holds files'), h('span', null, sw.why === 'entries' ? 'Only an empty database can hold files. To work with files, create a new database.' : 'This database holds files, so it can’t go back to entries. For entries, create a new database.'), h('button', { class: 'set-btn with-icon', onclick: (e) => { e.stopPropagation(); closePop(); env.ctx.newDatabase?.(); } }, iconSvg('plus', 13), 'New database'));
+                        box.replaceChildren(h('div', { class: 'fdb-toggle-row', role: 'button', tabindex: 0, onclick: async () => {
+                                if (!sw.ok) {
+                                    why?.toggleAttribute('hidden');
+                                    return;
+                                }
+                                env.ctx.ws.boundary();
+                                await switchFiles(env.ctx.ws, db, !files);
+                                toast(files ? 'Entries are pages again' : 'Entries are files now – New uploads files');
+                                env.redraw();
+                                if (nav)
+                                    nav.refresh();
+                                else
+                                    draw();
+                            } }, menuIcon('folder'), h('span', { class: 'fdb-toggle-label' }, 'Entries are files'), sw.ok ? null : iconSvg('lock', 13), switchControl(files, () => { }, 'Entries are files')), h('div', { class: 'fdb-desc' }, files ? `Each file in the folder ${db.dir}/files is an entry, subfolders stay folders.` : 'Each file in the database folder becomes an entry, subfolders stay folders.'), ...(why ? [why] : []));
+                    };
+                    draw();
+                    dbRows.push({ el: box }, 'sep');
+                }
+                if (!db.schema.files && props().some((p) => p.type === 'date'))
+                    dbRows.push({ label: 'Repeating entries', icon: menuIcon('repeat'), toggle: db.schema.repeat !== false, onToggle: () => { if (db.schema.repeat === false)
+                            delete db.schema.repeat;
+                        else
+                            db.schema.repeat = false; env.ctx.ws.boundary(); env.ctx.ws.saveSchema(db).then(() => env.ctx.ws.emit()); } });
+                // sub-items (as in Notion): entries nest under other entries; shown as a tree in tables
+                if (!db.schema.files)
+                    dbRows.push({ label: 'Sub-items', icon: menuIcon('list'), toggle: !!db.schema.subItems, onToggle: async () => {
                             env.ctx.ws.boundary();
-                            await switchFiles(env.ctx.ws, db, !files);
-                            toast(files ? 'Entries are pages again' : 'Entries are files now – New uploads files');
+                            if (db.schema.subItems) {
+                                delete db.schema.subItems;
+                                await env.ctx.ws.saveSchema(db);
+                                toast('Sub-items off – the “Parent item” and “Sub-items” properties stay');
+                            }
+                            else {
+                                await env.ctx.ws.enableSubItems(db);
+                                toast('Sub-items on – right-click an entry → Add sub-item');
+                            }
                             env.redraw();
-                        } }, menuIcon('folder'), h('span', { class: 'fdb-toggle-label' }, 'Entries are files'), sw.ok ? null : iconSvg('lock', 13), switchControl(files, () => { }, 'Entries are files')), h('div', { class: 'fdb-desc' }, files ? `Each file in the folder ${db.dir}/files is an entry, subfolders stay folders.` : 'Each file in the database folder becomes an entry, subfolders stay folders.'), sw.ok ? null : h('div', { class: 'fdb-why', hidden: true }, h('b', null, sw.why === 'entries' ? 'Already has entries' : 'Holds files'), h('span', null, sw.why === 'entries' ? 'Only an empty database can hold files. To work with files, create a new database.' : 'This database holds files, so it can’t go back to entries. For entries, create a new database.'), h('button', { class: 'set-btn with-icon', onclick: (e) => { e.stopPropagation(); closePop(); env.ctx.newDatabase?.(); } }, iconSvg('plus', 13), 'New database'))) }, 'sep');
-            }
-            if (!db.schema.files && props().some((p) => p.type === 'date'))
-                dbRows.push({ label: 'Repeating entries', icon: menuIcon('repeat'), toggle: db.schema.repeat !== false, onToggle: () => { if (db.schema.repeat === false)
-                        delete db.schema.repeat;
-                    else
-                        db.schema.repeat = false; env.ctx.ws.boundary(); env.ctx.ws.saveSchema(db).then(() => env.ctx.ws.emit()); } });
-            // sub-items (as in Notion): entries nest under other entries; shown as a tree in tables
-            if (!db.schema.files)
-                dbRows.push({ label: 'Sub-items', icon: menuIcon('list'), toggle: !!db.schema.subItems, onToggle: async () => {
-                        env.ctx.ws.boundary();
-                        if (db.schema.subItems) {
-                            delete db.schema.subItems;
-                            await env.ctx.ws.saveSchema(db);
-                            toast('Sub-items off – the “Parent item” and “Sub-items” properties stay');
-                        }
-                        else {
-                            await env.ctx.ws.enableSubItems(db);
-                            toast('Sub-items on – right-click an entry → Add sub-item');
-                        }
-                        env.redraw();
-                    } });
-            if (!env.ctx.isDbPage?.(db.key))
-                dbRows.push({ label: 'Open database as full page', icon: menuIcon('maximize'), run: () => env.ctx.openDb(db.key) });
-            dbRows.push({ label: 'Find duplicates…', icon: menuIcon('layers'), run: () => openDuplicates(env.ctx, db) });
-            if (env.ctx.importCsvFile && !db.schema.files)
-                dbRows.push({ label: 'Import CSV…', icon: menuIcon('arrow-down'), run: () => env.ctx.importCsvFile(db) });
-            rows.push({ section: 'Database' }, { label: db.schema.name, icon: menuIcon('database'), hint: 'All views', go: () => ({ title: db.schema.name, rows: () => [{ section: 'Applies to every view' }, ...dbRows] }) });
+                        } });
+                if (!env.ctx.isDbPage?.(db.key))
+                    dbRows.push({ label: 'Open database as full page', icon: menuIcon('maximize'), run: () => env.ctx.openDb(db.key) });
+                dbRows.push({ label: 'Find duplicates…', icon: menuIcon('layers'), run: () => openDuplicates(env.ctx, db) });
+                if (env.ctx.importCsvFile && !db.schema.files)
+                    dbRows.push({ label: 'Import CSV…', icon: menuIcon('arrow-down'), run: () => env.ctx.importCsvFile(db) });
+                return dbRows;
+            };
+            rows.push({ section: 'Database' }, { label: db.schema.name, icon: menuIcon('database'), hint: 'All views', go: () => ({ title: db.schema.name, rows: (nav) => [{ section: 'Applies to every view' }, ...dbRowsOf(nav)] }) });
             const viewControls = () => {
                 const tabRows = [
                     { label: 'Switch view', icon: menuIcon(VIEW_TYPES.find((t) => t.type === view.type)?.icon ?? 'table'), hint: view.name, go: () => ({
