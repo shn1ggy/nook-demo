@@ -64,6 +64,12 @@ export function dayConfig(db) {
             m.title = 'Media';
     return s.day;
 }
+/** phone head of a day log (Day and Trends alike): the date or period with ‹ › beside it, one quiet line
+ *  (with "Today" to jump back when you are elsewhere), then the switches – every row the same height */
+export function phoneHead(title, sub, back, toToday, prev, next, rows) {
+    const nav = (icon, lab, run) => h('button', { type: 'button', class: 'trp-nav', 'aria-label': lab, onclick: run }, iconSvg(icon, 18));
+    return h('div', { class: 'trp-head' }, h('div', { class: 'trp-top' }, title, h('span', { class: 'trp-navs' }, nav('chevron-left', 'Before', prev), nav('chevron-right', 'After', next))), h('div', { class: 'trp-sub' }, back, h('span', null, sub), toToday ? h('button', { type: 'button', class: 'trp-today', onclick: toToday }, 'Today') : null), ...rows.map((r) => h('div', { class: 'trp-row' }, r)));
+}
 // ── days ──
 const wdOf = (d) => (d + 3) % 7;
 export const weekFirst = (d) => d - ((wdOf(d) - weekStart() + 7) % 7);
@@ -192,8 +198,7 @@ export function renderDay(env) {
     // phone: the same head as Trends – the date, one quiet line, then Day | Trends and the day steps on rows of their own
     if (isPhone) {
         const back = cameFrom.get(key)?.length ? h('button', { class: 'dayv-back', onclick: () => { const b = cameFrom.get(key).pop(); go(b); } }, iconSvg('chevron-left', 12), (() => { const st0 = cameFrom.get(key); const b = label(st0[st0.length - 1]); return `${b.wd}, ${b.day} ${b.month.slice(0, 3)}`; })()) : null;
-        const stepBtn = (lab, run, on = false) => h('button', { type: 'button', class: 'trp-step' + (on ? ' on' : ''), onclick: run }, lab);
-        root.append(h('div', { class: 'trp-head' }, title, h('div', { class: 'trp-sub' }, back, [rel, items.length ? `${items.length} ${items.length === 1 ? 'entry' : 'entries'}` : 'No entries'].filter(Boolean).join(' · ')), h('div', { class: 'trp-row' }, modeSeg()), h('div', { class: 'trp-row trp-steps' }, stepBtn(iconSvg('chevron-left', 16), () => go(day - 1)), stepBtn('Today', () => go(today()), day === today()), stepBtn(iconSvg('chevron-right', 16), () => go(day + 1)))));
+        root.append(phoneHead(title, [rel, items.length ? `${items.length} ${items.length === 1 ? 'entry' : 'entries'}` : 'No entries'].filter(Boolean).join(' · '), back, day === today() ? null : () => go(today()), () => go(day - 1), () => go(day + 1), [modeSeg()]));
     }
     else
         root.append(h('div', { class: 'cal-head dayv-head' }, h('div', { class: 'dayv-date' }, title, h('div', { class: 'dayv-meta' }, modeSeg(), cameFrom.get(key)?.length ? h('button', { class: 'dayv-back', title: 'Back to the day you came from', onclick: () => { const b = cameFrom.get(key).pop(); go(b); } }, iconSvg('chevron-left', 12), (() => { const st0 = cameFrom.get(key); const b = label(st0[st0.length - 1]); return `${b.wd}, ${b.day} ${b.month.slice(0, 3)}${b.year !== label(day).year ? ` ${b.year}` : ''}`; })()) : null, ...[rel, items.length ? `${items.length} ${items.length === 1 ? 'entry' : 'entries'}` : 'No entries'].filter(Boolean).map((t, i) => h('span', { class: i ? 'sepd' : '' }, t)))), h('div', { class: 'dayv-nav' }, modeSeg(), h('span', { class: 'cal-head-gap' }), ...stepNav({ unit: 'day', prev: () => go(day - 1), today: () => go(today()), next: () => go(day + 1) }))));

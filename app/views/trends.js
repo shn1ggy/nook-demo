@@ -5,7 +5,7 @@ import { segmented, dayNum, isoFromDay, fmtNumber, h, shortId, svgIcon, ICONS } 
 import { zoomPicker, stepNav } from '../ui/zoomcal.js';
 import { iconSvg } from '../ui/icons.js';
 import { menu, prompt, menuIcon } from '../ui/pop.js';
-import { dayConfig, habitColor, dayIndex, dayOfValue, label, num, srcColor, today, weekFirst } from './days.js';
+import { phoneHead, dayConfig, habitColor, dayIndex, dayOfValue, label, num, srcColor, today, weekFirst } from './days.js';
 const TREND_KINDS = [
     { kind: 'figure', label: 'Figure', icon: 'hash', desc: 'One number, compared to before' },
     { kind: 'line', label: 'Line', icon: 'chart-bar', desc: 'A value day by day' },
@@ -104,8 +104,10 @@ export function renderTrends(env, mode) {
     const tbtn = h('button', { class: 'dayv-titlebtn', 'aria-label': 'Pick a period', onclick: () => zoomPicker(tbtn, st.unit === 'week' ? { iso: isoFromDay(from), onDay: (iso) => { st.day = dayNum(iso); env.redraw(); } } : { iso: isoFromDay(from), onMonth: (yy, mm) => { st.day = dayNum(`${yy}-${String(mm).padStart(2, '0')}-01`); env.redraw(); } }) }, h('span', { class: 'cal-title large' }, h('span', { class: 'cal-t-main' }, title)), iconSvg('chevron-down', 16));
     const isPhone = document.documentElement.classList.contains('phone');
     // phone: the month, a line saying what's in it, then each switch on a row of its own – nothing runs off the screen
-    if (isPhone)
-        root.append(h('div', { class: 'trp-head' }, tbtn, h('div', { class: 'trp-sub' }, `${n} days · ${recorded} recorded`), mode ? h('div', { class: 'trp-row' }, mode()) : null, h('div', { class: 'trp-row' }, unitSeg())));
+    if (isPhone) {
+        const cur = range(today())[0] === from;
+        root.append(phoneHead(tbtn, `${n} days · ${recorded} recorded`, null, cur ? null : () => { st.day = today(); env.redraw(); }, () => step(-1), () => step(1), [...(mode ? [mode()] : []), unitSeg()]));
+    }
     else
         root.append(h('div', { class: 'cal-head dayv-head' }, h('div', { class: 'dayv-date' }, tbtn, h('div', { class: 'dayv-meta' }, mode ? mode() : null, unitSeg(), h('span', null, `${n} days`), h('span', { class: 'sepd' }, `${recorded} recorded`))), h('div', { class: 'dayv-nav' }, unitSeg(), mode ? mode() : null, h('span', { class: 'cal-head-gap' }), ...stepNav({ unit: st.unit, prev: () => step(-1), today: () => { st.day = today(); env.redraw(); }, next: () => step(1) }))));
     const avg = (xs) => xs.length ? xs.reduce((s0, x) => s0 + x, 0) / xs.length : null;
