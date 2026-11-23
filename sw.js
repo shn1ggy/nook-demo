@@ -3,7 +3,7 @@
 // is asked first, the kept copy is used only when it doesn't answer in time.
 const CACHE = 'nook-app';
 // changes with every build (scripts/preload.mjs), so a new version is installed and kept completely
-const BUILD = '3982e18f31be';
+const BUILD = '13035e93c9a1';
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   // every file of the app at once (files.json), not only the ones a visit happened to load: parts that load

@@ -25,7 +25,7 @@ const audio = document.createElement('audio');
 audio.preload = 'auto';
 audio.setAttribute('playsinline', '');
 // in the page (hidden): the iPhone's lock screen and Control Center follow an element that is part of the page
-audio.style.display = 'none';
+audio.style.cssText = 'position:fixed;width:1px;height:1px;left:-10px;bottom:0;opacity:0;pointer-events:none';
 document.body.append(audio);
 let ctx = null;
 let queue = [];
@@ -152,6 +152,8 @@ for (const ev of ['play', 'pause', 'ratechange'])
     }
     catch { /* fine */ } });
 audio.addEventListener('loadedmetadata', () => { emit('state'); position(); });
+// iOS takes the lock-screen details once the sound really plays: (again) then
+audio.addEventListener('playing', () => { session(); position(); });
 audio.addEventListener('seeked', () => position());
 /** the lock screen and Control Center: title, play / pause, previous / next, seeking */
 function session() {
@@ -159,7 +161,7 @@ function session() {
     if (!m || !it)
         return;
     try {
-        m.metadata = new MediaMetadata({ title: titleOf(it.path), artist: it.place || 'Nook', album: (it.place ?? '').split(' › ').pop() ?? '', artwork: [{ src: new URL('icon-512.png', location.href).href, sizes: '512x512', type: 'image/png' }] });
+        m.metadata = new MediaMetadata({ title: titleOf(it.path), artist: it.place || 'Nook', album: (it.place ?? '').split(' › ').pop() ?? '', artwork: [{ src: new URL('apple-touch-icon.png', location.href).href, sizes: '180x180', type: 'image/png' }, { src: new URL('icon-512.png', location.href).href, sizes: '512x512', type: 'image/png' }] });
         m.setActionHandler('play', () => { void audio.play(); });
         m.setActionHandler('pause', () => audio.pause());
         m.setActionHandler('previoustrack', () => { stepSong(-1); });
@@ -419,7 +421,7 @@ export function mountPhoneBar(nav, onPlus) {
     pill.classList.add('tb-face', 'tb-tabs');
     const t = h('span', { class: 'tbp-t' }), sub = h('small', { class: 'tbp-s' });
     const pp = h('button', { class: 'tbp-b tbp-pp', 'aria-label': 'Play or pause', onclick: (e) => { e.stopPropagation(); togglePlay(); } });
-    const face = h('div', { class: 'tab-pill tb-face tb-player' }, h('button', { class: 'tbp-b tbp-back', 'aria-label': 'Back to the tabs', onclick: (e) => { e.stopPropagation(); flip(false); } }, pi('rollDown', 17)), h('span', { class: 'tbp-c' }, pi('music', 18)), h('span', { class: 'tbp-tx' }, t, sub), pp, h('button', { class: 'tbp-b', 'aria-label': 'Next', onclick: (e) => { e.stopPropagation(); stepSong(1); } }, pi('next', 22)));
+    const face = h('div', { class: 'tab-pill tb-face tb-player' }, h('button', { class: 'tbp-b tbp-back', 'aria-label': 'Back to the tabs', onclick: (e) => { e.stopPropagation(); flip(false); } }, pi('down', 18)), h('span', { class: 'tbp-c' }, pi('music', 18)), h('span', { class: 'tbp-tx' }, t, sub), pp, h('button', { class: 'tbp-b', 'aria-label': 'Next', onclick: (e) => { e.stopPropagation(); stepSong(1); } }, pi('next', 22)));
     face.addEventListener('click', () => openFullPlayer());
     // hold: open, back to the tabs, stop
     let timer = 0;
@@ -429,14 +431,12 @@ export function mountPhoneBar(nav, onPlus) {
     else
         e.preventDefault(); });
     face.addEventListener('touchmove', () => clearTimeout(timer), { passive: true });
-    // swipe the bar: up → player, down → tabs
+    // swipe up on the bar: the other side (a swipe down belongs to the phone itself)
     let y0 = null;
     stage.addEventListener('touchstart', (e) => { y0 = e.touches[0].clientY; }, { passive: true });
     stage.addEventListener('touchend', (e) => { if (y0 == null)
         return; const d = e.changedTouches[0].clientY - y0; y0 = null; if (d < -18)
-        flip(true);
-    else if (d > 18)
-        flip(false); });
+        flip(!flipped); });
     stage.append(pill, face);
     const plus = fab.innerHTML;
     fab.addEventListener('click', (e) => { if (nowPlaying() && !flipped) {
