@@ -161,7 +161,7 @@ const P = {
     music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
 };
 const pi = (k, n = 21) => { const t = document.createElement('template'); t.innerHTML = `<svg viewBox="0 0 24 24" width="${n}" height="${n}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P[k]}</svg>`; return t.content.firstChild; };
-async function shareMedia(ctx, p) {
+export async function shareMedia(ctx, p) {
     try {
         const b = await blobOf(ctx, p);
         const f = new File([b], fileName(p), { type: b.type || (mediaType(p) === 'pdf' ? 'application/pdf' : '') });

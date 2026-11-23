@@ -1,4 +1,8 @@
-import { h, svgIcon, ICONS } from '../util.js';
+import { nestRows } from '../workspace.js';
+import { subOpen, toggleSub, selectable, selectedRows } from './rowselect.js';
+import { entryIcon, renderValue } from './cells.js';
+import { dirOf } from '../layout.js';
+import { h, svgIcon, ICONS, fmtNumber as _fmt } from '../util.js';
 import { iconSvg } from '../ui/icons.js';
 import { confirmDialog, menu, menuIcon, prompt, toast } from '../ui/pop.js';
 import { folderOf, setFolder, uploadFiles, newFolder, refreshFileInfo, parentOf, moveInside, buildRows, saveSidecar, deleteFileRows } from '../filedb.js';
@@ -106,7 +110,7 @@ export function dropTarget(ctx, db, el, rel) {
             await upload(ctx, db, fs, rel);
     }, on);
 }
-async function moveTo(ctx, db, rels, folder) {
+export async function moveTo(ctx, db, rels, folder) {
     let n = 0;
     for (const rel of rels) {
         if (!rel || rel === folder || folder.startsWith(rel + '/') || (rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : '') === folder)
@@ -164,7 +168,10 @@ export function openFileEntry(ctx, db, row) {
 /** in an entry's window: what to do with the file */
 export function fileActions(ctx, row) {
     const btn = (icon, label, run) => h('button', { class: 'set-btn with-icon', onclick: run }, iconSvg(icon, 14), label);
-    return h('div', { class: 'fdb-actions' }, row.isDir ? null : btn('download', 'Download', () => void import('../ui/viewer.js').then((m) => m.downloadMedia(ctx, row.file))), ctx.ws.storage.reveal ? btn('folder', ctx.ws.storage.remote ? 'Show in Dropbox' : 'Show in folder', () => void ctx.ws.storage.reveal(row.file).catch((e) => toast(e.message))) : null);
+    const remote = ctx.ws.storage.remote;
+    return h('div', { class: 'fdb-actions' }, row.isDir ? null : phone()
+        ? btn('upload', 'Share or save', () => void import('../ui/viewer.js').then((m) => m.shareMedia(ctx, row.file)))
+        : btn('download', 'Download', () => void import('../ui/viewer.js').then((m) => m.downloadMedia(ctx, row.file))), ctx.ws.storage.reveal ? btn('folder', phone() && remote ? 'Dropbox' : remote ? 'Show in Dropbox' : 'Show in folder', () => void ctx.ws.storage.reveal(row.file).catch((e) => toast(e.message))) : null);
 }
 /** rename where there's no name cell to type in (gallery, menus): a small field */
 export function renameByPrompt(ctx, db, row, at) {
@@ -178,9 +185,22 @@ export function renameByPrompt(ctx, db, row, at) {
         ctx.ws.emit();
     });
 }
-/** right-click on a file or folder */
+const phone = () => document.documentElement.classList.contains('phone');
+/** "Move to folder…": every folder of the database (not into itself) */
+export function moveToFolderMenu(ctx, db, rows, at) {
+    const blocked = (rel) => rows.some((r) => r.isDir && (rel === r.rel || rel.startsWith(r.rel + '/')));
+    const dirs = db.rows.filter((r) => r.isDir && !blocked(r.rel)).map((r) => r.rel).sort((a, b) => a.localeCompare(b));
+    menu(at, [
+        { section: 'Move to' },
+        { label: db.schema.name, icon: menuIcon('folder'), run: () => void moveTo(ctx, db, rows.map((r) => r.rel), '') },
+        ...dirs.map((d) => ({ label: d.split('/').join(' › '), icon: menuIcon('folder'), run: () => void moveTo(ctx, db, rows.map((r) => r.rel), d) })),
+    ], { filter: dirs.length > 8 });
+}
+/** right-click (long-press on the phone) on a file or folder; with several selected: what applies to all */
 export function fileRowMenu(ctx, db, row, many, at, after) {
-    const one = many.length <= 1;
+    const list = many.length ? many : [row];
+    const one = list.length === 1;
+    const remote = ctx.ws.storage.remote;
     const rename = () => {
         const el = document.querySelector(`.dbview .selectable[data-row="${CSS.escape(row.id)}"]`);
         if (el)
@@ -188,30 +208,37 @@ export function fileRowMenu(ctx, db, row, many, at, after) {
         else
             renameByPrompt(ctx, db, row, at);
     };
+    const share = async () => { const v = await import('../ui/viewer.js'); for (const r of list.filter((x) => !x.isDir))
+        await v.shareMedia(ctx, r.file); };
     menu(at, [
+        { section: one ? baseOf(row.rel ?? '') : `${list.length} items` },
         ...(one ? [
             { label: 'Open', icon: menuIcon(row.isDir ? 'folder' : 'eye'), run: () => ctx.openRow(db, row) },
             ...(row.isDir ? [] : [{ label: 'Info', icon: menuIcon('info'), run: () => ctx.openRow(db, row, { info: true }) }]),
-            { label: 'Rename', icon: menuIcon('pencil'), hint: 'F2', run: rename },
-            ...(row.isDir ? [] : [{ label: 'Download', icon: menuIcon('download'), run: () => void import('../ui/viewer.js').then((m) => m.downloadMedia(ctx, row.file)) }]),
-            ...(ctx.ws.storage.reveal ? [{ label: ctx.ws.storage.remote ? 'Show in Dropbox' : 'Show in folder', icon: menuIcon('folder'), run: () => void ctx.ws.storage.reveal(row.file).catch((e) => toast(e.message)) }] : []),
-            'sep',
+            { label: 'Rename', icon: menuIcon('pencil'), hint: phone() ? undefined : 'F2', run: rename },
         ] : []),
-        { label: one ? 'Move to Unused files' : `Move ${many.length} items to Unused files`, icon: menuIcon('trash'), danger: true, run: async () => {
+        { label: 'Move to folder…', icon: menuIcon('folder'), run: () => moveToFolderMenu(ctx, db, list, at) },
+        ...(list.some((r) => !r.isDir) ? [phone()
+                ? { label: 'Share or save', icon: menuIcon('upload'), run: () => void share() }
+                : { label: one ? 'Download' : 'Download all', icon: menuIcon('download'), run: () => void import('../ui/viewer.js').then(async (m) => { for (const r of list.filter((x) => !x.isDir))
+                        await m.downloadMedia(ctx, r.file); }) }] : []),
+        ...(one && !phone() && ctx.ws.storage.reveal ? [{ label: remote ? 'Show in Dropbox' : 'Show in folder', icon: menuIcon('folder'), run: () => void ctx.ws.storage.reveal(row.file).catch((e) => toast(e.message)) }] : []),
+        ...(one && document.documentElement.classList.contains('touch') ? [{ label: 'Select', icon: menuIcon('check-square'), run: () => void import('./rowselect.js').then((m) => m.startSelectMode(row.id)) }] : []),
+        'sep',
+        { label: 'Move to Unused files', icon: menuIcon('archive'), run: async () => {
                 ctx.ws.boundary();
-                for (const r of many.length ? many : [row])
+                for (const r of list)
                     await ctx.ws.deleteRow(db, r);
-                toast(one ? `“${baseOf(row.rel ?? '')}” is in Unused files` : `${many.length} items are in Unused files`);
+                toast(one ? `“${baseOf(row.rel ?? '')}” is in Unused files` : `${list.length} items are in Unused files`);
                 after();
             } },
         { label: 'Delete permanently…', icon: menuIcon('trash'), danger: true, run: () => {
-                const list = many.length ? many : [row];
-                const what = list.length === 1 ? `“${baseOf(row.rel ?? '')}”` : `${list.length} items`;
+                const what = one ? `“${baseOf(row.rel ?? '')}”` : `${list.length} items`;
                 confirmDialog({ title: `Delete ${what} permanently?`, lines: [list.some((r) => r.isDir) ? 'Folders go with everything in them.' : 'The file is deleted from the workspace folder.', 'This can’t be undone in Nook (Dropbox keeps deleted files for a while).'], ok: 'Delete permanently', danger: true, onOk: async () => {
                         try {
                             await deleteFileRows(ctx.ws, db, list);
                             ctx.ws.emit();
-                            toast(`${list.length === 1 ? what : `${list.length} items`} deleted`);
+                            toast(`${what} deleted`);
                         }
                         catch (e) {
                             toast(`Could not delete: ${e.message}`);
@@ -220,5 +247,57 @@ export function fileRowMenu(ctx, db, row, many, at, after) {
                     } });
             } },
     ]);
+}
+/** the phone's ＋: what to add to the folder shown */
+export function addMenu(ctx, db, at) {
+    const f = folderOf(db);
+    const pick = (o) => {
+        const input = h('input', { type: 'file', multiple: !o.capture, accept: o.accept, style: { display: 'none' } });
+        if (o.capture)
+            input.setAttribute('capture', 'environment');
+        input.addEventListener('change', () => { const fs = [...(input.files ?? [])]; input.remove(); if (fs.length)
+            void upload(ctx, db, fs); });
+        document.body.append(input);
+        input.click();
+    };
+    menu(at, [
+        { section: `Add to ${f ? baseOf(f) : db.schema.name}` },
+        { label: 'Files', icon: menuIcon('upload'), hint: 'iCloud, Dropbox', run: () => pick({}) },
+        { label: 'Photos & videos', icon: menuIcon('image'), run: () => pick({ accept: 'image/*,video/*' }) },
+        { label: 'Take photo or video', icon: menuIcon('camera'), run: () => pick({ accept: 'image/*,video/*', capture: true }) },
+        { label: 'New folder', icon: menuIcon('folder-plus'), run: () => askNewFolder(ctx, db, at) },
+    ]);
+}
+/** the phone: a database of files as a list – folders open in place (▸), a tap opens, holding gives the menu */
+export function renderFilePhone(env, rows) {
+    const { ctx, db } = env;
+    const list = h('div', { class: 'fdb-plist' });
+    const items = nestRows(db, rows, (id, ghost) => subOpen(`${db.key}:${id}`, ghost));
+    for (const it of items) {
+        const r = it.row;
+        const key = `${db.key}:${r.id}`;
+        const open = it.kids ? subOpen(key, !!it.ghost) : false;
+        const tri = r.isDir ? h('button', { class: 'fdb-tri' + (open ? ' open' : ''), 'aria-label': open ? 'Close folder' : 'Show what’s inside', onclick: (e) => { e.stopPropagation(); toggleSub(key, !!it.ghost); env.redraw(); } }, it.kids ? iconSvg('chevron-right', 13) : null) : h('span', { class: 'fdb-tri none' });
+        const tags = db.schema.properties.filter((p) => !p.file && p.type !== 'title').flatMap((p) => { const v = r.values[p.name]; return v == null || v === '' || (Array.isArray(v) && !v.length) ? [] : [renderValue(db, p, v)]; });
+        const len = db.schema.properties.find((p) => p.file === 'length'), size = db.schema.properties.find((p) => p.file === 'size');
+        const n = r.isDir ? db.rows.filter((x) => x.rel && dirOf(x.rel) === r.rel).length : 0;
+        const facts = r.isDir ? `${n} item${n === 1 ? '' : 's'}` : [len && r.values[len.name] != null ? _fmt(Number(r.values[len.name]), 'duration') : '', size && r.values[size.name] != null ? _fmt(Number(r.values[size.name]), 'bytes') : ''].filter(Boolean).join(' · ');
+        const el = h('div', { class: 'fdb-li', style: { paddingLeft: `${14 + it.depth * 22}px` } }, tri, entryIcon(r, 20), h('div', { class: 'fdb-tx' }, h('div', { class: 'fdb-name' }, baseOf(r.rel ?? '')), h('div', { class: 'fdb-sub' }, ...tags, facts ? h('span', null, facts) : null)));
+        selectable(el, env, r, () => ctx.openRow(db, r));
+        el.addEventListener('nook-rename', () => renameByPrompt(ctx, db, r, el));
+        el.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); const s = selectedRows(); fileRowMenu(ctx, db, r, s && s.env.db === db && s.rows.includes(r) ? s.rows : [r], el, () => env.redraw()); });
+        // hold: the menu (as a right-click)
+        let t, sx = 0, sy = 0;
+        el.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; t = setTimeout(() => { el.classList.add('held'); el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })); setTimeout(() => el.classList.remove('held'), 300); }, 480); }, { passive: true });
+        el.addEventListener('touchmove', (e) => { if (Math.hypot(e.touches[0].clientX - sx, e.touches[0].clientY - sy) > 8)
+            clearTimeout(t); }, { passive: true });
+        el.addEventListener('touchend', () => clearTimeout(t));
+        if (r.isDir)
+            dropTarget(ctx, db, el, r.rel);
+        list.append(el);
+    }
+    if (!items.length)
+        list.append(h('div', { class: 'fdb-empty' }, 'Nothing here yet – ＋ adds files'));
+    return list;
 }
 //# sourceMappingURL=fileview.js.map

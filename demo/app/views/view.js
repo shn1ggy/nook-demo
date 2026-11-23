@@ -19,7 +19,7 @@ import { renderDay } from './days.js';
 import { renderTrends } from './trends.js';
 import { openViewSettings, opsFor, VIEW_TYPES, describeRule } from './viewpanel.js';
 import { iconSvg, renderIcon } from '../ui/icons.js';
-import { pickUpload, fileInfoOnce, fileCrumb, viewDrop, newFileButton } from './fileview.js';
+import { pickUpload, fileInfoOnce, fileCrumb, viewDrop, newFileButton, renderFilePhone, addMenu } from './fileview.js';
 const states = new Map();
 const lastView = new Map();
 function viewState(key) {
@@ -119,7 +119,10 @@ export function renderViewBlock(ctx, b, savePage, fullPage = false) {
             newRow: async (extra = {}, open = false, template) => {
                 // a database of files: New uploads files
                 if (db.schema.files) {
-                    pickUpload(ctx, db);
+                    if (onPhone())
+                        addMenu(ctx, db, root.querySelector('.vbar') ?? root);
+                    else
+                        pickUpload(ctx, db);
                     return;
                 }
                 const values = defaultsFor(db, view, state.offset);
@@ -206,7 +209,7 @@ export function renderViewBlock(ctx, b, savePage, fullPage = false) {
         switch (view.type) {
             case 'daylog':
             case 'table':
-                root.appendChild(renderTable(env, res));
+                root.appendChild(db.schema.files && onPhone() ? renderFilePhone(env, res.rows) : renderTable(env, res));
                 break;
             case 'calendar':
                 root.appendChild(renderCalendar(env));
@@ -215,7 +218,7 @@ export function renderViewBlock(ctx, b, savePage, fullPage = false) {
                 root.appendChild(renderBoard(env, res));
                 break;
             case 'list':
-                root.appendChild(renderList(env, res));
+                root.appendChild(db.schema.files && onPhone() ? renderFilePhone(env, res.rows) : renderList(env, res));
                 break;
             case 'chart':
                 root.appendChild(renderChart(env, res));
