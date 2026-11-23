@@ -4975,3 +4975,12 @@ html.phone .dp-mon.today { color: var(--accent); font-weight: 650; }
 html.phone .dp-mon.on, html.phone .dp-mon.on.today { background: var(--accent); color: #fff; font-weight: 650; outline: 0; }
 html.phone .dp-mon small { font-size: 11.5px; }
 html.phone .dp-mon.on small { color: rgba(255, 255, 255, .8); }
+/* phone pop-ups: no ✕ (they close by swiping down or tapping outside) */
+html.phone .pop .mclose, html.phone .pop .sheet-close { display: none !important; }
+/* phone pop-ups: one title style everywhere – the one of the page ⋯ menu */
+html.phone .pop .mhead { font-size: 13px !important; font-weight: 600 !important; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-muted) !important; padding: 4px 12px 4px 16px !important; min-height: 0; }
+html.phone .pop .mhead.vpanel-head { margin-bottom: 4px; }
+/* phone panels that scroll inside (view options …): the room above the bottom bar goes on the scrolling list */
+html.phone:not(.kb-open) .pop.pop-panel { padding-bottom: 0 !important; }
+html.phone:not(.kb-open) .pop.pop-panel .vpanel-rows { padding-bottom: calc(var(--bar-gap) + 76px) !important; }
+html.phone .overlay:not(.phone-page) .sheet-close { visibility: hidden !important; pointer-events: none !important; }
