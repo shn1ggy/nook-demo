@@ -5194,3 +5194,7 @@ html.phone .trp-row :is(.seg, .segmented) > * { height: 34px; display: flex; ali
 html.phone .trp-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 !important; margin: 0 !important; }
 html.phone .trp-top .trp-navs { display: flex; align-items: center; gap: 2px; flex: none; }
 html.phone .trp-row .dayv-combo { width: 100%; }
+/* the day log switch: its own height from its buttons (3px around 34px), buttons centred – no space left under them */
+html.phone .trp-row > * { height: auto !important; }
+html.phone .trp-row :is(.seg, .segmented) { height: auto !important; min-height: 0 !important; align-items: center !important; padding: 3px !important; box-sizing: border-box; }
+html.phone .trp-row :is(.seg, .segmented) > * { height: 34px !important; margin: 0 !important; }
