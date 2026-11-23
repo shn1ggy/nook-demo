@@ -5040,3 +5040,8 @@ html.phone .ogb-days { margin: 0; }
 html.phone .ogb-other { margin-top: 8px; }
 html.phone .ogb-seg { margin-top: 0; }
 html.phone .ogb-foot { padding-top: 22px; }
+/* new reminder: title and note as two clean rows of one card, same left edge (no browser padding) */
+html.phone .ogb-card { padding: 0 16px !important; }
+html.phone .ogb .own-title, html.phone .ogb .own-notes { -webkit-appearance: none; appearance: none; border-radius: 0; box-shadow: none; text-indent: 0; margin: 0 !important; padding-left: 0 !important; padding-right: 0 !important; width: 100%; display: block; }
+html.phone .ogb .own-title { padding-top: 14px !important; padding-bottom: 12px !important; line-height: 24px !important; height: auto !important; border-bottom: 1px solid color-mix(in srgb, var(--fg) 8%, transparent) !important; }
+html.phone .ogb .own-notes { padding-top: 12px !important; padding-bottom: 14px !important; line-height: 21px !important; min-height: 47px !important; overflow: hidden; }

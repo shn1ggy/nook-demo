@@ -512,7 +512,7 @@ export class Notifications {
         drawRep();
         const notes = h('textarea', { class: 'own-notes', rows: 2, placeholder: 'Notes …' });
         notes.value = o.notes ?? '';
-        const grow = () => { notes.style.height = 'auto'; notes.style.height = `${notes.scrollHeight}px`; };
+        const grow = () => { notes.style.setProperty('height', 'auto', 'important'); notes.style.setProperty('height', `${Math.max(notes.scrollHeight, phone() ? 47 : 0)}px`, 'important'); };
         notes.addEventListener('input', grow);
         setTimeout(grow, 0);
         const save = () => {
