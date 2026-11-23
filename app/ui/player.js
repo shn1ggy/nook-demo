@@ -4,7 +4,7 @@
 // switches, the bar turns like a cube) and on the desktop as a small pill in the top bar.
 import { h } from '../util.js';
 import { closePop, menu, menuIcon, toast } from './pop.js';
-import { P, pi, fileName, blobOf, downloadMedia } from './viewer.js';
+import { P, pi, fileName, downloadMedia } from './viewer.js';
 void P;
 const phone = () => document.documentElement.classList.contains('phone');
 const dur = (s) => `${Math.floor((s || 0) / 60)}:${String(Math.floor((s || 0) % 60)).padStart(2, '0')}`;
@@ -31,6 +31,8 @@ let ctx = null;
 let queue = [];
 let cur = -1;
 let order = [];
+/** the playing song as a file (for Share), once fetched */
+let songFile = null;
 const listeners = new Set();
 const emit = (kind) => listeners.forEach((f) => f(kind));
 export const onPlayer = (f) => { listeners.add(f); return () => listeners.delete(f); };
@@ -61,6 +63,14 @@ async function load(k, play = true) {
         audio.src = u;
         audio.playbackRate = playMode.rate;
         session();
+        // the song as a file, fetched alongside: Share can then hand it over right on the tap (the iPhone allows
+        // sharing only in the moment of a tap – waiting for a download first was why it did nothing)
+        songFile = null;
+        const ext = (fileName(it.path).split('.').pop() ?? '').toLowerCase();
+        void fetch(u).then((r) => (r.ok ? r.blob() : null)).then((b) => { if (b && queue[cur] === it) {
+            songFile = new File([b], fileName(it.path), { type: MIME[ext] ?? 'application/octet-stream' });
+            emit('state');
+        } }).catch(() => { });
         if (play)
             await audio.play().catch(() => { });
     }
@@ -199,31 +209,22 @@ function speedChip() {
 /** Share: the iPhone shares only right on the tap – the first tap fetches the song, the second shares it */
 const MIME = { mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac', wav: 'audio/wav', aif: 'audio/aiff', aiff: 'audio/aiff', flac: 'audio/flac', ogg: 'audio/ogg', opus: 'audio/ogg' };
 function shareChip(it) {
-    let ready = null;
-    return chip('share', 'Share', (b) => {
-        const lab = b.lastElementChild;
-        if (ready) {
-            const f = ready;
-            void navigator.share({ files: [f] }).catch((e) => { if (e.name !== 'AbortError') {
-                toast('This phone can’t share the file – downloading it instead');
-                void downloadMedia(ctx, it.path);
-            } });
-            return;
-        }
+    const b = chip('share', 'Share', () => {
         if (!ctx)
             return;
         if (!navigator.share) {
             void downloadMedia(ctx, it.path);
             return;
         }
-        lab.textContent = 'Preparing…';
-        void blobOf(ctx, it.path).then((bl) => {
-            const ext = (fileName(it.path).split('.').pop() ?? '').toLowerCase();
-            ready = new File([bl], fileName(it.path), { type: MIME[ext] ?? 'application/octet-stream' });
-            lab.textContent = 'Tap to share';
-            b.classList.add('on');
-        }).catch((e) => { lab.textContent = 'Share'; toast(e.message); });
+        const f = nowPlaying() === it ? songFile : null;
+        if (!f) {
+            toast('The song is still loading – tap Share again in a moment', 2500);
+            return;
+        }
+        void navigator.share({ files: [f] }).catch((e) => { if (e.name !== 'AbortError')
+            toast(`Could not share: ${e.message}`, 4000); });
     });
+    return b;
 }
 const upNextOrder = () => { if (!order.includes(cur))
     makeOrder(); const from = order.indexOf(cur); return [...order.slice(from), ...order.slice(0, from)]; };
