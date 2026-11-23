@@ -5199,3 +5199,9 @@ html.phone .trp-row > * { height: auto !important; }
 html.phone .trp-row :is(.seg, .segmented) { height: auto !important; min-height: 0 !important; align-items: center !important; padding: 3px !important; box-sizing: border-box; }
 html.phone .trp-row :is(.seg, .segmented) > * { height: 34px !important; margin: 0 !important; }
 html.phone .trv .trgrid { margin-top: 0 !important; }
+/* panels: the room above the bar only once (on the sheet), not again on its list */
+html.phone:not(.kb-open) .pop.pop-panel .vpanel-rows { padding-bottom: 0 !important; }
+/* a labelled field in a panel (Name, Limit …): label and field apart, field as tall as a row */
+html.phone .panel-num-row { display: flex; align-items: center; gap: 14px; padding: 6px 12px !important; }
+html.phone .panel-num-row > span { flex: none; }
+html.phone .panel-num-row .set-input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; font-size: 16px; border-radius: 12px; }
