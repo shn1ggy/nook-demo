@@ -5064,3 +5064,4 @@ html.phone :is(.ogb-time, .ogb-rep).on { font-weight: 600; }
 html.phone .ogb-rep { color: var(--fg-muted); }
 html.phone .ogb-rep.on { color: var(--fg); }
 html.phone .ogb-save { font-size: 16px; font-weight: 500; }
+html.phone .tab-bell { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }

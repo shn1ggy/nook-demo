@@ -1895,19 +1895,9 @@ export class App {
         const home = this.ws.homePage();
         const onHome = !this.libraryOn && this.route?.kind === 'page' && this.route.id === home?.id;
         const tab = (label, icon, run, on = false) => h('button', { class: 'tab tab-' + label.toLowerCase() + (on ? ' on' : ''), onclick: () => {
-                // Notifications, tapped twice quickly: straight to a new reminder (on the Notifications page)
-                if (label === 'Notifications') {
-                    const now = Date.now();
-                    if (now - this.bellTap < 380) {
-                        this.bellTap = 0;
-                        if (!this.notes.panelOpen)
-                            run();
-                        if (!document.querySelector('.own-window'))
-                            this.notes.ownForm();
-                        return;
-                    }
-                    this.bellTap = now;
-                }
+                // a long press on Notifications already opened a new reminder: this tap is not a tab change
+                if (label === 'Notifications' && Date.now() - this.bellTap < 700)
+                    return;
                 // Settings and Notifications are pages of their own (phone): a tab shows one page – tapping the page
                 // that is open stays on it, any other tab leaves it at once (no closing slide over the bar)
                 // windows open on top (an entry, a page …) go first – the bar stays above them, so a tab means leaving them
@@ -1971,7 +1961,23 @@ export class App {
             this.libraryAt = null;
             this.pagesQuery = '';
             this.render();
-        }, this.libraryOn), (() => { const b = tab('Notifications', 'bell', () => this.notes.open()); b.setAttribute('aria-label', 'Notifications'); b.classList.add('nb-host', 'tab-bell'); b.appendChild(nbDot()); return b; })(), tab('Settings', 'settings', () => this.settingsDialog())), add);
+        }, this.libraryOn), (() => {
+            const b = tab('Notifications', 'bell', () => this.notes.open());
+            b.setAttribute('aria-label', 'Notifications');
+            // long press: a new reminder right where you are (the page you're on stays)
+            let timer = 0, sx = 0, sy = 0;
+            const stop = () => { clearTimeout(timer); timer = 0; };
+            b.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; stop(); timer = window.setTimeout(() => { timer = 0; this.bellTap = Date.now(); navigator.vibrate?.(10); closeSheets(); closePop(); this.notes.ownForm(); }, 450); });
+            b.addEventListener('pointermove', (e) => { if (Math.hypot(e.clientX - sx, e.clientY - sy) > 10)
+                stop(); });
+            b.addEventListener('pointerup', stop);
+            b.addEventListener('pointercancel', stop);
+            b.addEventListener('pointerleave', stop);
+            b.addEventListener('contextmenu', (e) => e.preventDefault());
+            b.classList.add('nb-host', 'tab-bell');
+            b.appendChild(nbDot());
+            return b;
+        })(), tab('Settings', 'settings', () => this.settingsDialog())), add);
     }
     toggleSidebar() {
         if (isPhone() && this.sidebarOpen) {
