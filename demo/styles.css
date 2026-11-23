@@ -3249,7 +3249,7 @@ html.phone .win-searchbox { height: 44px; margin: 4px 0 0; border-radius: 12px; 
 html.phone .keep-window, html.phone .ws-window { width: 100%; }
 html.phone .keep-window .dialog-body.pset { padding: 0 16px calc(24px + env(safe-area-inset-bottom)); display: flex; flex-direction: column;overflow-y: auto; }
 html.phone .keep-window .win-sum { padding: 0 4px; }
-html.phone .pset .set-row:active { background: color-mix(in srgb, var(--fg) 8%, transparent); }
+html.phone .pset .set-row:has(button, input, select):not(:has(.wset-grid, .theme-cards, input[type=range])):active { background: color-mix(in srgb, var(--fg) 8%, transparent); }
 html.phone .sheet-head .sheet-close { width: auto !important; min-width: 0 !important; overflow: visible; display: inline-flex; align-items: center; }
 html.phone .dialog .dialog-head.sheet-head .sheet-close { display: inline-flex; justify-self: end; grid-column: 3; }
 /* keyboard up: the page itself keeps the full height, so windows on it are not cut off at the keyboard */
@@ -5248,3 +5248,10 @@ html.phone .set-range-a { font-size: 21px; color: var(--fg-muted); flex: none; }
 html.phone .set-range-a.small { font-size: 13px; }
 html.phone .set-range-val { font-size: 14px; color: var(--fg-muted); min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
 html.phone .set-time { height: 34px; padding: 0 10px; border-radius: 9px; font-size: 16px; border: 0; background: color-mix(in srgb, var(--fg) 10%, transparent); color: var(--fg); }
+
+/* theme cards: clean outline (gradient no longer under the border), clear choice with a check */
+html.phone .theme-card { -webkit-tap-highlight-color: transparent; outline: none; }
+html.phone .theme-card:focus-visible { outline: none; }
+html.phone .theme-prev { background-clip: padding-box; position: relative; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 12%, transparent); }
+html.phone .theme-card.on .theme-prev { border-color: var(--fg); box-shadow: none; }
+html.phone .theme-card.on .theme-prev::after { content: ''; position: absolute; right: 6px; bottom: 6px; width: 20px; height: 20px; border-radius: 10px; box-shadow: 0 0 0 2px #fff; background: #2b2d30 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E") center/12px no-repeat; }

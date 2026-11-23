@@ -711,7 +711,7 @@ export function openSettings(app, start) {
             ] },
         { id: 'behaviour', group: 'Workspace', label: 'Navigation', icon: 'compass', subtitle: 'How you move between pages and open entries.', items: behaviour },
         { id: 'appearance', group: 'Look', label: 'Appearance', icon: 'palette', subtitle: 'Theme, text and layout.', summary: () => ({ light: 'Light', dark: 'Dark', system: 'Auto' }[s.theme ?? 'dark'] ?? ''), items: appearance },
-        { id: 'dates', group: 'Look', label: 'Dates & numbers', icon: 'calendar', subtitle: 'How dates, times and numbers are written.', items: dates },
+        { id: 'dates', group: 'Look', label: 'Dates & Numbers', icon: 'calendar', subtitle: 'How dates, times and numbers are written.', items: dates },
         { id: 'colors', group: 'Look', label: 'Colors', icon: 'circle-dot', subtitle: 'The colors of options, text, highlights and callouts.', items: colors },
         { id: 'widgets', group: 'Content', label: 'Widgets', icon: 'puzzle', summary: () => { const n = customWidgets().length; return n ? String(n) : ''; }, subtitle: 'Small blocks like timers and notes, added with “/”.', items: () => {
                 const own = customWidgets();

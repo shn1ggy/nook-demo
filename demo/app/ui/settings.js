@@ -130,12 +130,17 @@ function phoneSettings(sections, start) {
     const text = (x) => (x instanceof Node ? x.textContent ?? '' : String(x ?? ''));
     const hit = (it) => !('heading' in it) && ('title' in it ? `${text(it.title)} ${text(it.desc)} ${it.keywords ?? ''}` : `${it.action} ${it.keywords ?? ''}`).toLowerCase().includes(query);
     const chev = () => h('span', { class: 'pset-chev' }, svgIcon(ICONS.chevron, 13));
+    let listScroll = 0;
     const go = (s) => {
         const fwd = !!s;
         last = s ?? page ?? last;
+        if (fwd && !page)
+            listScroll = body.scrollTop;
+        const back = !fwd ? listScroll : 0;
         page = s;
         body.scrollTop = 0;
         draw();
+        body.scrollTop = back;
         box.classList.remove('pset-in', 'pset-out');
         void box.offsetWidth;
         box.classList.add(fwd ? 'pset-in' : 'pset-out');
