@@ -5219,3 +5219,8 @@ html.phone .mrow-el > .wset-row .wset-label, html.phone .mrow-el > .panel-num-ro
 html.phone .mrow-el > .wset-row.tall { flex-wrap: wrap; align-items: flex-start; }
 html.phone .mrow-el > .wset-row.tall textarea { flex: 1 1 100% !important; min-height: 88px; padding: 11px 14px !important; font-size: 16px !important; border-radius: 12px !important; }
 html.phone .mrow-el > .wset-row .wset-label, html.phone .mrow-el > .panel-num-row > span, html.phone .wset-row .wset-label { font-size: 16px !important; color: var(--fg); }
+/* phone: a labelled field lines up with the menu rows – icon and label at the same spots, 8px icon→label, 16px label→field */
+html.phone :is(.vpanel.mpanel, .mgrp) .mrow-el > :is(.wset-row, .panel-num-row), html.phone .mrow-el > .panel-num-row { padding: 6px 12px 6px 8px !important; gap: 8px !important; }
+html.phone .mrow-el > :is(.wset-row, .panel-num-row) > :is(.wset-label, span:not(.menu-ico)) { margin-right: 8px; }
+html.phone .mrow-el > .wset-row > .menu-ico { width: 16px !important; height: 16px !important; flex: 0 0 16px !important; margin: 0 !important; }
+html.phone :is(.vpanel.mpanel, .mgrp) .mrow-el > :is(.wset-row, .panel-num-row), html.phone .mrow-el > .panel-num-row { padding-left: 10px !important; }
