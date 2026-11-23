@@ -5190,3 +5190,7 @@ html.phone .trp-today { border: 0; border-radius: 13px; height: 26px; padding: 0
 html.phone .trp-row > * { height: 40px; box-sizing: border-box; }
 html.phone .trp-row :is(.seg, .segmented) { height: 40px; padding: 3px; border-radius: 12px; }
 html.phone .trp-row :is(.seg, .segmented) > * { height: 34px; display: flex; align-items: center; font-size: 14.5px; }
+/* phone day log head = the calendar database's head (title left, ‹ Today › right) */
+html.phone .trp-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 !important; margin: 0 !important; }
+html.phone .trp-top .trp-navs { display: flex; align-items: center; gap: 2px; flex: none; }
+html.phone .trp-row .dayv-combo { width: 100%; }

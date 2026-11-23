@@ -2,7 +2,7 @@ import { parsePage } from '../format/page.js';
 import { openViewer, mediaMenu } from '../ui/viewer.js';
 import { svgIcon, ICONS, IMAGE_RE, shortId, segmented, fmtTime, parseTime, asDate, dayNum, isoFromDay, todayISO, weekStart, MONTHS, WEEKDAYS, fmtNumber, h, COLORS } from '../util.js';
 import { zoomPicker, monthsGrid, yearsGrid, crumbParts, stepNav } from '../ui/zoomcal.js';
-import { renderTrends } from './trends.js';
+import { renderTrends, trendUnit } from './trends.js';
 import { renderValue, entryTitle } from './cells.js';
 import { rowMenu } from './rowmenu.js';
 import { iconSvg } from '../ui/icons.js';
@@ -66,9 +66,9 @@ export function dayConfig(db) {
 }
 /** phone head of a day log (Day and Trends alike): the date or period with ‹ › beside it, one quiet line
  *  (with "Today" to jump back when you are elsewhere), then the switches – every row the same height */
-export function phoneHead(title, sub, back, toToday, prev, next, rows) {
-    const nav = (icon, lab, run) => h('button', { type: 'button', class: 'trp-nav', 'aria-label': lab, onclick: run }, iconSvg(icon, 18));
-    return h('div', { class: 'trp-head' }, h('div', { class: 'trp-top' }, title, h('span', { class: 'trp-navs' }, nav('chevron-left', 'Before', prev), nav('chevron-right', 'After', next))), h('div', { class: 'trp-sub' }, back, h('span', null, sub), toToday ? h('button', { type: 'button', class: 'trp-today', onclick: toToday }, 'Today') : null), ...rows.map((r) => h('div', { class: 'trp-row' }, r)));
+export function phoneHead(title, sub, back, prev, toToday, next, unit, switcher) {
+    // as the calendar database: the date or month with ‹ Today › on the right, one quiet line below, then the one switch
+    return h('div', { class: 'trp-head' }, h('div', { class: 'cal-head trp-top' }, title, h('div', { class: 'trp-navs' }, ...stepNav({ unit, prev, today: toToday, next }))), h('div', { class: 'trp-sub' }, back, h('span', null, sub)), h('div', { class: 'trp-row' }, switcher));
 }
 // ── days ──
 const wdOf = (d) => (d + 3) % 7;
@@ -154,8 +154,18 @@ export function renderDay(env) {
             });
     };
     const modeSeg = () => segmented([['day', 'Day'], ['trends', 'Trends']], dayMode.get(key) ?? 'day', (k) => { dayMode.set(key, k); env.redraw(); }, 'Show', 'small dayv-mode');
+    // phone: one switch for both – Day, or Trends over a week, a month or a year
+    const comboSeg = () => segmented([['day', 'Day'], ['week', 'Week'], ['month', 'Month'], ['year', 'Year']], dayMode.get(key) === 'trends' ? trendUnit(`${db.key}:${env.view.id}`) : 'day', (k) => {
+        if (k === 'day')
+            dayMode.set(key, 'day');
+        else {
+            dayMode.set(key, 'trends');
+            trendUnit(`${db.key}:${env.view.id}`, k);
+        }
+        env.redraw();
+    }, 'Show', 'small dayv-combo');
     if (dayMode.get(key) === 'trends')
-        return renderTrends(env, modeSeg);
+        return renderTrends(env, modeSeg, comboSeg);
     // ← → move between days (not while typing)
     const keys = (e) => {
         if (!root.isConnected) {
@@ -198,7 +208,7 @@ export function renderDay(env) {
     // phone: the same head as Trends – the date, one quiet line, then Day | Trends and the day steps on rows of their own
     if (isPhone) {
         const back = cameFrom.get(key)?.length ? h('button', { class: 'dayv-back', onclick: () => { const b = cameFrom.get(key).pop(); go(b); } }, iconSvg('chevron-left', 12), (() => { const st0 = cameFrom.get(key); const b = label(st0[st0.length - 1]); return `${b.wd}, ${b.day} ${b.month.slice(0, 3)}`; })()) : null;
-        root.append(phoneHead(title, [rel, items.length ? `${items.length} ${items.length === 1 ? 'entry' : 'entries'}` : 'No entries'].filter(Boolean).join(' · '), back, day === today() ? null : () => go(today()), () => go(day - 1), () => go(day + 1), [modeSeg()]));
+        root.append(phoneHead(title, [rel, items.length ? `${items.length} ${items.length === 1 ? 'entry' : 'entries'}` : 'No entries'].filter(Boolean).join(' · '), back, () => go(day - 1), () => go(today()), () => go(day + 1), 'day', comboSeg()));
     }
     else
         root.append(h('div', { class: 'cal-head dayv-head' }, h('div', { class: 'dayv-date' }, title, h('div', { class: 'dayv-meta' }, modeSeg(), cameFrom.get(key)?.length ? h('button', { class: 'dayv-back', title: 'Back to the day you came from', onclick: () => { const b = cameFrom.get(key).pop(); go(b); } }, iconSvg('chevron-left', 12), (() => { const st0 = cameFrom.get(key); const b = label(st0[st0.length - 1]); return `${b.wd}, ${b.day} ${b.month.slice(0, 3)}${b.year !== label(day).year ? ` ${b.year}` : ''}`; })()) : null, ...[rel, items.length ? `${items.length} ${items.length === 1 ? 'entry' : 'entries'}` : 'No entries'].filter(Boolean).map((t, i) => h('span', { class: i ? 'sepd' : '' }, t)))), h('div', { class: 'dayv-nav' }, modeSeg(), h('span', { class: 'cal-head-gap' }), ...stepNav({ unit: 'day', prev: () => go(day - 1), today: () => go(today()), next: () => go(day + 1) }))));

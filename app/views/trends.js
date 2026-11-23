@@ -74,7 +74,16 @@ function defaultTrends(ms, habits) {
     return out;
 }
 const trendsAt = new Map();
-export function renderTrends(env, mode) {
+/** the period Trends show (read, or set from the phone's one switch) */
+export function trendUnit(key, set) {
+    if (!trendsAt.has(key))
+        trendsAt.set(key, { unit: 'month', day: today() });
+    const st = trendsAt.get(key);
+    if (set)
+        st.unit = set;
+    return st.unit;
+}
+export function renderTrends(env, mode, combo) {
     const { db, ctx } = env;
     const cfg = dayConfig(db);
     const key = `${db.key}:${env.view.id}`;
@@ -104,10 +113,8 @@ export function renderTrends(env, mode) {
     const tbtn = h('button', { class: 'dayv-titlebtn', 'aria-label': 'Pick a period', onclick: () => zoomPicker(tbtn, st.unit === 'week' ? { iso: isoFromDay(from), onDay: (iso) => { st.day = dayNum(iso); env.redraw(); } } : { iso: isoFromDay(from), onMonth: (yy, mm) => { st.day = dayNum(`${yy}-${String(mm).padStart(2, '0')}-01`); env.redraw(); } }) }, h('span', { class: 'cal-title large' }, h('span', { class: 'cal-t-main' }, title)), iconSvg('chevron-down', 16));
     const isPhone = document.documentElement.classList.contains('phone');
     // phone: the month, a line saying what's in it, then each switch on a row of its own – nothing runs off the screen
-    if (isPhone) {
-        const cur = range(today())[0] === from;
-        root.append(phoneHead(tbtn, `${n} days · ${recorded} recorded`, null, cur ? null : () => { st.day = today(); env.redraw(); }, () => step(-1), () => step(1), [...(mode ? [mode()] : []), unitSeg()]));
-    }
+    if (isPhone)
+        root.append(phoneHead(tbtn, `${n} days · ${recorded} recorded`, null, () => step(-1), () => { st.day = today(); env.redraw(); }, () => step(1), st.unit, combo ? combo() : unitSeg()));
     else
         root.append(h('div', { class: 'cal-head dayv-head' }, h('div', { class: 'dayv-date' }, tbtn, h('div', { class: 'dayv-meta' }, mode ? mode() : null, unitSeg(), h('span', null, `${n} days`), h('span', { class: 'sepd' }, `${recorded} recorded`))), h('div', { class: 'dayv-nav' }, unitSeg(), mode ? mode() : null, h('span', { class: 'cal-head-gap' }), ...stepNav({ unit: st.unit, prev: () => step(-1), today: () => { st.day = today(); env.redraw(); }, next: () => step(1) }))));
     const avg = (xs) => xs.length ? xs.reduce((s0, x) => s0 + x, 0) / xs.length : null;
