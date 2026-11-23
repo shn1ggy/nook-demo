@@ -556,17 +556,33 @@ export class Notifications {
                     d.setDate(start.getDate() + i);
                     return h('button', { class: 'ogb-day' + (ymd(d) === ymd(at) ? ' on' : ''), onclick: () => setDay(d) }, h('span', null, d.toLocaleDateString(undefined, { weekday: 'short' }).replace('.', '')), h('b', null, String(d.getDate())));
                 }));
-                const own = !TIMES.includes(hm());
-                times.replaceChildren(...TIMES.map((t) => h('button', { class: 'ogb-time' + (t === hm() ? ' on' : ''), onclick: () => setTime(t) }, fmtTime(t))), h('button', { class: 'ogb-time' + (own ? ' on' : ''), onclick: () => other() }, own ? fmtTime(hm()) : 'Other…'));
+                times.replaceChildren(...TIMES.map((t) => h('button', { class: 'ogb-time' + (t === hm() ? ' on' : ''), onclick: () => { typed.value = ''; typedOut.textContent = ''; setTime(t); } }, fmtTime(t))));
                 reps.replaceChildren(...REPS.map(([k, l]) => h('button', { class: 'ogb-rep' + (rep === k ? ' on' : ''), onclick: () => { rep = k; draw(); } }, l)));
                 orig();
             };
-            anchorEl = times;
+            // any other day or time: typed right here (“sun 18”, “tomorrow 21:00”), or picked in the calendar
+            const typed = h('input', { class: 'ogb-typed', placeholder: 'Other: sun 18, tomorrow 21:00 …', enterkeyhint: 'done' });
+            const typedOut = h('span', { class: 'ogb-typed-out' });
+            typed.addEventListener('input', () => {
+                const d = typed.value.trim() ? parseWhen(typed.value) : null;
+                typedOut.textContent = typed.value.trim() ? (d ? shortWhen(d) : '?') : '';
+                typedOut.classList.toggle('bad', !!typed.value.trim() && !d);
+                if (d) {
+                    at = d;
+                    draw();
+                }
+            });
+            typed.addEventListener('keydown', (e) => { if (e.key === 'Enter') {
+                e.preventDefault();
+                typed.blur();
+            } });
+            const otherRow = h('div', { class: 'ogb-other' }, typed, typedOut, h('button', { class: 'ogb-cal', 'aria-label': 'Pick in calendar', onclick: () => calendar() }, iconSvg('calendar', 18)));
+            anchorEl = otherRow;
             // a time typed or picked in "Other…" redraws the tiles too
             const orig = drawChip;
             drawChip = draw;
             draw();
-            return h('div', { class: 'own-body own-body-phone ogb' }, h('div', { class: 'ogb-head' }, edit ? 'REMINDER' : 'NEW REMINDER'), title, notes, days, times, reps);
+            return h('div', { class: 'own-body own-body-phone ogb' }, h('div', { class: 'ogb-head' }, edit ? 'REMINDER' : 'NEW REMINDER'), h('div', { class: 'ogb-card' }, title, notes), days, times, otherRow, reps);
         };
         const prop = (icon, name, ...v) => h('div', { class: 'own-prop' }, h('span', { class: 'own-k' }, iconSvg(icon, 15), name), h('div', { class: 'own-v' }, ...v));
         const close = dialog(h('div', { class: 'bwindow own-window' }, phone()

@@ -5013,3 +5013,23 @@ html.phone .ogb .own-title { margin: 0 !important; height: auto; line-height: 1.
 html.phone .ogb .own-notes { margin: 0 !important; line-height: 1.4; }
 html.phone .ogb-foot { padding-top: 16px; }
 html.phone .own-window .own-body.own-body-phone.ogb { padding: 4px 16px 0 !important; }
+/* new reminder in the Notifications page's language: soft cards, neutral selection, one accent-free button like "New reminder" */
+html.phone .ogb-card { background: color-mix(in srgb, var(--fg) 6.5%, transparent); border-radius: 14px; padding: 8px 14px 4px; margin-bottom: 12px; }
+html.phone .ogb .own-title { font-size: 19px !important; }
+html.phone .ogb .own-notes { padding-bottom: 8px; }
+html.phone .ogb-day.on { background: color-mix(in srgb, var(--fg) 15%, transparent); color: var(--fg); }
+html.phone .ogb-day.on b { color: var(--fg); }
+html.phone .ogb-times { grid-template-columns: repeat(3, 1fr); }
+html.phone .ogb-time { background: color-mix(in srgb, var(--fg) 6.5%, transparent); border-radius: 14px; }
+html.phone .ogb-time.on { background: color-mix(in srgb, var(--fg) 15%, transparent); color: var(--fg); }
+html.phone .ogb-other { display: flex; align-items: center; gap: 8px; margin-top: 6px; background: color-mix(in srgb, var(--fg) 6.5%, transparent); border-radius: 14px; padding: 0 6px 0 14px; }
+html.phone .ogb-typed { flex: 1; min-width: 0; border: 0; background: none; outline: none; color: var(--fg); font-size: 15px; padding: 12px 0; }
+html.phone .ogb-typed::placeholder { color: var(--fg-muted); }
+html.phone .ogb-typed-out { font-size: 13.5px; color: var(--fg-muted); white-space: nowrap; }
+html.phone .ogb-typed-out.bad { color: #e5534b; }
+html.phone .ogb-cal { border: 0; background: none; color: var(--fg-muted); width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; }
+html.phone .ogb-seg { background: color-mix(in srgb, var(--fg) 6.5%, transparent); border-radius: 14px; }
+html.phone .ogb-rep { border-radius: 11px; }
+html.phone .ogb-save { border-radius: 23px; height: 46px; padding: 0; background: color-mix(in srgb, var(--fg) 7.5%, transparent); color: var(--fg); font-size: 16px; font-weight: 600; }
+html.phone .ogb-del { border-radius: 23px; height: 46px; padding: 0; }
+html.phone .ogb .own-notes { height: 30px !important; min-height: 0 !important; padding: 2px 0 6px !important; }
