@@ -415,4 +415,18 @@ export function iconKind(name, dir = false) {
         return 'archive';
     return 'other';
 }
+/** "Delete permanently" (asked first): the file or folder is gone, not in Unused files */
+export async function deleteFileRows(ws, db, rows) {
+    for (const row of rows) {
+        if (!row.rel)
+            continue;
+        const a = `${filesDir(db)}/${row.rel}`;
+        await ws.storage.remove(a);
+        for (const f of [...ws.files])
+            if (f === a || f.startsWith(a + '/'))
+                ws.files.delete(f);
+    }
+    buildRows(ws, db);
+    await saveSidecar(ws, db);
+}
 //# sourceMappingURL=filedb.js.map

@@ -1,7 +1,7 @@
 import { h, svgIcon, ICONS } from '../util.js';
 import { iconSvg } from '../ui/icons.js';
-import { menu, menuIcon, prompt, toast } from '../ui/pop.js';
-import { folderOf, setFolder, uploadFiles, newFolder, refreshFileInfo, parentOf, moveInside, buildRows, saveSidecar } from '../filedb.js';
+import { confirmDialog, menu, menuIcon, prompt, toast } from '../ui/pop.js';
+import { folderOf, setFolder, uploadFiles, newFolder, refreshFileInfo, parentOf, moveInside, buildRows, saveSidecar, deleteFileRows } from '../filedb.js';
 import { openViewer, mediaType } from '../ui/viewer.js';
 import { baseOf, join } from '../layout.js';
 const refreshed = new WeakSet();
@@ -203,6 +203,21 @@ export function fileRowMenu(ctx, db, row, many, at, after) {
                     await ctx.ws.deleteRow(db, r);
                 toast(one ? `“${baseOf(row.rel ?? '')}” is in Unused files` : `${many.length} items are in Unused files`);
                 after();
+            } },
+        { label: 'Delete permanently…', icon: menuIcon('trash'), danger: true, run: () => {
+                const list = many.length ? many : [row];
+                const what = list.length === 1 ? `“${baseOf(row.rel ?? '')}”` : `${list.length} items`;
+                confirmDialog({ title: `Delete ${what} permanently?`, lines: [list.some((r) => r.isDir) ? 'Folders go with everything in them.' : 'The file is deleted from the workspace folder.', 'This can’t be undone in Nook (Dropbox keeps deleted files for a while).'], ok: 'Delete permanently', danger: true, onOk: async () => {
+                        try {
+                            await deleteFileRows(ctx.ws, db, list);
+                            ctx.ws.emit();
+                            toast(`${list.length === 1 ? what : `${list.length} items`} deleted`);
+                        }
+                        catch (e) {
+                            toast(`Could not delete: ${e.message}`);
+                        }
+                        after();
+                    } });
             } },
     ]);
 }
