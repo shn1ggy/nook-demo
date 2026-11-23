@@ -1701,4 +1701,33 @@ async function openDemo(url) {
             f.focus({ preventScroll: true }); });
     }, true);
 }
+// phone, new reminder sheet: it stays where it is when the keyboard comes up, and only moves up as far
+// as needed when the field you type in would be behind the keyboard (the time field lower down)
+{
+    const fit = () => {
+        const dlg = document.querySelector('.overlay > .dialog:has(> .own-window)');
+        if (!dlg)
+            return;
+        const f = document.activeElement;
+        const kb = document.documentElement.classList.contains('kb-open');
+        if (!kb || !f || !dlg.contains(f) || !f.matches('input, textarea')) {
+            dlg.style.transform = '';
+            return;
+        }
+        const kbH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--kb-h')) || (innerHeight - (visualViewport?.height ?? innerHeight));
+        const limit = innerHeight - kbH - 16;
+        const cur = new DOMMatrix(getComputedStyle(dlg).transform).m42 || 0;
+        const bottom = f.getBoundingClientRect().bottom - cur;
+        const top = dlg.firstElementChild.getBoundingClientRect().top - cur;
+        void top;
+        const lift = Math.max(0, bottom - limit);
+        dlg.style.transition = 'transform .25s cubic-bezier(.3,.7,.3,1)';
+        dlg.style.transform = lift > 0 ? `translateY(${-Math.round(lift)}px)` : '';
+    };
+    const later = () => { requestAnimationFrame(fit); setTimeout(fit, 120); setTimeout(fit, 350); };
+    document.addEventListener('focusin', later, true);
+    document.addEventListener('focusout', later, true);
+    visualViewport?.addEventListener('resize', later);
+    new MutationObserver(later).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+}
 //# sourceMappingURL=main.js.map
