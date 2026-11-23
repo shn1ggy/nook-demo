@@ -759,11 +759,14 @@ document.addEventListener('touchstart', (e) => {
     if (sheet.parentElement?.classList.contains('phone-page'))
         return;
     const isPop = sheet.classList.contains('pop');
-    // inside something that is scrolled down, the finger scrolls it back up first
-    for (let el = t; el && el !== sheet.parentElement; el = el.parentElement) {
-        if (el instanceof HTMLElement && el.scrollTop > 0)
-            return;
-    }
+    // the strip along the top edge (the grab handle) always pulls the sheet, however far it is scrolled
+    const grip = e.touches[0].clientY - sheet.getBoundingClientRect().top < 28;
+    // anywhere else, inside something that is scrolled down, the finger scrolls it back up first
+    if (!grip)
+        for (let el = t; el && el !== sheet.parentElement; el = el.parentElement) {
+            if (el instanceof HTMLElement && el.scrollTop > 0)
+                return;
+        }
     // text being typed in keeps the finger for itself (cursor, selection); a field that is not in use can be pulled like the rest
     const field = t.closest('input, textarea, [contenteditable="true"]');
     if (field && ((field === document.activeElement && !field.classList.contains('palette-input')) || field.matches('input[type="range"]') || (!isPop && !t.closest('.peek-head, .dialog-head'))))

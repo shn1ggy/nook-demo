@@ -5119,3 +5119,14 @@ html.phone .pop.pop-panel { overflow-y: auto !important; overscroll-behavior: co
 html.phone:not(.kb-open) .pop.pop-panel { padding-bottom: calc(var(--bar-gap) + 76px) !important; }
 html.phone .pop.pop-panel .vpanel { display: block !important; max-height: none !important; height: auto !important; }
 html.phone .pop.pop-panel .vpanel-rows { overflow: visible !important; max-height: none !important; padding-bottom: 0 !important; }
+/* phone: the grab handle belongs to the sheet's frame – it stays at the top edge while the content scrolls
+   under it (menus, panels and every window); pulling on that strip always closes the sheet (main.ts) */
+html.phone .pop::before {
+  position: sticky; top: -8px; z-index: 6; width: auto; height: 22px; border-radius: 0; margin: -8px -6px 0;
+  background-color: inherit;
+  background-image: radial-gradient(circle at 2.5px 2.5px, var(--border-strong) 2.5px, transparent 2.6px), radial-gradient(circle at 2.5px 2.5px, var(--border-strong) 2.5px, transparent 2.6px), linear-gradient(var(--border-strong), var(--border-strong));
+  background-size: 5px 5px, 5px 5px, 31px 5px;
+  background-position: calc(50% - 15.5px) 8px, calc(50% + 15.5px) 8px, center 8px;
+  background-repeat: no-repeat;
+}
+html.phone .dialog::before { position: sticky; top: 0; z-index: 6; }
