@@ -5477,3 +5477,4 @@ body:has(.overlay.spl) .pop { z-index: 1100 !important; }
 .spl-vtrack::before { content: ''; position: absolute; left: 0; right: 0; height: 3px; border-radius: 2px; background: rgba(255,255,255,.2); }
 .spl-vtrack i { position: relative; height: 3px; border-radius: 2px; background: #fff; }
 .spl-vtrack i::after { content: ''; position: absolute; right: -6px; top: -4.5px; width: 12px; height: 12px; border-radius: 6px; background: #fff; }
+.spl-left .mvp-chips { padding-top: 0; }

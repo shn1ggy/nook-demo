@@ -366,8 +366,8 @@ function desktopFull() {
         head.textContent = place || 'Player';
         seek = seekBar();
         ctl = controls(26);
-        // the cover's top lines up with Up next's top, the buttons' bottom with its bottom
-        left.replaceChildren(h('div', { class: 'spl-cover' }, pi('music', 72)), h('div', { class: 'spl-low' }, h('div', { class: 'spl-title' }, titleOf(it.path)), h('div', { class: 'spl-sub' }, [ext, queue.length > 1 ? `${cur + 1} of ${queue.length}${place ? ` in ${place.split(' › ').pop()}` : ''}` : ''].filter(Boolean).join(' · ')), seek.el, ctl.el, h('div', { class: 'mvp-chips' }, speedChip(), chip('save', 'Download', () => void downloadMedia(ctx, it.path)))));
+        // the cover's top lines up with Up next's top, the buttons' bottom with its bottom; the song in the middle between
+        left.replaceChildren(h('div', { class: 'spl-cover' }, pi('music', 72)), h('div', { class: 'spl-low' }, h('div', { class: 'spl-title' }, titleOf(it.path)), h('div', { class: 'spl-sub' }, [ext, queue.length > 1 ? `${cur + 1} of ${queue.length}${place ? ` in ${place.split(' › ').pop()}` : ''}` : ''].filter(Boolean).join(' · ')), seek.el, ctl.el), h('div', { class: 'mvp-chips' }, speedChip(), chip('save', 'Download', () => void downloadMedia(ctx, it.path))));
         seek.paint();
         drawList();
     };
