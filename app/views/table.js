@@ -298,6 +298,8 @@ export function renderTable(env, res) {
                         fileClick.set(row.id, 0);
                         return;
                     }
+                    // the frame of a name just renamed goes (only the selection shows)
+                    table.querySelectorAll('td.sel').forEach((x) => x.classList.remove('sel'));
                     grip.dispatchEvent(new MouseEvent('click', { bubbles: true }));
                     fileClick.set(row.id, now);
                 });

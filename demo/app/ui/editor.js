@@ -17,7 +17,8 @@ import { embedUrl, siteName } from '../format/embed.js';
 import { pickIcon } from './iconpicker.js';
 import { formatKey, installFormatBar, registerFormatHost } from './formatbar.js';
 import { newTextComment, openTextComment } from './comments.js';
-import { renderViewBlock } from '../views/view.js';
+import { renderViewBlock, newView } from '../views/view.js';
+import { VIEW_TYPES } from '../views/viewpanel.js';
 import { dbItems, linkItems, pickEntries } from './pickers.js';
 import { serializePage } from '../format/page.js';
 import { tintStyle, tintMenuEntries, buttonEl, buttonSettings, runButton, stepsOf, captureCfg, captureStart, captureSettings, runCapture } from './buttons.js';
@@ -1668,26 +1669,41 @@ export class Editor {
         })));
     }
     /** "/" → Database view: the databases (always the current list), searchable; or a new one */
-    dbChoices(b, anchor, done) {
+    dbChoices(b, anchor, done, type) {
         const ws = this.ctx.ws;
+        /** the database's view of that type (made when it has none) */
+        const viewOf = (key) => {
+            const d = ws.dbs.get(key);
+            if (!d)
+                return undefined;
+            if (!type)
+                return d.views[0]?.id;
+            let v = d.views.find((x) => x.type === type);
+            if (!v) {
+                v = newView(d, type);
+                d.views.push(v);
+                void ws.saveViews(d);
+            }
+            return v.id;
+        };
         const dbs = [...ws.dbs.values()].sort((x, y) => x.schema.name.localeCompare(y.schema.name));
         return [
             { label: 'Create new database…', icon: menuIcon('plus'), create: async (name) => {
                     // typed in the search: a database with that name, no second question
                     const db = await ws.createDatabase(name || 'Untitled', this.owner ? ws.pages.get(this.owner) : undefined);
                     done();
-                    Object.assign(b, { type: 'view', text: undefined, db: db.key, view: db.views[0]?.id });
+                    Object.assign(b, { type: 'view', text: undefined, db: db.key, view: viewOf(db.key) });
                     this.changed();
                     this.ctx.refreshSidebar?.();
                 }, run: () => prompt(anchor, 'Name of the new database', '', async (name) => {
                     const db = await ws.createDatabase(name.trim() || 'Untitled', this.owner ? ws.pages.get(this.owner) : undefined);
                     done();
-                    Object.assign(b, { type: 'view', text: undefined, db: db.key, view: db.views[0]?.id });
+                    Object.assign(b, { type: 'view', text: undefined, db: db.key, view: viewOf(db.key) });
                     this.changed();
                     this.ctx.refreshSidebar?.();
                 }) },
             ...(dbs.length ? ['sep'] : []),
-            ...pickEntries(dbItems(ws), (k) => { done(); Object.assign(b, { type: 'view', text: undefined, db: k, view: ws.dbs.get(k)?.views[0]?.id }); this.changed(); }),
+            ...pickEntries(dbItems(ws), (k) => { done(); Object.assign(b, { type: 'view', text: undefined, db: k, view: viewOf(k) }); this.changed(); }),
         ];
     }
     // ---------- phone: long press for the menu and to drag ----------
@@ -1979,6 +1995,8 @@ export class Editor {
             { label: 'Capture', icon: menuIcon('inbox'), run: () => { clear(); Object.assign(b, { type: 'capture', text: undefined, data: undefined }); captureCfg(b); b.children = captureStart(b, this.pageTitle()); this.changed(); this.openCaptureSettings(b); } },
             { section: 'Databases' },
             { label: 'Database view', icon: menuIcon('table'), subFilter: true, sub: () => this.dbChoices(b, el, clear) },
+            // every kind of view by name: "/board" → which database (or a new one), shown as a board
+            ...VIEW_TYPES.filter((t) => t.type !== 'day').map((t) => ({ label: `${t.label} view`, icon: menuIcon(t.icon), subFilter: true, sub: () => this.dbChoices(b, el, clear, t.type) })),
         ];
         const r = el.getBoundingClientRect();
         menu({ x: r.left, y: r.bottom }, entries, { filter: true });

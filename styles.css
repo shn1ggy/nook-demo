@@ -5335,3 +5335,5 @@ html.phone body:has(.mvp) .pop { padding-bottom: calc(env(safe-area-inset-bottom
 .fdb-crumb-b { display: inline-flex; align-items: center; gap: 6px; }
 .fdb-crumb .fdb-up { width: 26px; height: 26px; margin-right: 4px; }
 .fdb-crumb .fdb-up:disabled { opacity: .35; }
+/* the "A" of text colours: centred in its circle */
+.pop-item .swatch:not(:empty), .pop-item .menu-ico > .swatch:not(:empty) { display: inline-grid !important; place-items: center; line-height: 1 !important; font-size: 11px; padding-top: 1px; }

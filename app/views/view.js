@@ -593,7 +593,7 @@ function addViewMenu(env, anchor, selectTab) {
         },
     })));
 }
-function newView(db, type) {
+export function newView(db, type) {
     const dateProp = db.schema.properties.find((p) => p.type === 'date')?.name;
     const selectProp = db.schema.properties.find((p) => p.type === 'select')?.name;
     const numProp = db.schema.properties.find((p) => p.type === 'number')?.name;
