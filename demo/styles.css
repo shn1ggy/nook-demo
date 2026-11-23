@@ -5171,3 +5171,11 @@ html.phone .trp-dot { position: absolute; width: 7px; height: 7px; margin: -3.5p
 html.phone .trp-x { grid-column: 2; display: flex; justify-content: space-between; font-size: 10.5px; color: var(--fg-faint); padding-top: 4px; font-variant-numeric: tabular-nums; }
 html.phone .trv .trmod { outline: 0 !important; }
 html.phone { --glass-bg: color-mix(in srgb, var(--bg-side) 38%, transparent); --glass-blur: blur(16px) saturate(2.2) brightness(1.05); }
+/* phone Day view: the same head and cards as Trends */
+html.phone .trp-steps { display: flex; gap: 2px; background: color-mix(in srgb, var(--fg) 5.5%, transparent); border-radius: 12px; padding: 3px; }
+html.phone .trp-step { flex: 1; border: 0; background: none; color: var(--fg-muted); border-radius: 9px; padding: 7px 0; font-size: 14.5px; display: grid; place-items: center; }
+html.phone .trp-step.on { background: color-mix(in srgb, var(--fg) 12%, transparent); color: var(--fg); font-weight: 600; }
+html.phone .trp-sub .dayv-back { margin-right: 6px; }
+html.phone .dayv .dmod { border: 0 !important; outline: 0 !important; box-shadow: none !important; background: color-mix(in srgb, var(--fg) 5.5%, transparent) !important; border-radius: 14px !important; padding: 12px 14px !important; }
+html.phone .dayv .dmod .w-label { font-size: 15px; font-weight: 600; color: var(--fg); }
+html.phone .dayv :is(.dayv-main, .dayv-side) { gap: 8px !important; }
