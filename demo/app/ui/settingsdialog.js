@@ -753,7 +753,7 @@ export function openSettings(app, start) {
                 { title: 'Notion', desc: 'Its Markdown & CSV export, with subpages. Notion stays unchanged.', icon: 'file', control: h('button', { class: 'set-btn primary', onclick: () => { win?.close(); app.shell.importNotion?.(); } }, 'Import…'), keywords: 'notion export import' },
                 { title: 'CSV file', desc: 'A table from any app (contacts, Excel, Numbers …) as a new database – columns become properties of the right type.', icon: 'table', control: h('button', { class: 'set-btn primary', onclick: () => { win?.close(); app.importCsvFile(); } }, 'Import…'), keywords: 'csv import table contacts excel spreadsheet' },
             ] },
-        { id: 'export', group: 'Data', label: 'Export & backup', icon: 'arrow-up', subtitle: 'Take your content with you.', items: () => [
+        { id: 'export', group: 'Data', label: 'Export & Backup', icon: 'arrow-up', subtitle: 'Take your content with you.', items: () => [
                 { heading: 'Export' },
                 { title: 'Everything', desc: 'Markdown & CSV with files, as one .zip – for Notion, Obsidian …', keywords: 'export notion markdown csv zip obsidian',
                     control: h('button', { class: 'set-btn primary', onclick: () => void app.runExport(() => exportWorkspace(app.ws)) }, 'Export') },

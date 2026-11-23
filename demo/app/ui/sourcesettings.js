@@ -251,9 +251,9 @@ export function sourcesSection(ws, redraw, closeWin = () => { }) {
     const items = () => {
         if (!loaded) {
             void load();
-            return [{ heading: 'Data sources' }];
+            return [{ heading: 'Data Sources' }];
         }
-        const out = [{ heading: 'Data sources' }];
+        const out = [{ heading: 'Data Sources' }];
         for (const s of cfg.sources) {
             const r = recipeOf(cfg, s.recipe), db = ws().dbs.get(s.db);
             const st = s.error ? h('span', { class: 'cal-status err' }, h('i'), s.error) : lastFetched(s) ? h('span', { class: 'cal-status ok' }, h('i'), `Synced ${fmtDate({ start: lastFetched(s).slice(0, 10) })}`) : null;
@@ -284,6 +284,6 @@ export function sourcesSection(ws, redraw, closeWin = () => { }) {
         out.push({ action: 'Add a data source…', run: () => pick(), keywords: 'letterboxd goodreads csv rss feed import' });
         return out;
     };
-    return { id: 'sources', group: 'Content', label: 'Data sources', icon: 'download', summary: () => (cfg.sources.length ? String(cfg.sources.length) : ''), subtitle: 'Other services’ data in your databases – once from an export, or kept in sync.', items };
+    return { id: 'sources', group: 'Content', label: 'Data Sources', icon: 'download', summary: () => (cfg.sources.length ? String(cfg.sources.length) : ''), subtitle: 'Other services’ data in your databases – once from an export, or kept in sync.', items };
 }
 //# sourceMappingURL=sourcesettings.js.map
