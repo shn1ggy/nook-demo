@@ -5478,3 +5478,7 @@ body:has(.overlay.spl) .pop { z-index: 1100 !important; }
 .spl-vtrack i { position: relative; height: 3px; border-radius: 2px; background: #fff; }
 .spl-vtrack i::after { content: ''; position: absolute; right: -6px; top: -4.5px; width: 12px; height: 12px; border-radius: 6px; background: #fff; }
 .spl-left .mvp-chips { padding-top: 0; }
+/* turning back to the tabs also goes upwards: the player rolls up, the tabs come from below */
+html.phone .tb-stage.tb-snap-tabs .tb-tabs { transition: none !important; transform: rotateX(-90deg) !important; opacity: 0 !important; }
+html.phone .tb-stage.tb-up-out .tb-player { transform: rotateX(90deg); opacity: 0; pointer-events: none; }
+html.phone .tb-stage.tb-snap .tb-face, html.phone .tb-stage.tb-snap .tb-player > * { transition: none !important; }

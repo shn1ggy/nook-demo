@@ -438,11 +438,11 @@ export function mountPhoneBar(nav, onPlus) {
     pill.classList.add('tb-face', 'tb-tabs');
     const t = h('span', { class: 'tbp-t' }), sub = h('small', { class: 'tbp-s' });
     const pp = h('button', { class: 'tbp-b tbp-pp', 'aria-label': 'Play or pause', onclick: (e) => { e.stopPropagation(); togglePlay(); } });
-    const face = h('div', { class: 'tab-pill tb-face tb-player' }, h('button', { class: 'tbp-b tbp-back', 'aria-label': 'Back to the tabs', onclick: (e) => { e.stopPropagation(); flip(false); } }, pi('down', 18)), h('span', { class: 'tbp-c' }, pi('music', 18)), h('span', { class: 'tbp-tx' }, t, sub), pp, h('button', { class: 'tbp-b', 'aria-label': 'Next', onclick: (e) => { e.stopPropagation(); stepSong(1); } }, pi('next', 22)));
+    const face = h('div', { class: 'tab-pill tb-face tb-player' }, h('button', { class: 'tbp-b tbp-back', 'aria-label': 'Back to the tabs', onclick: (e) => { e.stopPropagation(); flip(false); } }, pi('up', 18)), h('span', { class: 'tbp-c' }, pi('music', 18)), h('span', { class: 'tbp-tx' }, t, sub), pp, h('button', { class: 'tbp-b', 'aria-label': 'Next', onclick: (e) => { e.stopPropagation(); stepSong(1); } }, pi('next', 22)));
     face.addEventListener('click', () => openFullPlayer());
     // hold: open, back to the tabs, stop
     let timer = 0;
-    face.addEventListener('touchstart', () => { timer = window.setTimeout(() => { timer = 0; const it = nowPlaying(); menu(face, [{ section: it ? titleOf(it.path) : 'Player' }, { label: 'Open player', icon: menuIcon('maximize'), run: openFullPlayer }, { label: 'Back to tabs', icon: menuIcon('chevron-down'), run: () => flip(false) }, 'sep', { label: 'Stop', icon: menuIcon('square'), danger: true, run: stopPlayer }]); }, 480); }, { passive: true });
+    face.addEventListener('touchstart', () => { timer = window.setTimeout(() => { timer = 0; const it = nowPlaying(); menu(face, [{ section: it ? titleOf(it.path) : 'Player' }, { label: 'Open player', icon: menuIcon('maximize'), run: openFullPlayer }, { label: 'Back to tabs', icon: menuIcon('arrow-up'), run: () => flip(false) }, 'sep', { label: 'Stop', icon: menuIcon('square'), danger: true, run: stopPlayer }]); }, 480); }, { passive: true });
     face.addEventListener('touchend', (e) => { if (timer)
         clearTimeout(timer);
     else
@@ -484,8 +484,23 @@ export function mountPhoneBar(nav, onPlus) {
         pp.replaceChildren(pi(audio.paused ? 'play' : 'pause', 22));
         tick();
     };
-    const flip = (to) => { if (!nowPlaying())
-        return; flipped = to; paint(); };
+    // the bar always turns upwards: back to the tabs, the player rolls up and away and the tabs come from below
+    const flip = (to) => {
+        if (!nowPlaying())
+            return;
+        if (!to && flipped) {
+            stage.classList.add('tb-snap-tabs');
+            void stage.offsetWidth; // the tabs wait below
+            stage.classList.remove('tb-snap-tabs');
+            stage.classList.add('tb-up-out');
+            flipped = false;
+            paint();
+            setTimeout(() => { stage.classList.add('tb-snap'); stage.classList.remove('tb-up-out'); void stage.offsetWidth; stage.classList.remove('tb-snap'); }, 560);
+            return;
+        }
+        flipped = to;
+        paint();
+    };
     const off = onPlayer((k) => { if (k === 'song' && nowPlaying() && !openView) { /* a song started from a list: show the player bar */ } paint(); });
     audio.addEventListener('timeupdate', tick);
     paint();
