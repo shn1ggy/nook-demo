@@ -582,7 +582,7 @@ export class Notifications {
             const orig = drawChip;
             drawChip = draw;
             draw();
-            return h('div', { class: 'own-body own-body-phone ogb' }, h('div', { class: 'ogb-head' }, edit ? 'REMINDER' : 'NEW REMINDER'), h('div', { class: 'ogb-card' }, title, notes), days, times, otherRow, reps);
+            return h('div', { class: 'own-body own-body-phone ogb' }, h('div', { class: 'ogb-head' }, edit ? 'REMINDER' : 'NEW REMINDER'), h('div', { class: 'ogb-card' }, title, notes), h('div', { class: 'ogb-label' }, 'Day'), days, h('div', { class: 'ogb-label' }, 'Time'), times, otherRow, h('div', { class: 'ogb-label' }, 'Repeat'), reps);
         };
         const prop = (icon, name, ...v) => h('div', { class: 'own-prop' }, h('span', { class: 'own-k' }, iconSvg(icon, 15), name), h('div', { class: 'own-v' }, ...v));
         const close = dialog(h('div', { class: 'bwindow own-window' }, phone()

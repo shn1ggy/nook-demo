@@ -5033,3 +5033,10 @@ html.phone .ogb-rep { border-radius: 11px; }
 html.phone .ogb-save { border-radius: 23px; height: 46px; padding: 0; background: color-mix(in srgb, var(--fg) 7.5%, transparent); color: var(--fg); font-size: 16px; font-weight: 600; }
 html.phone .ogb-del { border-radius: 23px; height: 46px; padding: 0; }
 html.phone .ogb .own-notes { height: 30px !important; min-height: 0 !important; padding: 2px 0 6px !important; }
+/* new reminder: labelled groups with room between them (labels as the Notifications day headings) */
+html.phone .ogb-label { font-size: 12.5px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-muted); padding: 18px 4px 8px; }
+html.phone .ogb-card { margin-bottom: 0; }
+html.phone .ogb-days { margin: 0; }
+html.phone .ogb-other { margin-top: 8px; }
+html.phone .ogb-seg { margin-top: 0; }
+html.phone .ogb-foot { padding-top: 22px; }
