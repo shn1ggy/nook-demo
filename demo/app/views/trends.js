@@ -102,7 +102,12 @@ export function renderTrends(env, mode) {
     const recorded = [...index.keys()].filter((d) => d >= from && d < to).length;
     const unitSeg = () => segmented([['week', 'Week'], ['month', 'Month'], ['year', 'Year']], st.unit, (u) => { st.unit = u; env.redraw(); }, 'Period', 'small dayv-unit');
     const tbtn = h('button', { class: 'dayv-titlebtn', 'aria-label': 'Pick a period', onclick: () => zoomPicker(tbtn, st.unit === 'week' ? { iso: isoFromDay(from), onDay: (iso) => { st.day = dayNum(iso); env.redraw(); } } : { iso: isoFromDay(from), onMonth: (yy, mm) => { st.day = dayNum(`${yy}-${String(mm).padStart(2, '0')}-01`); env.redraw(); } }) }, h('span', { class: 'cal-title large' }, h('span', { class: 'cal-t-main' }, title)), iconSvg('chevron-down', 16));
-    root.append(h('div', { class: 'cal-head dayv-head' }, h('div', { class: 'dayv-date' }, tbtn, h('div', { class: 'dayv-meta' }, mode ? mode() : null, unitSeg(), h('span', null, `${n} days`), h('span', { class: 'sepd' }, `${recorded} recorded`))), h('div', { class: 'dayv-nav' }, unitSeg(), mode ? mode() : null, h('span', { class: 'cal-head-gap' }), ...stepNav({ unit: st.unit, prev: () => step(-1), today: () => { st.day = today(); env.redraw(); }, next: () => step(1) }))));
+    const isPhone = document.documentElement.classList.contains('phone');
+    // phone: the month, a line saying what's in it, then each switch on a row of its own – nothing runs off the screen
+    if (isPhone)
+        root.append(h('div', { class: 'trp-head' }, tbtn, h('div', { class: 'trp-sub' }, `${n} days · ${recorded} recorded`), mode ? h('div', { class: 'trp-row' }, mode()) : null, h('div', { class: 'trp-row' }, unitSeg())));
+    else
+        root.append(h('div', { class: 'cal-head dayv-head' }, h('div', { class: 'dayv-date' }, tbtn, h('div', { class: 'dayv-meta' }, mode ? mode() : null, unitSeg(), h('span', null, `${n} days`), h('span', { class: 'sepd' }, `${recorded} recorded`))), h('div', { class: 'dayv-nav' }, unitSeg(), mode ? mode() : null, h('span', { class: 'cal-head-gap' }), ...stepNav({ unit: st.unit, prev: () => step(-1), today: () => { st.day = today(); env.redraw(); }, next: () => step(1) }))));
     const avg = (xs) => xs.length ? xs.reduce((s0, x) => s0 + x, 0) / xs.length : null;
     const f1 = (x) => fmtNumber(Math.round(x * 10) / 10);
     const saveCfg = () => { void ctx.ws.saveSchema(db); env.redraw(); };
@@ -151,7 +156,7 @@ export function renderTrends(env, mode) {
                 if (!meas)
                     break;
                 const pts = days.map((d) => meas.day(d));
-                body = pts.filter((x) => x != null).length < 2 ? h('div', { class: 'dmod-none' }, 'Not enough days yet') : lineChart(pts, meas.range ?? null);
+                body = pts.filter((x) => x != null).length < 2 ? h('div', { class: 'dmod-none' }, 'Not enough days yet') : isPhone ? axedLine(pts, meas.range ?? null, meas.fmt, days) : lineChart(pts, meas.range ?? null);
                 break;
             }
             case 'bars': {
@@ -250,6 +255,23 @@ function lineChart(pts, fixed) {
     const coords = pts.map((p, i) => (p == null ? null : `${(i / Math.max(1, pts.length - 1)) * W},${H - 10 - ((p - lo) / sp) * (H - 20)}`)).filter(Boolean);
     svg.append(svgEl('polyline', { points: coords.join(' '), class: 'line' }));
     return svg;
+}
+/** phone: the line with its scale – lowest, middle and highest value on the left, first, middle and last day below, the latest value marked */
+function axedLine(pts, fixed, fmt, days) {
+    const xs = pts.filter((x) => x != null);
+    const lo = fixed ? fixed[0] : Math.min(...xs), hi = fixed ? fixed[1] : Math.max(...xs);
+    const svg = lineChart(pts, fixed);
+    let last = -1;
+    pts.forEach((p, i) => { if (p != null)
+        last = i; });
+    const W = 600, H = 120, sp = hi - lo || 1;
+    let dotEl = null;
+    if (last >= 0) {
+        const cx = (last / Math.max(1, pts.length - 1)) * W, cy = H - 10 - ((pts[last] - lo) / sp) * (H - 20);
+        dotEl = h('i', { class: 'trp-dot', style: { left: `${(cx / W) * 100}%`, top: `${(cy / H) * 100}%` } });
+    }
+    const d0 = label(days[0]).day, dm = label(days[Math.floor((days.length - 1) / 2)]).day, d1 = label(days[days.length - 1]).day;
+    return h('div', { class: 'trp-chart' }, h('div', { class: 'trp-y' }, h('span', null, fmt(hi)), h('span', null, fmt((hi + lo) / 2)), h('span', null, fmt(lo))), h('div', { class: 'trp-plot' }, svg, dotEl), h('div', { class: 'trp-x' }, h('span', null, String(d0)), h('span', null, String(dm)), h('span', null, String(d1))));
 }
 function barChart(per, color) {
     const W = 600, H = 120, mx = Math.max(...per) || 1, bw = W / per.length;

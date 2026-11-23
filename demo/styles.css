@@ -5137,3 +5137,36 @@ html.phone .ogb .own-notes { font-weight: 400 !important; color: var(--fg-muted)
 html.phone .ogb .own-title::placeholder, html.phone .ogb .own-notes::placeholder { color: var(--fg-faint); font-weight: 400; opacity: 1; }
 html.phone .ogb .own-title { padding-top: 13px !important; padding-bottom: 11px !important; }
 html.phone .ogb .own-notes { padding-top: 12px !important; padding-bottom: 12px !important; }
+/* phone Day Log trends (mock-up A): stacked switches, soft cards, habit squares that fit, charts with a scale */
+html.phone .trp-head { display: flex; flex-direction: column; gap: 0; padding: 4px 0 4px; }
+html.phone .trp-head .dayv-titlebtn { align-self: flex-start; }
+html.phone .trp-sub { font-size: 13.5px; color: var(--fg-muted); padding: 2px 4px 12px; }
+html.phone .trp-row { display: flex; margin-bottom: 8px; }
+html.phone .trp-row > * { flex: 1; width: 100%; }
+html.phone .trp-row .seg, html.phone .trp-row [role="radiogroup"], html.phone .trp-row .segmented { display: flex; width: 100%; }
+html.phone .trp-row :is(.seg, .segmented) > * { flex: 1; justify-content: center; text-align: center; }
+html.phone .trv .trgrid { gap: 8px !important; margin-top: 4px; }
+html.phone .trv .trmod { border: 0 !important; box-shadow: none !important; background: color-mix(in srgb, var(--fg) 5.5%, transparent) !important; border-radius: 14px !important; padding: 12px 14px !important; }
+html.phone .trv .trmod .dmod-h { margin-bottom: 6px; }
+html.phone .trv .trmod .w-label { font-size: 15px; font-weight: 600; color: var(--fg); }
+html.phone .trv .tr-figure .w-label { font-size: 13px; font-weight: 500; color: var(--fg-muted); }
+html.phone .trv .trc-v { font-size: 28px; font-weight: 650; }
+html.phone .trv .trc-v small { font-size: 14px; color: var(--fg-muted); font-weight: 400; margin-left: 3px; }
+html.phone .trv .trc-d { font-size: 12.5px; }
+/* habits: name, a grid of day squares that wraps inside its column, the count */
+html.phone .trv .trh { display: grid !important; grid-template-columns: 64px 1fr 40px; align-items: center; gap: 8px; padding: 6px 0; }
+html.phone .trv .trh-l { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.phone .trv .trh-n { font-size: 13.5px; color: var(--fg-muted); text-align: right; font-variant-numeric: tabular-nums; }
+html.phone .trv .trh-c { display: grid !important; grid-template-columns: repeat(16, 1fr); gap: 3px; min-width: 0; }
+html.phone .trv .trh-c.year { grid-template-columns: repeat(31, 1fr); gap: 1px; }
+html.phone .trv .trh-c > i { display: block; width: auto !important; height: auto !important; aspect-ratio: 1; border-radius: 3px; background: color-mix(in srgb, var(--fg) 9%, transparent); margin: 0 !important; }
+html.phone .trv .trh-c > i.y { background: var(--hc, var(--accent)); }
+html.phone .trv .trh-c > i.f { background: transparent; outline: 1px dashed color-mix(in srgb, var(--fg) 10%, transparent); outline-offset: -1px; }
+/* line chart with scale */
+html.phone .trp-chart { display: grid; grid-template-columns: auto 1fr; grid-template-rows: 120px auto; column-gap: 8px; }
+html.phone .trp-y { display: flex; flex-direction: column; justify-content: space-between; font-size: 10.5px; color: var(--fg-faint); text-align: right; padding: 3px 0; font-variant-numeric: tabular-nums; }
+html.phone .trp-plot { position: relative; min-width: 0; }
+html.phone .trp-plot .trchart { width: 100%; height: 120px; display: block; }
+html.phone .trp-dot { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: var(--fg); }
+html.phone .trp-x { grid-column: 2; display: flex; justify-content: space-between; font-size: 10.5px; color: var(--fg-faint); padding-top: 4px; font-variant-numeric: tabular-nums; }
+html.phone .trv .trmod { outline: 0 !important; }
