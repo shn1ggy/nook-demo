@@ -8,7 +8,7 @@ import { entryIcon, renderValue, titleEl } from './cells.js';
 import { rowMenu } from './rowmenu.js';
 import { reorderable, selectable } from './rowselect.js';
 import { loadMoreBar } from './view.js';
-import { dropTarget } from './fileview.js';
+import { dropTarget, renameByPrompt } from './fileview.js';
 /** the picture a card shows, or null */
 function coverOf(env, row) {
     const { db, view } = env;
@@ -88,6 +88,8 @@ export function renderGallery(env, res) {
         reorderable(card, env, r);
         if (r.isDir)
             dropTarget(ctx, db, card, r.rel);
+        if (r.rel != null)
+            card.addEventListener('nook-rename', () => renameByPrompt(ctx, db, r, card));
         card.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); rowMenu(ctx, db, r, { x: e.clientX, y: e.clientY }, () => env.redraw()); });
         grid.appendChild(card);
     }

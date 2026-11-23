@@ -159,9 +159,10 @@ export async function refreshFileInfo(ws, db, assetUrl) {
         // new to Nook, or its content changed: read again (and the length too, if it had one)
         if (e.h && e.h !== fp)
             delete e.length;
+        // Created is the file's own date: kept from the first time on (uploads keep the date the file had on your computer)
         e.h = fp;
         e.size = info.size;
-        e.created = local(info.created);
+        e.created ??= local(info.created);
         e.modified = local(info.modified);
         if (!e.created)
             delete e.created;

@@ -166,4 +166,44 @@ export function fileActions(ctx, row) {
     const btn = (icon, label, run) => h('button', { class: 'set-btn with-icon', onclick: run }, iconSvg(icon, 14), label);
     return h('div', { class: 'fdb-actions' }, row.isDir ? null : btn('download', 'Download', () => void import('../ui/viewer.js').then((m) => m.downloadMedia(ctx, row.file))), ctx.ws.storage.reveal ? btn('folder', ctx.ws.storage.remote ? 'Show in Dropbox' : 'Show in folder', () => void ctx.ws.storage.reveal(row.file).catch((e) => toast(e.message))) : null);
 }
+/** rename where there's no name cell to type in (gallery, menus): a small field */
+export function renameByPrompt(ctx, db, row, at) {
+    prompt(at, row.isDir ? 'Folder name' : 'File name', baseOf(row.rel ?? ''), async (v) => {
+        const name = v.trim();
+        if (!name || name === baseOf(row.rel ?? ''))
+            return;
+        row.values[db.titleProp] = name;
+        ctx.ws.boundary();
+        await ctx.ws.saveRow(db, row);
+        ctx.ws.emit();
+    });
+}
+/** right-click on a file or folder */
+export function fileRowMenu(ctx, db, row, many, at, after) {
+    const one = many.length <= 1;
+    const rename = () => {
+        const el = document.querySelector(`.dbview .selectable[data-row="${CSS.escape(row.id)}"]`);
+        if (el)
+            import('./rowselect.js').then((m) => m.renameAt(el));
+        else
+            renameByPrompt(ctx, db, row, at);
+    };
+    menu(at, [
+        ...(one ? [
+            { label: 'Open', icon: menuIcon(row.isDir ? 'folder' : 'eye'), run: () => ctx.openRow(db, row) },
+            ...(row.isDir ? [] : [{ label: 'Info', icon: menuIcon('info'), run: () => ctx.openRow(db, row, { info: true }) }]),
+            { label: 'Rename', icon: menuIcon('pencil'), hint: 'F2', run: rename },
+            ...(row.isDir ? [] : [{ label: 'Download', icon: menuIcon('download'), run: () => void import('../ui/viewer.js').then((m) => m.downloadMedia(ctx, row.file)) }]),
+            ...(ctx.ws.storage.reveal ? [{ label: ctx.ws.storage.remote ? 'Show in Dropbox' : 'Show in folder', icon: menuIcon('folder'), run: () => void ctx.ws.storage.reveal(row.file).catch((e) => toast(e.message)) }] : []),
+            'sep',
+        ] : []),
+        { label: one ? 'Move to Unused files' : `Move ${many.length} items to Unused files`, icon: menuIcon('trash'), danger: true, run: async () => {
+                ctx.ws.boundary();
+                for (const r of many.length ? many : [row])
+                    await ctx.ws.deleteRow(db, r);
+                toast(one ? `“${baseOf(row.rel ?? '')}” is in Unused files` : `${many.length} items are in Unused files`);
+                after();
+            } },
+    ]);
+}
 //# sourceMappingURL=fileview.js.map

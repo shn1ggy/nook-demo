@@ -241,6 +241,13 @@ export function selectable(el, env, row, open, key = row.id) {
     el.addEventListener('dblclick', (e) => { e.stopPropagation(); if (openWith === 'single')
         return; clearSelection(); doOpen(); });
     el.addEventListener('keydown', (e) => {
+        // a database of files: Enter renames (as F2 does), double-click opens
+        if (e.key === 'Enter' && env.db.schema.files) {
+            e.preventDefault();
+            e.stopPropagation();
+            renameAt(el);
+            return;
+        }
         if (e.key === 'Enter') {
             e.preventDefault();
             e.stopPropagation();
@@ -304,6 +311,16 @@ export function installSelectionKeys() {
             if (el && selectAll(el, sel.env)) {
                 e.preventDefault();
                 e.stopPropagation();
+            }
+            return;
+        }
+        // a database of files: F2 or Enter renames the selected file or folder (Windows and Mac)
+        if ((e.key === 'F2' || e.key === 'Enter') && sel.env.db.schema.files && sel.ids.size === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
+            const el = visibleEl([...sel.ids][0]);
+            if (el) {
+                e.preventDefault();
+                e.stopPropagation();
+                renameAt(el);
             }
             return;
         }
@@ -708,5 +725,10 @@ export function reorderable(el, env, row, opts = {}) {
 /** small grip shown on hover, used where the whole element can't be the drag handle */
 export function gripEl() {
     return h('span', { class: 'row-grip', title: 'Drag to reorder', 'aria-hidden': 'true' }, svgIcon(ICONS.grip, 14, { fill: true }));
+}
+/** start renaming the entry an element shows (its name cell in a table, else the element itself) */
+export function renameAt(el) {
+    const t = el.closest('tr')?.querySelector('td.title') ?? el;
+    t.dispatchEvent(new CustomEvent('nook-rename', { bubbles: true }));
 }
 //# sourceMappingURL=rowselect.js.map

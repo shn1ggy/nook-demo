@@ -4,6 +4,7 @@ import { menu, toast, prompt, colorDot, menuIcon } from '../ui/pop.js';
 import { asDate } from '../util.js';
 import { repeatMenu } from './repeat.js';
 import { repeatOn, typeIcon } from './cells.js';
+import { fileRowMenu } from './fileview.js';
 import { selectedRows, deleteSelected, openSubItems, startSelectMode } from './rowselect.js';
 export function rowMenu(ctx, db, row, at, after, extra = [], afterOpen = []) {
     const ws = ctx.ws;
@@ -11,6 +12,11 @@ export function rowMenu(ctx, db, row, at, after, extra = [], afterOpen = []) {
     // right-click on one of several selected entries: changes apply to all of them
     const picked = selectedRows();
     const many = picked && picked.env.db === db && picked.rows.length > 1 && picked.rows.includes(row) ? picked.rows : [row];
+    // a database of files has its own, shorter menu
+    if (db.schema.files) {
+        fileRowMenu(ctx, db, row, many, at, after);
+        return;
+    }
     const set = async (prop, v) => {
         ws.boundary();
         for (const r of many) {

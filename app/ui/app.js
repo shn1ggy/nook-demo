@@ -1165,6 +1165,9 @@ export class App {
     }
     /** files put into a page's or entry's folder (in Finder …) that it doesn't show yet: listed under it, to open or add */
     folderFiles(owner, used, add) {
+        // switched off: files sit in the folders as they are; a page shows only what is on it
+        if (owner)
+            return null;
         const list = this.ws.looseFiles(owner, used());
         if (!list.length)
             return null;
