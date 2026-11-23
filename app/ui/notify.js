@@ -561,7 +561,7 @@ export class Notifications {
                 orig();
             };
             // any other day or time: typed right here (“sun 18”, “tomorrow 21:00”), or picked in the calendar
-            const typed = h('input', { class: 'ogb-typed', placeholder: 'Other: sun 18, tomorrow 21:00 …', enterkeyhint: 'done' });
+            const typed = h('input', { class: 'ogb-typed', placeholder: 'Other, e.g. fri 18', enterkeyhint: 'done' });
             const typedOut = h('span', { class: 'ogb-typed-out' });
             typed.addEventListener('input', () => {
                 const d = typed.value.trim() ? parseWhen(typed.value) : null;

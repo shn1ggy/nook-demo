@@ -5130,3 +5130,10 @@ html.phone .pop::before {
   background-repeat: no-repeat;
 }
 html.phone .dialog::before { position: sticky; top: 0; z-index: 6; }
+/* new reminder: title and note in one type – same size and face, the title only a little stronger */
+html.phone .ogb .own-title, html.phone .ogb .own-notes { font-family: inherit !important; font-size: 16px !important; letter-spacing: normal !important; line-height: 22px !important; }
+html.phone .ogb .own-title { font-weight: 500 !important; }
+html.phone .ogb .own-notes { font-weight: 400 !important; color: var(--fg-muted); min-height: 46px !important; }
+html.phone .ogb .own-title::placeholder, html.phone .ogb .own-notes::placeholder { color: var(--fg-faint); font-weight: 400; opacity: 1; }
+html.phone .ogb .own-title { padding-top: 13px !important; padding-bottom: 11px !important; }
+html.phone .ogb .own-notes { padding-top: 12px !important; padding-bottom: 12px !important; }
