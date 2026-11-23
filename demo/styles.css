@@ -5379,3 +5379,9 @@ html.phone body:has(.select-bar) .fdb-li.is-selected::before { background: var(-
 .mvp-chip:active { opacity: .7; }
 .mvp.audio .mvp-cover { width: min(74vw, 320px, 33vh); }
 .mvp.audio .mvp-stage { padding-top: calc(env(safe-area-inset-top, 0px) + 84px); }
+/* songs: seek bar and controls right under the title */
+.mvp-song-ctl { margin-top: -2px; }
+.mvp.audio .mvp-seek2 { padding: 0; }
+.mvp.audio .mvp-ctl2 { padding: 12px 0 0; }
+.mvp.audio .mvp-chips { padding: 20px 0 0; }
+.mvp.audio .mvp-stage { overflow-y: auto; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); }

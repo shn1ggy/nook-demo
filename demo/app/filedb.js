@@ -57,7 +57,16 @@ export function addFileProps(schema) {
 }
 const propFor = (db, k) => db.schema.properties.find((p) => p.file === k)?.name;
 /** the entries of a database of files, from the workspace's list of files (and its files.json) */
+const noCacheDirs = new Set();
+/** files of databases of files aren't kept in the browser (they can be big: songs, footage) – always fetched fresh */
+function skipCache(ws, db) {
+    noCacheDirs.add(filesDir(db) + '/');
+    const st = ws.storage;
+    if ('noCache' in st)
+        st.noCache = (p) => [...noCacheDirs].some((d) => p.startsWith(d));
+}
 export async function loadFileRows(ws, db, read) {
+    skipCache(ws, db);
     try {
         sides.set(db, JSON.parse((await read(sidecarPath(db))) ?? '{}'));
     }
@@ -361,6 +370,7 @@ export async function switchFiles(ws, db, on) {
             await ws.deleteRow(db, r, { history: false });
         db.schema.files = true;
         db.schema.repeat = false;
+        skipCache(ws, db);
         // the Date a new database starts with means nothing for files (there are no entries, so it is empty)
         db.schema.properties = db.schema.properties.filter((p) => !(p.type === 'date' && p.name === 'Date'));
         addFileProps(db.schema);

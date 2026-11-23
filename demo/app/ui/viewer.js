@@ -322,9 +322,10 @@ function phoneViewer(ctx, items, at) {
                 stage.append(h('div', { class: 'mvp-file' }, h('div', { class: 'mvp-fic' }, ext || 'FILE'), h('div', { class: 'mvp-ft' }, fileName(it.path), h('small', { class: 'mvp-fs' }, pdf ? 'PDF' : 'File')), h('button', { class: 'mvp-fopen', onclick: () => pdf ? openPdfFull(() => ctx.assetUrl(it.path)) : void shareMedia(ctx, it.path) }, pdf ? 'Open full screen' : 'Open in another app')));
                 bar.append(share, save, ...(folder ? [folder] : []));
             }
-            void fetch(u).then((r) => r.ok ? r.blob() : null).then((b) => { if (!b || items[i] !== it)
-                return; meta.textContent = `${meta.textContent ? meta.textContent + ' · ' : ''}${sizeLabel(b.size)}`; const fs = stage.querySelector('.mvp-fs'); if (fs)
-                fs.textContent = `${fs.textContent} · ${sizeLabel(b.size)}`; }).catch(() => { });
+            if (t !== 'audio' && t !== 'video')
+                void fetch(u).then((r) => r.ok ? r.blob() : null).then((b) => { if (!b || items[i] !== it)
+                    return; meta.textContent = `${meta.textContent ? meta.textContent + ' · ' : ''}${sizeLabel(b.size)}`; const fs = stage.querySelector('.mvp-fs'); if (fs)
+                    fs.textContent = `${fs.textContent} · ${sizeLabel(b.size)}`; }).catch(() => { });
         })();
     };
     /** the order songs play in: as in the folder, or shuffled (the one playing first) */
@@ -370,22 +371,19 @@ function phoneViewer(ctx, items, at) {
             song.playbackRate = playMode.rate;
         }
         void song.play().catch(() => { });
-        // the waveform: tap or drag to go there
-        const bars = 64;
-        const wave = h('div', { class: 'mvp-wave' }, ...Array.from({ length: bars }, () => h('i')));
+        // the seek bar: tap or drag to go there
+        const fill = h('i'), track = h('div', { class: 'mvp-track' }, fill);
         const cur = h('span'), left = h('span');
         const paint = () => {
-            const d = song.duration || 0, f = d ? song.currentTime / d : 0;
-            [...wave.children].forEach((b, k) => b.classList.toggle('on', k / bars < f));
+            const d = song.duration || 0;
+            fill.style.width = `${d ? (song.currentTime / d) * 100 : 0}%`;
             cur.textContent = dur(song.currentTime || 0);
             left.textContent = `−${dur(Math.max(0, d - (song.currentTime || 0)))}`;
         };
-        void peaksOf(it.path, u).then((pk) => { if (!pk || items[i] !== it)
-            return; [...wave.children].forEach((b, k) => { b.style.height = `${Math.max(8, pk[k] * 100)}%`; }); });
-        const seek = (e) => { const r = wave.getBoundingClientRect(); if (song.duration)
+        const seek = (e) => { const r = track.getBoundingClientRect(); if (song.duration)
             song.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * song.duration; paint(); };
-        wave.addEventListener('pointerdown', (e) => { e.stopPropagation(); wave.setPointerCapture(e.pointerId); seek(e); const mv = (ev) => seek(ev); wave.addEventListener('pointermove', mv); wave.addEventListener('pointerup', () => wave.removeEventListener('pointermove', mv), { once: true }); });
-        wave.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+        track.addEventListener('pointerdown', (e) => { e.stopPropagation(); track.setPointerCapture(e.pointerId); seek(e); const mv = (ev) => seek(ev); track.addEventListener('pointermove', mv); track.addEventListener('pointerup', () => track.removeEventListener('pointermove', mv), { once: true }); });
+        track.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
         const play = h('button', { class: 'mvp-play', 'aria-label': 'Play or pause' });
         const paintPlay = () => play.replaceChildren(pi(song.paused ? 'play' : 'pause', 30));
         play.addEventListener('click', () => { if (song.paused)
@@ -416,7 +414,34 @@ function phoneViewer(ctx, items, at) {
             menu({ x: r.left, y: r.top }, [{ section: playMode.shuffle ? 'Up next · shuffled' : 'Up next' }, ...list.map((k) => ({ label: fileName(items[k].path).replace(/\.[^.]+$/, ''), icon: menuIcon('music'), checked: k === i, run: () => { i = k; show(); } }))]);
         });
         const share = chip('share', 'Share', () => void shareMedia(ctx, it.path));
-        extra.append(h('div', { class: 'mvp-seek2' }, wave, h('div', { class: 'mvp-times' }, cur, left)), h('div', { class: 'mvp-ctl2' }, shuf, prev, play, next, rep), h('div', { class: 'mvp-chips' }, speed, upNext, share));
+        stage.append(h('div', { class: 'mvp-song-ctl' }, h('div', { class: 'mvp-seek2' }, track, h('div', { class: 'mvp-times' }, cur, left)), h('div', { class: 'mvp-ctl2' }, shuf, prev, play, next, rep), h('div', { class: 'mvp-chips' }, speed, upNext, share)));
+        // the lock screen and Control Center: title, play / pause, previous / next, seeking
+        const ms = navigator.mediaSession;
+        if (ms) {
+            try {
+                ms.metadata = new MediaMetadata({ title, artist: place || 'Nook', album: place.split(' › ').pop() ?? '', artwork: [{ src: new URL('icon-512.png', location.href).href, sizes: '512x512', type: 'image/png' }] });
+                ms.setActionHandler('play', () => void song.play());
+                ms.setActionHandler('pause', () => song.pause());
+                ms.setActionHandler('previoustrack', () => { if (song.currentTime > 3 || songs.length < 2)
+                    song.currentTime = 0;
+                else
+                    nextSong(-1); });
+                ms.setActionHandler('nexttrack', songs.length > 1 ? () => nextSong(1) : null);
+                ms.setActionHandler('seekto', (d) => { if (d.seekTime != null)
+                    song.currentTime = d.seekTime; });
+                ms.setActionHandler('seekbackward', null);
+                ms.setActionHandler('seekforward', null);
+            }
+            catch { /* an older iOS: only play / pause */ }
+        }
+        const pos = () => { try {
+            if (ms && song.duration)
+                ms.setPositionState({ duration: song.duration, position: Math.min(song.currentTime, song.duration), playbackRate: song.playbackRate });
+        }
+        catch { /* fine */ } };
+        song.addEventListener('loadedmetadata', pos);
+        song.addEventListener('seeked', pos);
+        song.addEventListener('ratechange', pos);
         const on = () => { paint(); paintPlay(); };
         song.addEventListener('timeupdate', paint);
         song.addEventListener('play', paintPlay);
@@ -540,11 +565,21 @@ function phoneViewer(ctx, items, at) {
             close();
     });
     const key = (e) => { if (e.key === 'Escape') {
+        if (document.querySelector('.pop'))
+            return; /* a menu over it (pulled down) closes, not the player */
         e.preventDefault();
         e.stopPropagation();
         close();
     } };
-    function close() { cleanup?.(); song.pause(); song.removeAttribute('src'); box.remove(); document.removeEventListener('keydown', key, true); }
+    function close() { cleanup?.(); song.pause(); song.removeAttribute('src'); try {
+        const m = navigator.mediaSession;
+        if (m) {
+            m.metadata = null;
+            for (const a of ['play', 'pause', 'previoustrack', 'nexttrack', 'seekto'])
+                m.setActionHandler(a, null);
+        }
+    }
+    catch { /* fine */ } box.remove(); document.removeEventListener('keydown', key, true); }
     document.body.append(box);
     document.addEventListener('keydown', key, true);
     show();
@@ -561,36 +596,4 @@ const saveMode = () => { try {
     localStorage.setItem(MODE, JSON.stringify(playMode));
 }
 catch { /* only a convenience */ } };
-const peaks = new Map();
-async function peaksOf(path, url, n = 64) {
-    if (peaks.has(path))
-        return peaks.get(path);
-    try {
-        const buf = await (await fetch(url)).arrayBuffer();
-        const AC = window.AudioContext ?? window.webkitAudioContext;
-        const ac = new AC();
-        const audio = await ac.decodeAudioData(buf);
-        void ac.close();
-        const d = audio.getChannelData(0), step = Math.max(1, Math.floor(d.length / n));
-        const out = [];
-        for (let k = 0; k < n; k++) {
-            let m = 0;
-            const end = Math.min(d.length, (k + 1) * step);
-            for (let x = k * step; x < end; x += 16) {
-                const v = Math.abs(d[x]);
-                if (v > m)
-                    m = v;
-            }
-            out.push(m);
-        }
-        const top = Math.max(...out, 0.0001);
-        const res = out.map((v) => Math.sqrt(v / top));
-        peaks.set(path, res);
-        return res;
-    }
-    catch {
-        peaks.set(path, null);
-        return null;
-    }
-}
 //# sourceMappingURL=viewer.js.map

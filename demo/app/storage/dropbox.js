@@ -1552,7 +1552,11 @@ export class DropboxStorage {
     }
     // ---------- files shown in pages (images, PDFs …) ----------
     assetKey(path) { return `${this.snapKey()}\u0000${path}`; }
+    /** folders whose files are never kept in the browser (databases of files: songs, footage …) – always fetched */
+    noCache = () => false;
     async cacheAsset(path, blob) {
+        if (this.noCache(path))
+            return;
         try {
             const t = (await idb()).transaction('assets', 'readwrite');
             t.objectStore('assets').put(blob, this.assetKey(path));
