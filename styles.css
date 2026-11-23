@@ -5463,3 +5463,17 @@ body:has(.overlay.spl) .pop { z-index: 1100 !important; }
 /* a note in a panel ("No filters …") is not a button: no hover, text centred in its line */
 .mgrp > .mrow-el:has(> .vpanel-empty):hover, .mrow-el:has(> .vpanel-empty):hover { background: none !important; }
 .vpanel-empty { padding: 8px 8px; line-height: 1.35; display: flex; align-items: center; min-height: 34px; }
+/* desktop player: cover top = Up next top, buttons bottom = Up next bottom; volume in the header */
+.spl-head { padding: 12px 14px 0 18px; }
+.spl-body { padding: 24px 48px 40px; align-items: stretch; }
+.spl-left { justify-content: space-between; gap: 20px; }
+.spl-cover { margin: 0; align-self: center; width: min(320px, calc(min(680px, 88vh) - 420px)); min-width: 140px; }
+.spl-low { display: flex; flex-direction: column; }
+.spl-left .mvp-chips { padding-bottom: 0; }
+.spl-vol { display: flex; align-items: center; gap: 6px; margin-right: 10px; color: #a6aaaf; }
+.spl-vb { border: 0; background: none; color: inherit; width: 26px; height: 26px; display: grid; place-items: center; cursor: pointer; border-radius: 6px; }
+.spl-vb:hover { color: #fff; }
+.spl-vtrack { width: 110px; height: 18px; display: flex; align-items: center; position: relative; cursor: pointer; touch-action: none; }
+.spl-vtrack::before { content: ''; position: absolute; left: 0; right: 0; height: 3px; border-radius: 2px; background: rgba(255,255,255,.2); }
+.spl-vtrack i { position: relative; height: 3px; border-radius: 2px; background: #fff; }
+.spl-vtrack i::after { content: ''; position: absolute; right: -6px; top: -4.5px; width: 12px; height: 12px; border-radius: 6px; background: #fff; }

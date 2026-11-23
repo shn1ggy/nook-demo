@@ -8,14 +8,16 @@ import { P, pi, fileName, downloadMedia } from './viewer.js';
 void P;
 const phone = () => document.documentElement.classList.contains('phone');
 const dur = (s) => `${Math.floor((s || 0) / 60)}:${String(Math.floor((s || 0) % 60)).padStart(2, '0')}`;
+const pi2 = pi;
+void pi2;
 const titleOf = (p) => fileName(p).replace(/\.[^.]+$/, '');
 // ---------- the engine ----------
 const MODE = 'nook:play-mode';
 export const playMode = (() => { try {
-    return { shuffle: false, repeat: 'off', rate: 1, ...JSON.parse(localStorage.getItem(MODE) ?? '{}') };
+    return { shuffle: false, repeat: 'off', rate: 1, vol: 1, ...JSON.parse(localStorage.getItem(MODE) ?? '{}') };
 }
 catch {
-    return { shuffle: false, repeat: 'off', rate: 1 };
+    return { shuffle: false, repeat: 'off', rate: 1, vol: 1 };
 } })();
 const saveMode = () => { try {
     localStorage.setItem(MODE, JSON.stringify(playMode));
@@ -27,6 +29,7 @@ audio.setAttribute('playsinline', '');
 // in the page (hidden): the iPhone's lock screen and Control Center follow an element that is part of the page
 audio.style.cssText = 'position:fixed;width:1px;height:1px;left:-10px;bottom:0;opacity:0;pointer-events:none';
 document.body.append(audio);
+audio.volume = playMode.vol;
 let ctx = null;
 let queue = [];
 let cur = -1;
@@ -177,6 +180,16 @@ function position() { try {
 }
 catch { /* fine */ } }
 // ---------- parts used by every view ----------
+/** volume (desktop: the iPhone lets only its own buttons change it) */
+function volBar() {
+    const fill = h('i'), track = h('div', { class: 'spl-vtrack' }, fill);
+    const paint = () => { fill.style.width = `${audio.volume * 100}%`; };
+    const set = (e) => { const r = track.getBoundingClientRect(); audio.volume = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); playMode.vol = audio.volume; paint(); };
+    track.addEventListener('pointerdown', (e) => { track.setPointerCapture(e.pointerId); set(e); const mv = (ev) => set(ev); track.addEventListener('pointermove', mv); track.addEventListener('pointerup', () => { track.removeEventListener('pointermove', mv); saveMode(); }, { once: true }); });
+    track.addEventListener('wheel', (e) => { e.preventDefault(); audio.volume = Math.max(0, Math.min(1, audio.volume - Math.sign(e.deltaY) * 0.05)); playMode.vol = audio.volume; saveMode(); paint(); }, { passive: false });
+    paint();
+    return h('div', { class: 'spl-vol', title: 'Volume' }, h('button', { class: 'spl-vb', 'aria-label': 'Quieter', onclick: () => { audio.volume = Math.max(0, audio.volume - 0.1); playMode.vol = audio.volume; saveMode(); paint(); } }, pi('vol0', 16)), track, h('button', { class: 'spl-vb', 'aria-label': 'Louder', onclick: () => { audio.volume = Math.min(1, audio.volume + 0.1); playMode.vol = audio.volume; saveMode(); paint(); } }, pi('vol', 16)));
+}
 function seekBar() {
     const fill = h('i'), track = h('div', { class: 'mvp-track' }, fill), a = h('span'), b = h('span');
     const paint = () => { const d = audio.duration || 0; fill.style.width = `${d ? (audio.currentTime / d) * 100 : 0}%`; a.textContent = dur(audio.currentTime); b.textContent = `−${dur(Math.max(0, d - audio.currentTime))}`; };
@@ -334,7 +347,7 @@ function desktopFull() {
         closePop();
         return;
     } moreMenu(more, close); });
-    const win = h('div', { class: 'spl-win', role: 'dialog', 'aria-label': 'Player' }, h('div', { class: 'spl-head' }, pi('music', 15), head, h('span', { style: { flex: '1' } }), more, h('button', { class: 'icon-btn', 'aria-label': 'Shrink to the small player', title: 'Shrink (the music goes on)', onclick: () => close() }, pi('down', 18))), h('div', { class: 'spl-body' }, left, h('div', { class: 'spl-right' }, h('div', { class: 'spl-rh' }, h('span', { class: 'spl-rt' }), h('span', { class: 'spl-n' })), list)));
+    const win = h('div', { class: 'spl-win', role: 'dialog', 'aria-label': 'Player' }, h('div', { class: 'spl-head' }, pi('music', 15), head, h('span', { style: { flex: '1' } }), volBar(), more, h('button', { class: 'icon-btn', 'aria-label': 'Shrink to the small player', title: 'Shrink (the music goes on)', onclick: () => close() }, pi('down', 18))), h('div', { class: 'spl-body' }, left, h('div', { class: 'spl-right' }, h('div', { class: 'spl-rh' }, h('span', { class: 'spl-rt' }), h('span', { class: 'spl-n' })), list)));
     const box = h('div', { class: 'overlay spl', onclick: (e) => { if (e.target === box)
             close(); } }, win);
     let seek = null, ctl = null;
@@ -353,7 +366,8 @@ function desktopFull() {
         head.textContent = place || 'Player';
         seek = seekBar();
         ctl = controls(26);
-        left.replaceChildren(h('div', { class: 'spl-cover' }, pi('music', 72)), h('div', { class: 'spl-title' }, titleOf(it.path)), h('div', { class: 'spl-sub' }, [ext, queue.length > 1 ? `${cur + 1} of ${queue.length}${place ? ` in ${place.split(' › ').pop()}` : ''}` : ''].filter(Boolean).join(' · ')), seek.el, ctl.el, h('div', { class: 'mvp-chips' }, speedChip(), chip('save', 'Download', () => void downloadMedia(ctx, it.path))));
+        // the cover's top lines up with Up next's top, the buttons' bottom with its bottom
+        left.replaceChildren(h('div', { class: 'spl-cover' }, pi('music', 72)), h('div', { class: 'spl-low' }, h('div', { class: 'spl-title' }, titleOf(it.path)), h('div', { class: 'spl-sub' }, [ext, queue.length > 1 ? `${cur + 1} of ${queue.length}${place ? ` in ${place.split(' › ').pop()}` : ''}` : ''].filter(Boolean).join(' · ')), seek.el, ctl.el, h('div', { class: 'mvp-chips' }, speedChip(), chip('save', 'Download', () => void downloadMedia(ctx, it.path)))));
         seek.paint();
         drawList();
     };
