@@ -5170,3 +5170,4 @@ html.phone .trp-plot .trchart { width: 100%; height: 120px; display: block; }
 html.phone .trp-dot { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: var(--fg); }
 html.phone .trp-x { grid-column: 2; display: flex; justify-content: space-between; font-size: 10.5px; color: var(--fg-faint); padding-top: 4px; font-variant-numeric: tabular-nums; }
 html.phone .trv .trmod { outline: 0 !important; }
+html.phone { --glass-bg: color-mix(in srgb, var(--bg-side) 38%, transparent); --glass-blur: blur(16px) saturate(2.2) brightness(1.05); }
