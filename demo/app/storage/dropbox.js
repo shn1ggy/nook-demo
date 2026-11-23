@@ -1132,10 +1132,22 @@ export class DropboxStorage {
         // a text file Nook doesn't know a version of: only created, never written over unseen (a conflict is merged or kept as a copy)
         return text ? 'add' : 'overwrite';
     }
+    /** texts this device sent for a file whose answer never came back (the connection dropped, the app was put away):
+     *  Dropbox may have them – finding one there later is this device's own save, not someone else's change */
+    attempted = new Map();
+    attempt(path, data) {
+        if (typeof data !== 'string')
+            return;
+        const a = this.attempted.get(path) ?? [];
+        a.push(data);
+        this.attempted.set(path, a.slice(-5));
+    }
     async uploadOne(path, data, base, rev) {
+        this.attempt(path, data);
         try {
             const meta = await (await content('/2/files/upload', { path: this.abs(path), mode: this.mode(path, rev, typeof data === 'string'), autorename: false, mute: true }, new Blob([data]))).json();
             this.sent(path, meta.rev ?? '', data);
+            this.attempted.delete(path);
         }
         catch (e) {
             if (!(e instanceof DropboxError && e.status === 409 && /conflict/.test(e.summary)))
@@ -1146,6 +1158,8 @@ export class DropboxStorage {
     async uploadBatch(batch) {
         const enc = new TextEncoder();
         const bodies = batch.map((op) => typeof op.data === 'string' ? enc.encode(op.data) : op.data);
+        for (const op of batch)
+            this.attempt(op.path, op.data);
         const sessions = new Array(batch.length);
         for (let i = 0; i < batch.length; i += 8) {
             await Promise.all(bodies.slice(i, i + 8).map(async (b, j) => {
@@ -1160,6 +1174,7 @@ export class DropboxStorage {
             const r = res.entries[i];
             if (r?.['.tag'] === 'success') {
                 this.sent(batch[i].path, r.rev ?? '', batch[i].data);
+                this.attempted.delete(batch[i].path);
                 continue;
             }
             const f = r?.failure;
@@ -1182,10 +1197,13 @@ export class DropboxStorage {
                 }
                 catch { /* unknown */ }
                 // nobody else changed it (its version number changed with a move, say): this device's version simply goes up
-                const merged = !rev ? null : base !== undefined && theirs === base ? data : autoMerge3(path, base, data, theirs);
+                // Dropbox has a text this device sent before without hearing back: its own save – this newer one simply goes on top
+                const own = theirs === data || (this.attempted.get(path) ?? []).includes(theirs);
+                const merged = !rev ? null : own ? data : base !== undefined && theirs === base ? data : autoMerge3(path, base, data, theirs);
                 if (merged !== null) {
                     const meta = await (await content('/2/files/upload', { path: this.abs(path), mode: { '.tag': 'update', update: rev }, autorename: false, mute: true }, new Blob([merged]))).json();
                     this.sent(path, meta.rev ?? '', merged);
+                    this.attempted.delete(path);
                     if (this.files && inTree(path) && merged !== data) {
                         this.files.set(path, { text: merged, rev: meta.rev ?? '' });
                         this.touch(path);
@@ -1375,8 +1393,11 @@ export class DropboxStorage {
         const known = this.files?.get(path) ?? this.other.get(path);
         // checked against what the app read – not against a newer version a sync brought in meanwhile
         const seen = this.served.get(path);
-        const rev = seen ? seen.rev : known?.rev;
-        const base = seen ? (seen.rev ? seen.text : undefined) : known?.rev ? known.text : undefined;
+        // a save of this file from this device is still on its way: this one builds on it, so it is checked against
+        // the version that save produces (not the older one both started from – that made Nook conflict with itself)
+        const ownAhead = this.ops.some((o) => o.kind === 'write' && o.path === path);
+        const rev = ownAhead ? undefined : seen ? seen.rev : known?.rev;
+        const base = ownAhead ? seen?.text : seen ? (seen.rev ? seen.text : undefined) : known?.rev ? known.text : undefined;
         this.served.set(path, { rev: rev ?? '', text: data });
         if (this.files && inTree(path)) {
             this.files.set(path, { text: data, rev: this.files.get(path)?.rev ?? '' });

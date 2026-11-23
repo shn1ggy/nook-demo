@@ -5076,3 +5076,40 @@ html.phone .tab-bell.fired > svg { animation: bell-ring .5s ease-in-out; transfo
 @keyframes bell-flash { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.6); } }
 @keyframes bell-ring { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(16deg); } 40% { transform: rotate(-13deg); } 60% { transform: rotate(8deg); } 80% { transform: rotate(-4deg); } }
 @media (prefers-reduced-motion: reduce) { html.phone .tab-bell.fired > svg { animation: none; } }
+/* labels added to the conflicts window: desktop shows them small, the phone in the ⋯-menu style below */
+.conf-phone-head { display: none; }
+.conf-label { font-size: 11.5px; font-weight: 600; color: var(--fg-muted); padding: 4px 2px 0; }
+/* phone: Dropbox conflicts in the language of the new reminder sheet / ⋯ menu */
+html.phone .conf-window .dialog-head, html.phone .conf-window .bfooter { display: none !important; }
+html.phone .conf-phone-head { display: block; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-muted); padding: 4px 22px 8px; }
+html.phone .conf-body { padding: 0 16px calc(var(--bar-gap) + 12px) !important; display: flex; flex-direction: column; gap: 0; }
+html.phone .conf-what { background: color-mix(in srgb, var(--fg) 6.5%, transparent); border-radius: 14px; padding: 13px 14px; gap: 10px; flex-wrap: wrap; }
+html.phone .conf-what strong { font-size: 17px; font-weight: 600; }
+html.phone .conf-what .keep-meta { font-size: 14px; color: var(--fg-muted); }
+html.phone .conf-when { font-size: 13px; padding: 8px 4px 0; }
+html.phone .conf-newer { background: color-mix(in srgb, var(--fg) 12%, transparent); font-size: 12px; padding: 1px 8px; border-radius: 8px; }
+html.phone .conf-hunks { gap: 0; overflow: visible; }
+html.phone .conf-label { font-size: 13px; font-weight: 500; color: var(--fg-faint); margin: 16px -10px 0; padding: 10px 12px 8px; border-top: 1px solid var(--border); }
+html.phone .conf-same { padding: 8px 4px 0; }
+html.phone .conf-same .conf-text, html.phone .conf-text { font-size: 13px; line-height: 1.55; }
+html.phone .conf-same .conf-line { padding: 0; }
+html.phone .conf-skip { padding: 2px 0; font-size: 12.5px; }
+html.phone .conf-hunk { background: none; padding: 0; gap: 8px; }
+html.phone .conf-side { outline: 0 !important; opacity: 1; border-radius: 14px; padding: 11px 14px; gap: 6px; background: color-mix(in srgb, var(--fg) 6.5%, transparent); position: relative; }
+html.phone .conf-side .conf-line { padding: 0; }
+html.phone .conf-side-head { padding: 0; font-size: 13px; font-weight: 500; color: var(--fg-muted); }
+html.phone .conf-side:not(.on) .conf-text { color: var(--fg-muted); }
+html.phone .conf-side.on { background: color-mix(in srgb, var(--fg) 15%, transparent); }
+html.phone .conf-side.on .conf-side-head { color: var(--fg); font-weight: 600; }
+html.phone .conf-side.on::after { content: '✓'; position: absolute; right: 14px; top: 10px; font-size: 15px; font-weight: 600; color: var(--fg); }
+html.phone .conf-hunk-foot { justify-content: stretch; }
+html.phone .conf-hunk-foot .set-btn { width: 100%; justify-content: center; height: 42px; border-radius: 14px; outline: 0 !important; background: color-mix(in srgb, var(--fg) 6.5%, transparent); font-size: 15px; }
+html.phone .conf-hunk-foot .set-btn.on { background: color-mix(in srgb, var(--fg) 15%, transparent); font-weight: 600; }
+html.phone .conf-actions { gap: 8px; margin-top: 0; }
+html.phone .conf-actions > .set-btn { height: 42px; border-radius: 14px; background: color-mix(in srgb, var(--fg) 6.5%, transparent); font-size: 15px; font-weight: 400; }
+html.phone .conf-actions > .btn-new { grid-column: 1 / -1; order: 9; margin-top: 12px; height: 46px; border-radius: 23px; background: color-mix(in srgb, var(--fg) 7.5%, transparent); color: var(--fg); font-size: 16px; font-weight: 500; box-shadow: none; }
+html.phone .conf-window { display: flex; flex-direction: column; min-height: 0; }
+html.phone .conf-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+html.phone .conf-body > * { flex: none; }
+html.phone .conf-hunks { flex: none !important; min-height: auto !important; }
+html.phone .conf-label-all { margin-top: 20px; }
