@@ -5459,3 +5459,4 @@ html.phone .tb-stage.flipped .tb-player > * { transform: none; opacity: 1; }
 .spl-qt { min-width: 0; overflow-wrap: anywhere; }
 /* menus of the desktop player open above it */
 body:has(.overlay.spl) .pop { z-index: 1100 !important; }
+.spl-left .mvp-seek2 { padding: 0; }

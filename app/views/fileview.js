@@ -9,6 +9,8 @@ import { folderOf, setFolder, uploadFiles, newFolder, refreshFileInfo, parentOf,
 import { openViewer, mediaType } from '../ui/viewer.js';
 import { baseOf, join } from '../layout.js';
 const refreshed = new WeakSet();
+/** what each database of files shows right now (filter and sorting of the view drawn last): the player's queue */
+export const visibleRows = new Map();
 /** sizes, dates and lengths: once per database each time the workspace is opened */
 export function fileInfoOnce(ctx, db) {
     if (refreshed.has(db))
@@ -161,7 +163,15 @@ export function openFileEntry(ctx, db, row) {
     }
     if (!row.file || !mediaType(row.file))
         return false;
-    const here = db.rows.filter((r) => !r.isDir && parentOf(r) === parentOf(row) && r.file && mediaType(r.file)).sort((a, b) => (a.rel ?? '').localeCompare(b.rel ?? ''));
+    // the entries the view shows (its filter and sorting) – else the folder, by name
+    // (inside closed folders of the tree: not shown)
+    const top = folderOf(db);
+    const open = (r) => { for (let d = parentOf(r); d && d !== top; d = dirOf(d))
+        if (!subOpen(`${db.key}:d:${d}`, false))
+            return false; return true; };
+    const shown = (visibleRows.get(db.key) ?? []).filter((r) => db.rows.includes(r) && open(r));
+    const pool = shown.includes(row) ? shown : db.rows.filter((r) => parentOf(r) === parentOf(row)).sort((a, b) => (a.rel ?? '').localeCompare(b.rel ?? ''));
+    const here = pool.filter((r) => !r.isDir && r.file && mediaType(r.file));
     openViewer(ctx, here.map((r) => ({ path: r.file, open: () => ctx.openRow(db, r, { info: true }), entryName: baseOf(r.rel), place: [db.schema.name, ...(parentOf(r) ? parentOf(r).split('/') : [])].join(' › ') })), Math.max(0, here.indexOf(row)));
     return true;
 }

@@ -19,7 +19,7 @@ import { renderDay } from './days.js';
 import { renderTrends } from './trends.js';
 import { openViewSettings, opsFor, VIEW_TYPES, describeRule } from './viewpanel.js';
 import { iconSvg, renderIcon } from '../ui/icons.js';
-import { pickUpload, fileInfoOnce, fileCrumb, viewDrop, newFileButton, renderFilePhone, addMenu } from './fileview.js';
+import { visibleRows, pickUpload, fileInfoOnce, fileCrumb, viewDrop, newFileButton, renderFilePhone, addMenu } from './fileview.js';
 const states = new Map();
 const lastView = new Map();
 function viewState(key) {
@@ -206,6 +206,8 @@ export function renderViewBlock(ctx, b, savePage, fullPage = false) {
             }
         }
         const res = query(db, view, state.offset, state.search, state.keep);
+        if (db.schema.files)
+            visibleRows.set(db.key, res.groups ? res.groups.flatMap((g) => g.rows) : res.rows);
         switch (view.type) {
             case 'daylog':
             case 'table':
