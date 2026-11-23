@@ -382,7 +382,10 @@ export function openSettings(app, start) {
         const bgBtn = h('button', { class: 'set-btn with-icon', onclick: () => { bgOpen = !bgOpen; redraw(); } }, h('span', { class: 'bg-chip', style: { background: `hsl(${bgc.h} ${bgc.s}% ${bgc.l}%)` } }), bgOpen ? 'Done' : 'Adjust…');
         return [
             { heading: 'Theme' },
-            { title: 'Theme', control: segmented([['dark', 'Dark'], ['light', 'Light'], ['system', 'Auto']], s.theme ?? 'dark', (v) => { s.theme = v; apply(); redraw(); }, 'Theme'), keywords: 'dark light mode appearance system auto' },
+            document.documentElement.classList.contains('phone')
+                // phone: see each theme before picking it
+                ? { title: 'Theme', wide: h('div', { class: 'theme-cards' }, ...[['light', 'Light'], ['dark', 'Dark'], ['system', 'Auto']].map(([k, l]) => h('button', { class: 'theme-card' + ((s.theme ?? 'dark') === k ? ' on' : ''), onclick: () => { s.theme = k; apply(); redraw(); } }, h('span', { class: `theme-prev theme-prev-${k}` }, h('i'), h('i'), h('i')), h('span', null, l)))), keywords: 'dark light mode appearance system auto' }
+                : { title: 'Theme', control: segmented([['dark', 'Dark'], ['light', 'Light'], ['system', 'Auto']], s.theme ?? 'dark', (v) => { s.theme = v; apply(); redraw(); }, 'Theme'), keywords: 'dark light mode appearance system auto' },
             { title: 'Accent', desc: 'Buttons, selections and highlights', control: accents, keywords: 'accent colour color theme' },
             { title: 'Background', desc: 'The page; sidebar, cards and lines follow', control: bgBtn, keywords: 'background hue saturation brightness colour grey contrast' },
             ...bgRows,
@@ -665,7 +668,7 @@ export function openSettings(app, start) {
         return items;
     };
     const sections = [
-        { id: 'general', group: 'Workspace', label: 'General', icon: 'settings', summary: () => ws.meta.name, subtitle: 'This workspace’s name and where it is saved.', items: general },
+        { id: 'general', group: 'Workspace', label: document.documentElement.classList.contains('phone') ? 'Workspace' : 'General', icon: 'settings', summary: () => ws.meta.name, card: () => ws.storage.remote ? 'Saved in Dropbox' : 'Saved on this device', subtitle: 'This workspace’s name and where it is saved.', items: general },
         { id: 'notifications', group: 'Workspace', label: 'Notifications', icon: 'bell', subtitle: 'Reminders and what needs you – inside Nook, on every device.', items: () => [
                 { heading: 'Reminders' },
                 { title: 'Default for entries with a time', desc: 'For entries without a reminder of their own', control: selectControl([['none', 'None'], ...REMIND_TIMED.map(([m, l]) => [String(m), l])], s.remindTimed === undefined ? 'none' : String(s.remindTimed), (v) => { if (v === 'none')
@@ -683,7 +686,7 @@ export function openSettings(app, start) {
                 { title: 'Missing files', desc: 'Pages and entries that point at files which are gone', control: switchControl(s.notifyMissing !== false, (on) => { s.notifyMissing = on ? undefined : false; void ws.saveSettings(); app.notes.paint(); }, 'Missing files'), keywords: 'missing files notifications' },
             ] },
         { id: 'behaviour', group: 'Workspace', label: 'Navigation', icon: 'compass', subtitle: 'How you move between pages and open entries.', items: behaviour },
-        { id: 'appearance', group: 'Look', label: 'Appearance', icon: 'palette', subtitle: 'Theme, text and layout.', summary: () => ({ light: 'Light', dark: 'Dark', system: 'System' }[s.theme ?? 'system'] ?? ''), items: appearance },
+        { id: 'appearance', group: 'Look', label: 'Appearance', icon: 'palette', subtitle: 'Theme, text and layout.', summary: () => ({ light: 'Light', dark: 'Dark', system: 'Auto' }[s.theme ?? 'dark'] ?? ''), items: appearance },
         { id: 'dates', group: 'Look', label: 'Dates & numbers', icon: 'calendar', subtitle: 'How dates, times and numbers are written.', items: dates },
         { id: 'colors', group: 'Look', label: 'Colors', icon: 'circle-dot', subtitle: 'The colors of options, text, highlights and callouts.', items: colors },
         { id: 'widgets', group: 'Content', label: 'Widgets', icon: 'puzzle', summary: () => { const n = customWidgets().length; return n ? String(n) : ''; }, subtitle: 'Small blocks like timers and notes, added with “/”.', items: () => {
@@ -717,8 +720,8 @@ export function openSettings(app, start) {
                     { title: '', wide: h('div', { class: 'wset-grid' }, builtIn.map((w) => h('div', { class: 'wset-card' }, h('span', { class: 'set-ico' }, iconSvg(w.icon, 16)), h('span', { class: 'wset-card-txt' }, h('b', null, w.name), h('span', null, w.description ?? ''))))), keywords: builtIn.map((w) => w.name).join(' ') },
                 ];
             } },
-        { id: 'shortcuts', group: 'Keyboard', label: 'Shortcuts', icon: 'key', subtitle: 'Click a shortcut, then press the new keys.', items: shortcuts },
-        { id: 'custom-shortcuts', group: 'Keyboard', label: 'Your shortcuts', icon: 'zap', subtitle: 'One key that sets a property, runs a button or opens a page.', items: customShortcuts },
+        { id: 'shortcuts', group: 'Keyboard', desktopOnly: true, label: 'Shortcuts', icon: 'key', subtitle: 'Click a shortcut, then press the new keys.', items: shortcuts },
+        { id: 'custom-shortcuts', group: 'Keyboard', desktopOnly: true, label: 'Your shortcuts', icon: 'zap', subtitle: 'One key that sets a property, runs a button or opens a page.', items: customShortcuts },
         calendarSection(() => app.ws, () => win?.refresh()),
         sourcesSection(() => app.ws, () => win?.refresh(), () => win?.close()),
         { id: 'import', group: 'Data', label: 'Import', icon: 'arrow-down', subtitle: 'Bring content from other apps.', items: () => [

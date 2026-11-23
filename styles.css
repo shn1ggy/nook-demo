@@ -5224,3 +5224,20 @@ html.phone :is(.vpanel.mpanel, .mgrp) .mrow-el > :is(.wset-row, .panel-num-row),
 html.phone .mrow-el > :is(.wset-row, .panel-num-row) > :is(.wset-label, span:not(.menu-ico)) { margin-right: 8px; }
 html.phone .mrow-el > .wset-row > .menu-ico { width: 16px !important; height: 16px !important; flex: 0 0 16px !important; margin: 0 !important; }
 html.phone :is(.vpanel.mpanel, .mgrp) .mrow-el > :is(.wset-row, .panel-num-row), html.phone .mrow-el > .panel-num-row { padding-left: 10px !important; }
+/* phone settings: workspace card on top, theme previews */
+html.phone .pset-ws { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 0; border-radius: 14px; background: color-mix(in srgb, var(--fg) 5.5%, var(--bg)); color: var(--fg); text-align: left; margin: 4px 0 2px; }
+html.phone .pset-ws-ico { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; flex: none; font-size: 19px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #3d8fe6, #7c5cd6); }
+html.phone .pset-ws-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+html.phone .pset-ws-text b { font-size: 17px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.phone .pset-ws-text small { font-size: 13px; color: var(--fg-muted); display: flex; align-items: center; gap: 6px; }
+html.phone .pset-ok { width: 7px; height: 7px; border-radius: 50%; background: #4fa36b; display: inline-block; }
+html.phone .theme-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; padding: 4px 0 2px; }
+html.phone .theme-card { border: 0; background: none; color: var(--fg-muted); font-size: 13.5px; display: flex; flex-direction: column; align-items: stretch; gap: 7px; padding: 0; }
+html.phone .theme-card.on { color: var(--fg); font-weight: 600; }
+html.phone .theme-prev { height: 84px; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px; border: 2px solid transparent; }
+html.phone .theme-card.on .theme-prev { border-color: var(--fg); }
+html.phone .theme-prev i { display: block; height: 7px; border-radius: 4px; }
+html.phone .theme-prev-light { background: #f4f4f5; } html.phone .theme-prev-light i { background: #dcdce0; }
+html.phone .theme-prev-dark { background: #1d1f21; } html.phone .theme-prev-dark i { background: #34373b; }
+html.phone .theme-prev-system { background: linear-gradient(135deg, #f4f4f5 50%, #1d1f21 50%); } html.phone .theme-prev-system i { background: transparent; }
+html.phone .theme-prev i:first-child { width: 60%; } html.phone .theme-prev i:last-child { width: 80%; }

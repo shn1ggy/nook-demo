@@ -5,9 +5,10 @@ import { h, svgIcon, ICONS } from '../util.js';
 import { iconSvg } from './icons.js';
 import { dialog, menu, menuIcon } from './pop.js';
 // the coloured tile of each settings page in the phone's list (as on iOS)
-const TILE = { general: '#6b6b70', notifications: '#e5534b', behaviour: '#3d8fe6', appearance: '#9d68d3', colors: '#d15796', dates: '#e97d2f',
-    widgets: '#529e72', shortcuts: '#5e7ce2', 'custom-shortcuts': '#e9b949', import: '#3d8fe6', export: '#529e72', files: '#4f86c6', switchws: '#9d68d3',
-    calendars: '#e5534b', sources: '#3fa5a0', about: '#3d8fe6' };
+// one hue per page, all about equally bright, so no two neighbours look alike and none is grey
+const TILE = { general: '#4b78c8', notifications: '#e5534b', behaviour: '#3d8fe6', appearance: '#8a63d2', colors: '#d4558c', dates: '#e48a2f',
+    widgets: '#3aa577', shortcuts: '#5b5fc7', 'custom-shortcuts': '#e0a930', import: '#4b78c8', export: '#4f9a6b', files: '#7d8590', switchws: '#8a63d2',
+    calendars: '#e0a930', sources: '#2fa3b5', about: '#4b78c8' };
 // a page without its own colour still gets one (never a grey square by accident)
 const TILE_FALLBACK = ['#3d8fe6', '#529e72', '#9d68d3', '#e97d2f', '#d15796', '#3fa5a0', '#e9b949'];
 const tileColor = (id) => TILE[id] ?? TILE_FALLBACK[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % TILE_FALLBACK.length];
@@ -174,7 +175,13 @@ function phoneSettings(sections, start) {
         else {
             let group = null;
             let card = null;
+            // the workspace as a card on top: its name and where it is saved; tapping it opens its page
+            const top = sections.find((x) => x.card);
+            if (top)
+                inner.append(h('button', { class: 'pset-ws', onclick: () => go(top) }, h('span', { class: 'pset-ws-ico' }, (top.summary?.() || 'N').trim().charAt(0).toUpperCase()), h('span', { class: 'pset-ws-text' }, h('b', null, top.summary?.() || top.label), h('small', null, h('i', { class: 'pset-ok' }), top.card())), chev()));
             for (const s of sections) {
+                if (s === top || s.desktopOnly)
+                    continue;
                 if (s.group !== group || !card) {
                     group = s.group;
                     card = h('div', { class: 'set-card pset-list' });
