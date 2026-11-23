@@ -4,7 +4,7 @@
 // page of a PDF inside a page).
 import { h, svgIcon, ICONS } from '../util.js';
 import { iconSvg } from './icons.js';
-import { menu, menuIcon, toast } from './pop.js';
+import { closePop, menu, menuIcon, toast } from './pop.js';
 import { openPdfFull, pdfUrl } from './pdf.js';
 export const mediaType = (p) => /\.(png|jpe?g|gif|webp|avif|svg|heic)$/i.test(p) ? 'image' : /\.(mp4|mov|m4v|webm)$/i.test(p) ? 'video' : /\.pdf$/i.test(p) ? 'pdf' : /\.(mp3|m4a|wav|aac|ogg|flac)$/i.test(p) ? 'audio' : null;
 const fileName = (p) => p.split('/').pop() ?? p;
@@ -193,7 +193,15 @@ function phoneViewer(ctx, items, at) {
     const box = h('div', { class: 'overlay mv mvp' }, stage, extra, h('div', { class: 'mvp-top' }, h('button', { class: 'mvp-rb', 'aria-label': 'Close', onclick: () => close() }, pi('x')), h('div', { class: 'mvp-title' }, name, meta), more), dots, bar);
     let cleanup = null;
     const act = (k, label, run) => { const b = h('button', { class: 'mvp-act', onclick: run }, pi(k), h('span', null, label)); return b; };
+    // a second tap closes the menu (the tap outside it already closes it on touch-down: then it must not open again)
+    let wasOpen = false;
+    more.addEventListener('pointerdown', () => { wasOpen = !!document.querySelector('.pop:not(.pop-closing)'); }, true);
     more.addEventListener('click', () => {
+        if (wasOpen || document.querySelector('.pop:not(.pop-closing)')) {
+            wasOpen = false;
+            closePop();
+            return;
+        }
         const it = items[i];
         const r = more.getBoundingClientRect();
         menu({ x: r.right, y: r.bottom }, [
