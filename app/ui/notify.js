@@ -276,10 +276,15 @@ export class Notifications {
             if (away.length || others.length)
                 this.awayCard(away, others);
         }
+        // quiet hours: still listed (and counted), but no card pops up and nothing pings
+        const q = this.ws.settings.quiet;
+        const hm = new Date().toTimeString().slice(0, 5);
+        const quiet = !!q && (q.from <= q.to ? hm >= q.from && hm < q.to : hm >= q.from || hm < q.to);
         for (const r of due)
             if (!this.carded.has(r.key)) {
                 this.carded.add(r.key);
-                this.card(r);
+                if (!quiet)
+                    this.card(r);
             }
         this.paint();
     }

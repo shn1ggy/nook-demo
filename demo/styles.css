@@ -5241,3 +5241,10 @@ html.phone .theme-prev-light { background: #f4f4f5; } html.phone .theme-prev-lig
 html.phone .theme-prev-dark { background: #1d1f21; } html.phone .theme-prev-dark i { background: #34373b; }
 html.phone .theme-prev-system { background: linear-gradient(135deg, #f4f4f5 50%, #1d1f21 50%); } html.phone .theme-prev-system i { background: transparent; }
 html.phone .theme-prev i:first-child { width: 60%; } html.phone .theme-prev i:last-child { width: 80%; }
+/* phone settings: text size slider, time fields */
+html.phone .set-range-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 6px 0 2px; }
+html.phone .set-range { flex: 1; min-width: 0; accent-color: var(--fg); height: 28px; }
+html.phone .set-range-a { font-size: 21px; color: var(--fg-muted); flex: none; }
+html.phone .set-range-a.small { font-size: 13px; }
+html.phone .set-range-val { font-size: 14px; color: var(--fg-muted); min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+html.phone .set-time { height: 34px; padding: 0 10px; border-radius: 9px; font-size: 16px; border: 0; background: color-mix(in srgb, var(--fg) 10%, transparent); color: var(--fg); }

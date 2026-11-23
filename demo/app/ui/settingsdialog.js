@@ -40,6 +40,9 @@ export function openSettings(app, start) {
         await ws.saveMeta(); await ws.saveSettings(); app.sidebarOpen = s.sidebar; app.applySettings(); app.render(); };
     let win = null;
     const redraw = () => win?.refresh();
+    const timeInput = (v, set) => { const i = h('input', { type: 'time', class: 'set-input set-time', value: v }); i.addEventListener('change', () => { if (i.value)
+        set(i.value); }); return i; };
+    const redrawNotes = () => redraw();
     // ----- general -----
     const general = () => {
         const name = h('input', { type: 'text', class: 'set-input', value: ws.meta.name, 'aria-label': 'Workspace name' });
@@ -391,10 +394,21 @@ export function openSettings(app, start) {
             ...bgRows,
             { heading: 'Text' },
             { title: 'Font', control: segmented(FONTS.map((f) => [f[0], f[1]]), FONTS.some((f) => f[0] === s.font) ? s.font : 'system', (v) => { s.font = v; apply(); }, 'Font'), keywords: 'font typeface geist serif monospace' },
-            { title: 'Size', desc: 'Everything in Nook', control: selectControl([80, 90, 100, 110, 125, 140, 150].map((n) => [String(n), `${n} %`]), String(s.zoom ?? 100), (v) => { const n = Number(v); if (n === 100)
-                    delete s.zoom;
-                else
-                    s.zoom = n; apply(); }, 'Size'), keywords: 'zoom size scale bigger smaller ui' },
+            document.documentElement.classList.contains('phone') ? { title: 'Size', desc: 'Everything in Nook', wide: (() => {
+                    // phone: a slider between a small and a big A; it applies when you let go
+                    const r = h('input', { type: 'range', class: 'set-range', min: 80, max: 150, step: 5, value: String(s.zoom ?? 100), 'aria-label': 'Text size' });
+                    const val = h('span', { class: 'set-range-val' }, `${s.zoom ?? 100} %`);
+                    r.addEventListener('input', () => { val.textContent = `${r.value} %`; });
+                    r.addEventListener('change', () => { const n = Number(r.value); if (n === 100)
+                        delete s.zoom;
+                    else
+                        s.zoom = n; apply(); });
+                    return h('div', { class: 'set-range-row' }, h('span', { class: 'set-range-a small' }, 'A'), r, h('span', { class: 'set-range-a' }, 'A'), val);
+                })(), keywords: 'zoom size scale bigger smaller ui' } :
+                { title: 'Size', desc: 'Everything in Nook', control: selectControl([80, 90, 100, 110, 125, 140, 150].map((n) => [String(n), `${n} %`]), String(s.zoom ?? 100), (v) => { const n = Number(v); if (n === 100)
+                        delete s.zoom;
+                    else
+                        s.zoom = n; apply(); }, 'Size'), keywords: 'zoom size scale bigger smaller ui' },
             { heading: 'Layout' },
             { title: 'Density', desc: 'Rows, blocks and sidebar', control: segmented([['dense', 'Compact'], ['compact', 'Comfortable']], s.density, (v) => { s.density = v; apply(); }, 'Density'), keywords: 'compact spacing density' },
             { title: 'Page width', desc: 'Pages can choose their own in their ⋯ menu', keywords: 'page width full wide narrow default pixels', control: widthControl(workspaceWidth(s), (value) => { s.defaultPageWidth = value; delete s.pageWidth; void apply(); }) },
@@ -681,6 +695,15 @@ export function openSettings(app, start) {
                         s.remindDay = Number(v); void ws.saveSettings(); }, 'Default'), keywords: 'reminder default notification all-day' },
                 { title: 'Missed while away', desc: 'Reminders that came due while Nook was closed are shown from the last …', control: selectControl([['2', '2 hours'], ['24', '24 hours'], ['72', '3 days'], ['168', '1 week']], String(s.remindMissed ?? 24), (v) => { s.remindMissed = Number(v) === 24 ? undefined : Number(v); void ws.saveSettings(); }, 'Missed'), keywords: 'reminder missed away closed' },
                 { title: 'Ping when a reminder goes off', desc: 'A small soft sound', control: switchControl(s.notifySound !== false, (on) => { s.notifySound = on ? undefined : false; void ws.saveSettings(); }, 'Ping'), keywords: 'sound ping reminder notification audio' },
+                { heading: 'Quiet hours' },
+                { title: 'Quiet hours', desc: 'No pop-ups and no ping – reminders are still listed', control: switchControl(!!s.quiet, (on) => { if (on)
+                        s.quiet = { from: '22:00', to: '07:00' };
+                    else
+                        delete s.quiet; void ws.saveSettings(); redrawNotes(); }, 'Quiet hours'), keywords: 'quiet hours night do not disturb silent' },
+                ...(s.quiet ? [
+                    { title: 'From', control: timeInput(s.quiet.from, (v) => { s.quiet.from = v; void ws.saveSettings(); }), keywords: 'quiet hours' },
+                    { title: 'Until', control: timeInput(s.quiet.to, (v) => { s.quiet.to = v; void ws.saveSettings(); }), keywords: 'quiet hours' },
+                ] : []),
                 { heading: 'Also listed' },
                 { title: 'Sync problems', desc: 'Conflicts and changes not saved to Dropbox yet – shown under Notifications and counted in the red number', control: switchControl(s.notifySync !== false, (on) => { s.notifySync = on ? undefined : false; void ws.saveSettings(); app.notes.paint(); }, 'Sync problems'), keywords: 'conflict sync dropbox unsaved notifications' },
                 { title: 'Missing files', desc: 'Pages and entries that point at files which are gone', control: switchControl(s.notifyMissing !== false, (on) => { s.notifyMissing = on ? undefined : false; void ws.saveSettings(); app.notes.paint(); }, 'Missing files'), keywords: 'missing files notifications' },
