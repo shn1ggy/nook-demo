@@ -5460,3 +5460,6 @@ html.phone .tb-stage.flipped .tb-player > * { transform: none; opacity: 1; }
 /* menus of the desktop player open above it */
 body:has(.overlay.spl) .pop { z-index: 1100 !important; }
 .spl-left .mvp-seek2 { padding: 0; }
+/* a note in a panel ("No filters …") is not a button: no hover, text centred in its line */
+.mgrp > .mrow-el:has(> .vpanel-empty):hover, .mrow-el:has(> .vpanel-empty):hover { background: none !important; }
+.vpanel-empty { padding: 8px 8px; line-height: 1.35; display: flex; align-items: center; min-height: 34px; }

@@ -299,12 +299,15 @@ function phoneFull() {
     } });
     audio.addEventListener('timeupdate', tick);
     // pull down to close (the music goes on)
-    let y0 = 0, x0 = 0;
+    // (only a gesture that began here: the seek bar keeps its touches for itself)
+    let y0 = null, x0 = 0;
     stage.addEventListener('touchstart', (e) => { y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; }, { passive: true });
-    stage.addEventListener('touchmove', (e) => { const d = e.touches[0].clientY - y0; if (d > 0 && d > Math.abs(e.touches[0].clientX - x0)) {
+    stage.addEventListener('touchmove', (e) => { if (y0 == null)
+        return; const d = e.touches[0].clientY - y0; if (d > 0 && d > Math.abs(e.touches[0].clientX - x0)) {
         box.style.transform = `translateY(${d}px)`;
     } }, { passive: true });
-    stage.addEventListener('touchend', (e) => { const d = e.changedTouches[0].clientY - y0; box.style.transform = ''; if (Date.now() - lastMenuTouch < 900)
+    stage.addEventListener('touchend', (e) => { if (y0 == null)
+        return; const d = e.changedTouches[0].clientY - y0; y0 = null; box.style.transform = ''; if (Date.now() - lastMenuTouch < 900)
         return; if (d > 110)
         close();
     else if (Math.abs(e.changedTouches[0].clientX - x0) > 70 && Math.abs(d) < 40 && queue.length > 1)
