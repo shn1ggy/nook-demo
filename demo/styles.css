@@ -5113,3 +5113,9 @@ html.phone .conf-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-beh
 html.phone .conf-body > * { flex: none; }
 html.phone .conf-hunks { flex: none !important; min-height: auto !important; }
 html.phone .conf-label-all { margin-top: 20px; }
+/* phone view options (and their sub-pages): like the page ⋯ menu – the heading scrolls away with the list, same colour and weight */
+html.phone .pop .mhead .mtitle { color: inherit !important; font-size: inherit !important; font-weight: inherit !important; letter-spacing: inherit; }
+html.phone .pop.pop-panel { overflow-y: auto !important; overscroll-behavior: contain; }
+html.phone:not(.kb-open) .pop.pop-panel { padding-bottom: calc(var(--bar-gap) + 76px) !important; }
+html.phone .pop.pop-panel .vpanel { display: block !important; max-height: none !important; height: auto !important; }
+html.phone .pop.pop-panel .vpanel-rows { overflow: visible !important; max-height: none !important; padding-bottom: 0 !important; }
