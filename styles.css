@@ -5065,3 +5065,14 @@ html.phone .ogb-rep { color: var(--fg-muted); }
 html.phone .ogb-rep.on { color: var(--fg); }
 html.phone .ogb-save { font-size: 16px; font-weight: 500; }
 html.phone .tab-bell { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* long press on Notifications: a glow fills in while you hold, the bell rings when the reminder opens */
+html.phone .tab-bell { position: relative; }
+html.phone .tab-bell::before { content: ''; position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--fg) 30%, transparent) 0%, color-mix(in srgb, var(--fg) 10%, transparent) 55%, transparent 72%);
+  opacity: 0; transform: scale(.4); transition: opacity .15s, transform .15s; }
+html.phone .tab-bell.pressing::before { opacity: 1; transform: scale(1); transition: opacity .45s ease-out, transform .45s cubic-bezier(.2, .8, .3, 1); }
+html.phone .tab-bell.fired::before { animation: bell-flash .55s ease-out; }
+html.phone .tab-bell.fired > svg { animation: bell-ring .5s ease-in-out; transform-origin: 50% 15%; }
+@keyframes bell-flash { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.6); } }
+@keyframes bell-ring { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(16deg); } 40% { transform: rotate(-13deg); } 60% { transform: rotate(8deg); } 80% { transform: rotate(-4deg); } }
+@media (prefers-reduced-motion: reduce) { html.phone .tab-bell.fired > svg { animation: none; } }

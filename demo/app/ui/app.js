@@ -1966,8 +1966,8 @@ export class App {
             b.setAttribute('aria-label', 'Notifications');
             // long press: a new reminder right where you are (the page you're on stays)
             let timer = 0, sx = 0, sy = 0;
-            const stop = () => { clearTimeout(timer); timer = 0; };
-            b.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; stop(); timer = window.setTimeout(() => { timer = 0; this.bellTap = Date.now(); navigator.vibrate?.(10); closeSheets(); closePop(); this.notes.ownForm(); }, 450); });
+            const stop = () => { clearTimeout(timer); timer = 0; b.classList.remove('pressing'); };
+            b.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; stop(); b.classList.add('pressing'); timer = window.setTimeout(() => { timer = 0; this.bellTap = Date.now(); b.classList.remove('pressing'); b.classList.remove('fired'); void b.offsetWidth; b.classList.add('fired'); setTimeout(() => b.classList.remove('fired'), 600); navigator.vibrate?.(10); closeSheets(); closePop(); this.notes.ownForm(); }, 450); });
             b.addEventListener('pointermove', (e) => { if (Math.hypot(e.clientX - sx, e.clientY - sy) > 10)
                 stop(); });
             b.addEventListener('pointerup', stop);
