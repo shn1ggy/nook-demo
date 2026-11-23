@@ -5048,3 +5048,8 @@ html.phone .ogb .own-notes { padding-top: 12px !important; padding-bottom: 14px 
 /* search fields never get squeezed by a long list below them (the trash search was lower while the full list showed) */
 .pset-search, .win-searchbox, .win-sum { flex-shrink: 0; }
 html.phone :is(.pset-search, .win-searchbox) { min-height: 44px; }
+/* new reminder: the same heading, section labels and separators as the ⋯ menu */
+html.phone .ogb-head { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-muted); padding: 4px 6px 8px; }
+html.phone .ogb-label { font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: normal; color: var(--fg-faint); margin: 16px -10px 0; padding: 10px 12px 8px; border-top: 1px solid var(--border); }
+html.phone .ogb-card { margin-top: 4px; }
+html.phone .ogb-foot { padding-top: 20px; }
