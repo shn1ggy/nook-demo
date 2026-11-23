@@ -487,8 +487,24 @@ export function menu(anchor, entries, opts = {}) {
     }
     {
         const inp = input;
-        if (inp && kbFocusOk())
+        if (inp && kbFocusOk()) {
             inp.focus();
+            if (document.documentElement.classList.contains('phone')) {
+                // the phone: the editor may take the focus back right after "/" – keep handing it to the search field
+                const again = () => { if (inp.isConnected && document.activeElement !== inp)
+                    inp.focus(); };
+                requestAnimationFrame(again);
+                setTimeout(again, 60);
+                setTimeout(again, 250);
+                const keep = () => { if (inp.isConnected && !inp.value)
+                    setTimeout(again, 0); };
+                document.addEventListener('focusin', function f(e) { if (!inp.isConnected) {
+                    document.removeEventListener('focusin', f);
+                    return;
+                } if (e.target !== inp && e.target.isContentEditable)
+                    keep(); });
+            }
+        }
         else if (!inp)
             items()[0]?.focus();
     }
@@ -927,6 +943,11 @@ function phoneFormHead(box) {
         const x = head.querySelector('.icon-btn[aria-label="Close"]');
         if (!x)
             return;
+        // a choice window (Compressed / Original): tapping an option is the answer, no Done
+        if (box.matches('.cmp-window')) {
+            x.hidden = true;
+            return;
+        }
         head.classList.add('form-head');
         head.querySelectorAll(':scope > :not(strong)').forEach((el) => { if (el !== x)
             el.hidden = true; });
