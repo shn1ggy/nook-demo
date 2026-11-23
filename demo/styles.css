@@ -5205,3 +5205,10 @@ html.phone:not(.kb-open) .pop.pop-panel .vpanel-rows { padding-bottom: 0 !import
 html.phone .panel-num-row { display: flex; align-items: center; gap: 14px; padding: 6px 12px !important; }
 html.phone .panel-num-row > span { flex: none; }
 html.phone .panel-num-row .set-input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; font-size: 16px; border-radius: 12px; }
+/* phone widget settings: labelled fields like the panels' – room between label and field, field 44px tall */
+html.phone .wset-row { display: flex; align-items: center; gap: 14px; padding: 6px 12px !important; min-height: 56px; }
+html.phone .wset-row > .wset-label { flex: none; }
+html.phone .wset-row > .rule-input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; font-size: 16px; border-radius: 12px; box-sizing: border-box; }
+html.phone .wset-row.tall { align-items: flex-start; flex-wrap: wrap; }
+html.phone .wset-row.tall > .wset-ta { flex: 1 1 100%; min-height: 88px; height: auto; padding: 11px 14px; font-size: 16px; border-radius: 12px; }
+html.phone .pop .rule-input { min-height: 40px; font-size: 16px; }
