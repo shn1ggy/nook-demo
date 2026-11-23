@@ -1279,6 +1279,29 @@ export class DropboxStorage {
                 out.push([e.name, await this.read(`${d}/${e.name}`)]);
         return out;
     }
+    /** size and dates of every file below a folder: "created" is the file's own date (as on the computer it came from) */
+    async fileInfo(dir) {
+        const out = [];
+        const take = (es) => { for (const e of es)
+            if (e['.tag'] === 'file') {
+                const rel = this.rel(e.path_display ?? e.path_lower ?? '');
+                if (rel)
+                    out.push({ path: rel, size: e.size ?? 0, created: e.client_modified, modified: e.server_modified });
+            } };
+        try {
+            let r = await rpc('/2/files/list_folder', { path: this.abs(dir), recursive: true, limit: 2000 });
+            take(r.entries);
+            while (r.has_more) {
+                r = await rpc('/2/files/list_folder/continue', { cursor: r.cursor });
+                take(r.entries);
+            }
+        }
+        catch (e) {
+            if (!notFound(e))
+                throw e;
+        }
+        return out;
+    }
     async list(dir) {
         const d = dir.replace(/^\/+|\/+$/g, '');
         const out = new Map();

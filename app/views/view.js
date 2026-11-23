@@ -19,6 +19,7 @@ import { renderDay } from './days.js';
 import { renderTrends } from './trends.js';
 import { openViewSettings, opsFor, VIEW_TYPES, describeRule } from './viewpanel.js';
 import { iconSvg, renderIcon } from '../ui/icons.js';
+import { pickUpload, fileInfoOnce, fileCrumb, viewDrop, newFileButton } from './fileview.js';
 const states = new Map();
 const lastView = new Map();
 function viewState(key) {
@@ -116,6 +117,11 @@ export function renderViewBlock(ctx, b, savePage, fullPage = false) {
             redraw: draw,
             saveView: () => { ctx.ws.saveViews(db); },
             newRow: async (extra = {}, open = false, template) => {
+                // a database of files: New uploads files
+                if (db.schema.files) {
+                    pickUpload(ctx, db);
+                    return;
+                }
                 const values = defaultsFor(db, view, state.offset);
                 Object.assign(values, extra);
                 if (db.dateLabel && !values[db.dateLabel])
@@ -188,6 +194,16 @@ export function renderViewBlock(ctx, b, savePage, fullPage = false) {
             e.stopPropagation();
             openViewSettings(env, { x: e.clientX, y: e.clientY }, selectTab);
         };
+        if (db.schema.files) {
+            fileInfoOnce(ctx, db);
+            const crumb = fileCrumb(ctx, db);
+            if (crumb)
+                root.appendChild(crumb);
+            if (!root.dataset.fdb) {
+                root.dataset.fdb = '1';
+                viewDrop(ctx, db, root);
+            }
+        }
         const res = query(db, view, state.offset, state.search, state.keep);
         switch (view.type) {
             case 'daylog':
@@ -668,6 +684,8 @@ function nameInPlace(root, ctx, db, row) {
 }
 /** the blue "New" button with a ▾ that lists the templates and lets you make or edit them (as in Notion) */
 function newEntryButton(env, editTemplates) {
+    if (env.db.schema.files)
+        return newFileButton(env.ctx, env.db);
     // a day log: New asks which of its databases
     const tpls = env.db.schema.templates ?? [];
     const main = h('button', { class: 'btn-new', title: env.db.schema.defaultTemplate ? `New entry from “${env.db.schema.defaultTemplate}”` : 'New entry', onclick: () => env.newRow({}, true) }, 'New');

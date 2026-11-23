@@ -21,6 +21,7 @@ import { parsePage, serializePage } from './format/page.js';
 import { compile, evaluate, FormulaError, references, renameInFormula } from './formula.js';
 import { MONTHS, fmtDate, weekStart, asDate, compareDateStarts, compareText, dayNum, defaultLocale, localeDefaults, pad2, slug, todayISO, hhmmOfDate, ulid } from './util.js';
 import { plainText } from './format/inline.js';
+import { loadFileRows, buildRows, saveFileRow, removeFileRow, folderOf, parentOf } from './filedb.js';
 import { safeName, dirOf, baseOf, stemOf, join, under, pageFolder, uniqueName, namesIn, NOT_CONTENT, PAGES, DATABASES, UNUSED } from './layout.js';
 const safeDecode = (s) => { try {
     return decodeURI(s);
@@ -634,6 +635,11 @@ export class Workspace {
                 key = `${savedKey || baseOf(base)}-${i}`;
             const db = new Database(key, schema, views.length ? views : [defaultView(schema)]);
             db.dir = base;
+            if (db.schema.files) {
+                await loadFileRows(ws, db, textOf);
+                ws.dbs.set(key, db);
+                return;
+            }
             const rowFiles = texts.filter((p) => p.toLowerCase().endsWith('.md') && dbOf(p) === base);
             const rows = await Promise.all(rowFiles.map(async (f) => { const t = await textOf(f); if (t == null)
                 return null; const r = parseRow(t, baseOf(f)); r.file = f; return r; }));
@@ -1299,8 +1305,13 @@ export class Workspace {
         // with the folders following the sidebar the key stays: only the folder's name follows
         if (this.layout2) {
             await this.placeDb(db);
+            if (db.schema.files)
+                buildRows(this, db);
             return null;
         }
+        // a database of files keeps its folder (its files would have to be copied over)
+        if (db.schema.files)
+            return null;
         const base = slug(db.schema.name) || 'database';
         const old = db.key;
         if (base === old || old.replace(/-\d+$/, '') === base)
@@ -1732,6 +1743,8 @@ export class Workspace {
     }
     /** an entry's file (and its folder of files) named after it */
     async placeRow(db, r) {
+        if (db.schema.files)
+            return false;
         if (!this.layout2)
             return false;
         const cur = this.rowPath(db, r);
@@ -2411,6 +2424,11 @@ export class Workspace {
     }
     /** `history: false` for changes that come from outside (calendar sync): they are not undone with Ctrl+Z */
     async saveRow(db, row, opts = {}) {
+        if (db.schema.files) {
+            await saveFileRow(this, db, row);
+            this.rowListeners.forEach((f) => f(db, row));
+            return;
+        }
         if (!opts.keepEdited)
             row.edited = new Date().toISOString().slice(0, 19);
         db.invalidate(row.id);
@@ -2424,6 +2442,11 @@ export class Workspace {
     }
     rowPath(db, row) { return row.file ??= this.newRowFile(db, row); }
     async deleteRow(db, row, opts = {}) {
+        if (db.schema.files) {
+            await removeFileRow(this, db, row);
+            this.emit();
+            return;
+        }
         db.rows = db.rows.filter((r) => r !== row);
         await this.removeFile(this.rowPath(db, row), opts.history !== false);
         // subpages of the entry don't disappear with it: they go to the top level
@@ -2439,6 +2462,8 @@ export class Workspace {
     }
     /** a copy of an entry: values, page content, icon, repetition and reminder (a new id, created now) */
     async duplicateRow(db, r, values) {
+        if (db.schema.files)
+            return r;
         const now = new Date().toISOString().slice(0, 19);
         const c = { id: ulid(), values: values ?? structuredClone(r.values), body: r.body, created: now, edited: now };
         if (r.icon)
@@ -3233,6 +3258,11 @@ export function query(db, view, offset = 0, search = '', keep) {
     // keep: entries just made here – they stay visible even when the filter would hide them
     const kept = (r) => !!keep?.has(r.id);
     let rows = db.rows.filter((r) => kept(r) || matchFilter(db, r, view.filter));
+    // a database of files shows one folder at a time
+    if (db.schema.files) {
+        const f = folderOf(db);
+        rows = rows.filter((r) => parentOf(r) === f);
+    }
     const range = view.period ? periodRange(view.period, offset) : null;
     if (range && view.period) {
         const prop = view.period.prop;
@@ -3290,6 +3320,12 @@ export function query(db, view, offset = 0, search = '', keep) {
             const rest = rows.filter((r) => !keep.has(r.id));
             rows = view.newAt === 'top' ? [...fresh.reverse(), ...rest] : [...rest, ...fresh];
         }
+    }
+    // folders before files (in the order the sorting gives)
+    if (db.schema.files) {
+        if (!sorts.length && !view.order?.length)
+            rows = [...rows].sort((a, b) => compareText(a.rel ?? '', b.rel ?? ''));
+        rows = [...rows.filter((r) => r.isDir), ...rows.filter((r) => !r.isDir)];
     }
     let groups = null;
     if (view.groupBy) {

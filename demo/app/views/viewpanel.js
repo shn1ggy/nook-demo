@@ -12,12 +12,13 @@ import { periodRange, weeksOn } from '../workspace.js';
 import { parsePage, serializePage } from '../format/page.js';
 import { Editor } from '../ui/editor.js';
 import { MONTHS, debounce, fmtDay, todayISO, asDate, h, parseDateInput, ulid, svgIcon, ICONS, COLORS, colorLabel, segmented } from '../util.js';
-import { dialog, menu, panel, prompt, toast } from '../ui/pop.js';
+import { closePop, dialog, menu, panel, prompt, toast } from '../ui/pop.js';
 import { iconSvg, renderIcon } from '../ui/icons.js';
 import { pickIcon } from '../ui/iconpicker.js';
 import { typeIcon, dateEditor } from './cells.js';
 import { calendars, calendarViewKeys, overlaysFor, setSubShown, subShownIn } from '../sync/service.js';
 import { viewDrag as makeViewDrag } from './vieworder.js';
+import { canSwitch, switchFiles } from '../filedb.js';
 import { saveConfig } from '../sync/calsync.js';
 export const VIEW_TYPES = [
     { type: 'table', label: 'Table', icon: 'table' }, { type: 'board', label: 'Board', icon: 'kanban' },
@@ -1072,29 +1073,48 @@ export function openViewSettings(env, anchor, selectTab, start) {
                 rows.push({ label: 'Search', icon: menuIcon('search'), run: () => { env.state.searchOpen = true; env.redraw(); } });
             // everything that changes the whole database (every view): one page
             const dbRows = [];
-            if (props().some((p) => p.type === 'date'))
+            // "Entries are files": only while there's nothing to lose (no entries; or, once on, no files yet)
+            {
+                const sw = canSwitch(db);
+                let why = false;
+                const files = !!db.schema.files;
+                dbRows.push({ el: h('div', { class: 'fdb-toggle' + (sw.ok ? '' : ' locked') }, h('div', { class: 'fdb-toggle-row', role: 'button', tabindex: 0, onclick: async (e) => {
+                            const box = e.currentTarget.parentElement;
+                            if (!sw.ok) {
+                                why = !why;
+                                box.querySelector('.fdb-why')?.toggleAttribute('hidden', !why);
+                                return;
+                            }
+                            env.ctx.ws.boundary();
+                            await switchFiles(env.ctx.ws, db, !files);
+                            toast(files ? 'Entries are pages again' : 'Entries are files now – New uploads files');
+                            env.redraw();
+                        } }, menuIcon('folder'), h('span', { class: 'fdb-toggle-label' }, 'Entries are files'), sw.ok ? null : iconSvg('lock', 13), switchControl(files, () => { }, 'Entries are files')), h('div', { class: 'fdb-desc' }, files ? `Each file in the folder ${db.dir}/files is an entry, subfolders stay folders.` : 'Each file in the database folder becomes an entry, subfolders stay folders.'), sw.ok ? null : h('div', { class: 'fdb-why', hidden: true }, h('b', null, sw.why === 'entries' ? 'Already has entries' : 'Holds files'), h('span', null, sw.why === 'entries' ? 'Only an empty database can hold files. To work with files, create a new database.' : 'This database holds files, so it can’t go back to entries. For entries, create a new database.'), h('button', { class: 'set-btn with-icon', onclick: (e) => { e.stopPropagation(); closePop(); env.ctx.newDatabase?.(); } }, iconSvg('plus', 13), 'New database'))) }, 'sep');
+            }
+            if (!db.schema.files && props().some((p) => p.type === 'date'))
                 dbRows.push({ label: 'Repeating entries', icon: menuIcon('repeat'), toggle: db.schema.repeat !== false, onToggle: () => { if (db.schema.repeat === false)
                         delete db.schema.repeat;
                     else
                         db.schema.repeat = false; env.ctx.ws.boundary(); env.ctx.ws.saveSchema(db).then(() => env.ctx.ws.emit()); } });
             // sub-items (as in Notion): entries nest under other entries; shown as a tree in tables
-            dbRows.push({ label: 'Sub-items', icon: menuIcon('list'), toggle: !!db.schema.subItems, onToggle: async () => {
-                    env.ctx.ws.boundary();
-                    if (db.schema.subItems) {
-                        delete db.schema.subItems;
-                        await env.ctx.ws.saveSchema(db);
-                        toast('Sub-items off – the “Parent item” and “Sub-items” properties stay');
-                    }
-                    else {
-                        await env.ctx.ws.enableSubItems(db);
-                        toast('Sub-items on – right-click an entry → Add sub-item');
-                    }
-                    env.redraw();
-                } });
+            if (!db.schema.files)
+                dbRows.push({ label: 'Sub-items', icon: menuIcon('list'), toggle: !!db.schema.subItems, onToggle: async () => {
+                        env.ctx.ws.boundary();
+                        if (db.schema.subItems) {
+                            delete db.schema.subItems;
+                            await env.ctx.ws.saveSchema(db);
+                            toast('Sub-items off – the “Parent item” and “Sub-items” properties stay');
+                        }
+                        else {
+                            await env.ctx.ws.enableSubItems(db);
+                            toast('Sub-items on – right-click an entry → Add sub-item');
+                        }
+                        env.redraw();
+                    } });
             if (!env.ctx.isDbPage?.(db.key))
                 dbRows.push({ label: 'Open database as full page', icon: menuIcon('maximize'), run: () => env.ctx.openDb(db.key) });
             dbRows.push({ label: 'Find duplicates…', icon: menuIcon('layers'), run: () => openDuplicates(env.ctx, db) });
-            if (env.ctx.importCsvFile)
+            if (env.ctx.importCsvFile && !db.schema.files)
                 dbRows.push({ label: 'Import CSV…', icon: menuIcon('arrow-down'), run: () => env.ctx.importCsvFile(db) });
             rows.push({ section: 'Database' }, { label: db.schema.name, icon: menuIcon('database'), hint: 'All views', go: () => ({ title: db.schema.name, rows: () => [{ section: 'Applies to every view' }, ...dbRows] }) });
             const viewControls = () => {

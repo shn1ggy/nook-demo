@@ -75,7 +75,7 @@ export function openViewer(ctx, items, at) {
         stage.textContent = '';
         stage.className = `mv-stage ${t ?? ''}`;
         name.textContent = fileName(it.path);
-        const label = t === 'image' ? 'Photo' : t === 'video' ? 'Video' : t === 'pdf' ? 'PDF' : 'File';
+        const label = t === 'image' ? 'Photo' : t === 'video' ? 'Video' : t === 'pdf' ? 'PDF' : t === 'audio' ? 'Audio' : 'File';
         meta.textContent = label;
         strip.querySelectorAll('.mv-th').forEach((x, k) => x.classList.toggle('cur', k === i));
         void (async () => {
@@ -85,6 +85,8 @@ export function openViewer(ctx, items, at) {
                     return;
                 if (t === 'pdf')
                     stage.append(h('iframe', { class: 'mv-pdf', src: await pdfUrl(u), title: fileName(it.path) }));
+                else if (t === 'audio')
+                    stage.append(h('div', { class: 'mv-audio' }, iconSvg('music', 48), h('audio', { src: u, controls: true, autoplay: true })));
                 else if (t === 'video') {
                     const v = h('video', { class: 'mv-media', src: u, controls: true, autoplay: true, playsInline: true });
                     v.addEventListener('loadedmetadata', () => { if (items[i] === it && Number.isFinite(v.duration))
@@ -110,9 +112,9 @@ export function openViewer(ctx, items, at) {
     } i = next; show(); };
     items.forEach((it, k) => {
         const t = mediaType(it.path);
-        const th = h('button', { class: 'mv-th' + (t === 'pdf' ? ' doc' : ''), 'aria-label': fileName(it.path), onclick: () => { i = k; show(); } });
-        if (t === 'pdf')
-            th.append(iconSvg('file-text', 16));
+        const th = h('button', { class: 'mv-th' + (t === 'pdf' || t === 'audio' ? ' doc' : ''), 'aria-label': fileName(it.path), onclick: () => { i = k; show(); } });
+        if (t === 'pdf' || t === 'audio')
+            th.append(iconSvg(t === 'pdf' ? 'file-text' : 'music', 16));
         else {
             const el = t === 'video' ? h('video', { muted: true, preload: 'metadata', playsInline: true }) : h('img', { alt: '', loading: 'lazy' });
             void ctx.assetUrl(it.path).then((u) => { el.src = t === 'video' ? `${u}#t=0.1` : u; }).catch(() => { });

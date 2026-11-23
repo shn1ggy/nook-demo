@@ -114,7 +114,10 @@ export function entryTitle(db, row) {
     return first ? { text: first.slice(0, 80), derived: true } : { text: 'Untitled', derived: true };
 }
 /** an entry's icon in views: its own, or (as in Notion) a page icon once it has content of its own */
+const FILE_ICONS = [[/\.(png|jpe?g|gif|webp|avif|heic|svg|tiff?|bmp)$/i, 'image'], [/\.(mp4|mov|m4v|webm|mkv|avi|mxf)$/i, 'video'], [/\.(mp3|m4a|wav|aiff?|aac|ogg|flac|opus)$/i, 'music'], [/\.(pdf|docx?|pages|odt|rtf|txt|md)$/i, 'file-text'], [/\.(xlsx?|numbers|csv)$/i, 'table']];
 export function entryIcon(row, size) {
+    if (row.rel != null)
+        return h('span', { class: 'auto-icon file-ico' + (row.isDir ? ' dir' : '') }, iconSvg(row.isDir ? 'folder' : FILE_ICONS.find(([re]) => re.test(row.rel))?.[1] ?? 'file', size));
     if (row.icon)
         return renderIcon(row.icon, size);
     if (!row.body?.trim())
@@ -216,7 +219,7 @@ function textEditor(v, cell, set, move, initial) {
  */
 export function editValue(ws, db, row, prop, cell, done, opts = {}) {
     const def = db.prop(prop);
-    if (!def)
+    if (!def || def.file)
         return;
     let then = null;
     const move = opts.onMove ? (d) => { then = d; } : undefined;

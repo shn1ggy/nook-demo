@@ -36,7 +36,8 @@ import { Notifications, nbCount, nbDot } from './notify.js';
 import { databaseCsv, entryProps, exportDatabase, exportEntry, exportHtml, exportPage, safeName, saveFile } from '../exporter/export.js';
 import { openFind, closeFind } from './find.js';
 import { calendars } from '../sync/service.js';
-import { editValue, renderValue, setAssetResolver, setRowOpener, typeIcon } from '../views/cells.js';
+import { entryIcon, editValue, renderValue, setAssetResolver, setRowOpener, typeIcon } from '../views/cells.js';
+import { openFileEntry, fileActions } from '../views/fileview.js';
 import { renderViewBlock } from '../views/view.js';
 /** font presets: id, label, CSS font stack */
 export const FONTS = [
@@ -2288,7 +2289,7 @@ export class App {
                 else
                     val.append(rendered);
                 // the reminder sits with the date: a bell chip (faint until one is set)
-                if (p.type === 'date' && (p.name === remindDate() || db.schema.reminders?.props?.[p.name] != null) && v)
+                if (p.type === 'date' && !db.schema.files && (p.name === remindDate() || db.schema.reminders?.props?.[p.name] != null) && v)
                     val.append(this.remindChipEl(db, row, p.name, p.name === remindDate(), drawProps));
                 const edit = () => editValue(ws, db, row, p.name, val, drawProps);
                 val.addEventListener('click', edit);
@@ -2408,6 +2409,10 @@ export class App {
                 icon.classList.toggle('empty', !row.icon);
                 icon.append(row.icon ? renderIcon(row.icon, 30) : h('span', { class: 'add-icon' }, svgIcon(ICONS.plus, 14), 'Add icon'));
             }) }, row.icon ? renderIcon(row.icon, 30) : h('span', { class: 'add-icon' }, svgIcon(ICONS.plus, 14), 'Add icon'));
+        if (db.schema.files) {
+            const fel = h('div', { class: 'row-page fdb-page' }, h('div', { class: 'page-head' }, entryIcon(row, 30) ?? icon, title), props, hiddenToggle, fileActions(this, row));
+            return { el: fel, focusTitle: () => { title.focus({ preventScroll: true }); placeCaretEnd(title); } };
+        }
         const el = h('div', { class: 'row-page' }, h('div', { class: 'page-head' }, icon, title), props, hiddenToggle, h('div', { class: 'row-page-body' }, editor.el, this.folderFiles(ws.rowPath(db, row), () => JSON.stringify(blocks) + JSON.stringify(row.values), (b) => { blocks.push(b); row.body = serializePage(blocks); void ws.saveRow(db, row).then(() => this.render()); })), backlinksSection(ws, rowTarget(db.key, row.id), { row: row.id }, ws.settings.backlinks ?? 'collapsed', this.blOpen()));
         return { el, focusTitle: () => { if (db.dateLabel) {
                 editValue(ws, db, row, db.dateLabel, title, drawProps);
@@ -2516,6 +2521,9 @@ export class App {
         return [name, val];
     }
     openRow(db, row, opts = {}) {
+        // a database of files: folders open in the view, pictures, videos, PDFs and sounds in the viewer
+        if (db.schema.files && !opts.info && openFileEntry(this, db, row))
+            return;
         closePop();
         const ws = this.ws;
         const initial = JSON.stringify(row.values);
@@ -2545,7 +2553,7 @@ export class App {
             keep = true;
             setTimeout(() => close(), 0);
         } };
-        close = dialog(h('div', { class: 'peek' }, h('div', { class: 'dialog-head' }, opts.back ? h('button', { class: 'icon-btn peek-back', 'aria-label': 'Back', title: 'Back to the list', onclick: () => { const b = opts.back; close(); b(); } }, iconSvg('arrow-left', 16)) : null, h('span', { style: { flex: 1, padding: '0 6px', display: 'inline-flex', alignItems: 'center', gap: '4px' } }, crumb), h('button', { class: 'icon-btn', 'aria-label': 'History', title: 'History of this entry', onclick: () => this.openHistory(ws.rowPath(db, row)) }, iconSvg('clock', 13)), ws.storage.reveal ? h('button', { class: 'icon-btn', 'aria-label': ws.storage.remote ? 'Show in Dropbox' : 'Show in folder', title: ws.storage.remote ? 'Show in Dropbox' : 'Show in folder', onclick: () => void ws.storage.reveal(ws.rowPath(db, row)).catch((e) => toast(e.message)) }, iconSvg('folder', 13)) : null, h('button', { class: 'icon-btn', 'aria-label': 'Open as full page', title: 'Open as full page', onclick: full }, iconSvg('maximize', 14)), h('button', { class: 'icon-btn', 'aria-label': 'Delete entry', title: 'Delete entry', onclick: async () => { ws.boundary(); await ws.deleteRow(db, row); close(); } }, svgIcon(ICONS.trash, 17)), h('button', { class: 'icon-btn', 'aria-label': 'Close', title: 'Close (Esc)', onclick: () => close() }, svgIcon(ICONS.close, 17))), h('div', { class: 'dialog-body peek-body' }, page.el)), { wide: true, onClose: async () => {
+        close = dialog(h('div', { class: 'peek' }, h('div', { class: 'dialog-head' }, opts.back ? h('button', { class: 'icon-btn peek-back', 'aria-label': 'Back', title: 'Back to the list', onclick: () => { const b = opts.back; close(); b(); } }, iconSvg('arrow-left', 16)) : null, h('span', { style: { flex: 1, padding: '0 6px', display: 'inline-flex', alignItems: 'center', gap: '4px' } }, crumb), db.schema.files ? null : h('button', { class: 'icon-btn', 'aria-label': 'History', title: 'History of this entry', onclick: () => this.openHistory(ws.rowPath(db, row)) }, iconSvg('clock', 13)), ws.storage.reveal ? h('button', { class: 'icon-btn', 'aria-label': ws.storage.remote ? 'Show in Dropbox' : 'Show in folder', title: ws.storage.remote ? 'Show in Dropbox' : 'Show in folder', onclick: () => void ws.storage.reveal(ws.rowPath(db, row)).catch((e) => toast(e.message)) }, iconSvg('folder', 13)) : null, db.schema.files ? null : h('button', { class: 'icon-btn', 'aria-label': 'Open as full page', title: 'Open as full page', onclick: full }, iconSvg('maximize', 14)), h('button', { class: 'icon-btn', 'aria-label': 'Delete entry', title: 'Delete entry', onclick: async () => { ws.boundary(); await ws.deleteRow(db, row); close(); } }, svgIcon(ICONS.trash, 17)), h('button', { class: 'icon-btn', 'aria-label': 'Close', title: 'Close (Esc)', onclick: () => close() }, svgIcon(ICONS.close, 17))), h('div', { class: 'dialog-body peek-body' }, page.el)), { wide: true, onClose: async () => {
                 offLive();
                 window.removeEventListener('keydown', onKeepAny, true);
                 // a new entry closed without typing anything is discarded, as in Notion
@@ -2593,6 +2601,10 @@ export class App {
     }
     /** An entry as a full page (route), like any other page. */
     openRowPage(db, row) {
+        if (db.schema.files) {
+            this.openRow(db, row);
+            return;
+        }
         this.go({ kind: 'row', db: db.key, id: row.id });
         this.navigate(); // a new page starts at the top (its scroll area is new)
     }

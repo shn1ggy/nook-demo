@@ -5298,3 +5298,28 @@ html.phone body:has(.mvp) .pop { z-index: 5100; }
 html.phone body:has(.mvp .mvp-top) .tab-bar { visibility: hidden; }
 .mvp:is(.video, .audio) .mvp-dots { display: none; }
 html.phone body:has(.mvp) .pop { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important; }
+.mv-audio { display: flex; flex-direction: column; align-items: center; gap: 22px; color: var(--fg-muted); }
+.mv-audio audio { width: min(460px, 70vw); }
+/* databases of files */
+.fdb-toggle { padding: 2px 0 4px; }
+.fdb-toggle-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.fdb-toggle-row:hover { background: var(--bg-hover); }
+.fdb-toggle-label { flex: 1; }
+.fdb-toggle .switch, .fdb-toggle [role=switch] { pointer-events: none; }
+.fdb-toggle.locked .fdb-toggle-label, .fdb-toggle.locked [role=switch], .fdb-toggle.locked .switch { opacity: .5; }
+.fdb-toggle.locked svg:not(.menu-ico svg) { color: var(--fg-faint); }
+.fdb-desc { font-size: 12.5px; color: var(--fg-muted); padding: 0 8px 6px 34px; line-height: 1.45; overflow-wrap: anywhere; }
+.fdb-why { margin: 2px 8px 8px; background: var(--bg-hover); border-radius: 8px; padding: 10px 11px; font-size: 13px; line-height: 1.45; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.fdb-why[hidden] { display: none; }
+.fdb-why .set-btn { margin-top: 7px; }
+.fdb-crumb { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; padding: 6px 0 4px; font-size: 13.5px; color: var(--fg-muted); }
+.fdb-crumb-b { border: 0; background: none; color: inherit; font: inherit; padding: 2px 6px; border-radius: 5px; cursor: pointer; }
+.fdb-crumb-b:hover { background: var(--bg-hover); color: var(--fg); }
+.fdb-crumb-b.cur { color: var(--fg); font-weight: 500; cursor: default; }
+.fdb-crumb-b.cur:hover { background: none; }
+.fdb-sep { display: inline-flex; color: var(--fg-faint); }
+.fdb-drop-into, .fdb-drop-into td { background: color-mix(in srgb, var(--accent) 12%, transparent) !important; }
+.dbview.fdb-drop { outline: 2px dashed var(--accent); outline-offset: 4px; border-radius: 8px; }
+.fdb-actions { display: flex; gap: 8px; margin: 18px 0 8px; }
+.g-cover.fdb-cover { display: grid; place-items: center; color: var(--fg-muted); }
+.file-ico { color: var(--fg-muted); }

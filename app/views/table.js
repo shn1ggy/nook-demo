@@ -1,4 +1,7 @@
 import { rowTarget } from '../links.js';
+// Table view: inline editing, resizable columns, grouping with sums, column totals,
+// keyboard navigation, and incremental rendering for large databases.
+import { dropTarget } from './fileview.js';
 import { aggregate, countRoots, nestRows, ruleColors, takeRoots } from '../workspace.js';
 import { stepsOf, COLORS, fmtNumber, h, svgIcon, ICONS } from '../util.js';
 import { rowMenu } from './rowmenu.js';
@@ -230,6 +233,8 @@ export function renderTable(env, res) {
             }
         });
         reorderable(r, env, row, { handle: grip, nest: true });
+        if (row.isDir)
+            dropTarget(ctx, db, r, row.rel);
         r.appendChild(gtd);
         if (isRowSelected(env, row.id))
             r.classList.add('is-selected');

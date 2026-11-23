@@ -8,12 +8,16 @@ import { entryIcon, renderValue, titleEl } from './cells.js';
 import { rowMenu } from './rowmenu.js';
 import { reorderable, selectable } from './rowselect.js';
 import { loadMoreBar } from './view.js';
+import { dropTarget } from './fileview.js';
 /** the picture a card shows, or null */
 function coverOf(env, row) {
     const { db, view } = env;
     const mode = view.cover ?? 'content';
     if (mode === 'none')
         return null;
+    // a database of files: the picture itself
+    if (row.rel != null)
+        return !row.isDir && row.file && IMAGE_RE.test(row.file) ? row.file : null;
     if (mode !== 'content') {
         const v = row.values[mode];
         const list = Array.isArray(v) ? v.map(String) : v ? [String(v)] : [];
@@ -64,6 +68,12 @@ export function renderGallery(env, res) {
             (/^(https?:|data:|blob:)/.test(src) ? Promise.resolve(src) : ctx.assetUrl(src)).then((u) => { img.src = u; }).catch(() => cover.classList.add('empty'));
             cover.appendChild(img);
         }
+        else if (r.rel != null) {
+            cover.classList.add('fdb-cover');
+            const ic = entryIcon(r, 34);
+            if (ic)
+                cover.appendChild(ic);
+        }
         else if (r.body.trim()) {
             // no picture: a preview of the page's first lines, like Notion
             cover.appendChild(h('div', { class: 'g-text' }, plainText(r.body.replace(/<[^>]+>/g, '').replace(/^[#>\-*\s[\]x]+/gm, '')).slice(0, 220)));
@@ -76,6 +86,8 @@ export function renderGallery(env, res) {
             card.style.setProperty('background', COLORS[tint]?.bg ?? '');
         selectable(card, env, r);
         reorderable(card, env, r);
+        if (r.isDir)
+            dropTarget(ctx, db, card, r.rel);
         card.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); rowMenu(ctx, db, r, { x: e.clientX, y: e.clientY }, () => env.redraw()); });
         grid.appendChild(card);
     }

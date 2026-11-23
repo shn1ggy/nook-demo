@@ -51,6 +51,10 @@ export class MemoryStorage {
     }
     movesFolders = true;
     async listAll() { return [...this.files.keys()]; }
+    async fileInfo(dir) {
+        const d = norm(dir) + '/';
+        return [...this.files.keys()].filter((k) => k.startsWith(d)).map((k) => ({ path: k, size: this.blobs.get(k)?.length ?? this.files.get(k).length }));
+    }
     async move(from, to) {
         const a = norm(from), b = norm(to);
         const keys = [...this.files.keys()].filter((k) => k === a || k.startsWith(a + '/'));
@@ -184,6 +188,34 @@ export class FolderStorage {
         const parts = split(path), name = parts.pop();
         const d = await this.dir(parts);
         await d.removeEntry(name, { recursive: true });
+    }
+    async fileInfo(dir) {
+        const out = [];
+        let root;
+        try {
+            root = await this.dir(split(dir));
+        }
+        catch {
+            return out;
+        }
+        const walk = async (d, pre, depth) => {
+            for await (const [n, h] of d.entries()) {
+                const p = `${pre}/${n}`;
+                if (h.kind === 'directory') {
+                    if (depth < 12)
+                        await walk(h, p, depth + 1);
+                    continue;
+                }
+                try {
+                    const f = await h.getFile();
+                    const m = new Date(f.lastModified).toISOString();
+                    out.push({ path: p, size: f.size, created: m, modified: m });
+                }
+                catch { /* gone */ }
+            }
+        };
+        await walk(root, norm(dir), 0);
+        return out;
     }
     async exists(path) {
         const parts = split(path), name = parts.pop();

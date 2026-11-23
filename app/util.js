@@ -590,6 +590,19 @@ export function fmtNumber(n, format) {
         const v = Math.max(0, Math.min(5, Math.round(n * 2) / 2));
         return '★'.repeat(Math.floor(v)) + (v % 1 ? '½' : '');
     }
+    if (format === 'bytes') {
+        const u = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let i = 0, v = n;
+        while (v >= 1000 && i < u.length - 1) {
+            v /= 1024;
+            i++;
+        }
+        return `${numFormat(loc, 'b' + (i > 1 ? 1 : 0), { maximumFractionDigits: i > 1 && v < 100 ? 1 : 0 }).format(v)} ${u[i]}`;
+    }
+    if (format === 'duration') {
+        const t = Math.round(n), hh = Math.floor(t / 3600), mm = Math.floor((t % 3600) / 60), ss = t % 60;
+        return hh ? `${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}` : `${mm}:${String(ss).padStart(2, '0')}`;
+    }
     if (format === 'plain_int')
         return String(Math.round(n));
     if (format === 'plain')
