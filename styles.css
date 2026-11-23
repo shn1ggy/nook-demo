@@ -5045,3 +5045,6 @@ html.phone .ogb-card { padding: 0 16px !important; }
 html.phone .ogb .own-title, html.phone .ogb .own-notes { -webkit-appearance: none; appearance: none; border-radius: 0; box-shadow: none; text-indent: 0; margin: 0 !important; padding-left: 0 !important; padding-right: 0 !important; width: 100%; display: block; }
 html.phone .ogb .own-title { padding-top: 14px !important; padding-bottom: 12px !important; line-height: 24px !important; height: auto !important; border-bottom: 1px solid color-mix(in srgb, var(--fg) 8%, transparent) !important; }
 html.phone .ogb .own-notes { padding-top: 12px !important; padding-bottom: 14px !important; line-height: 21px !important; min-height: 47px !important; overflow: hidden; }
+/* search fields never get squeezed by a long list below them (the trash search was lower while the full list showed) */
+.pset-search, .win-searchbox, .win-sum { flex-shrink: 0; }
+html.phone :is(.pset-search, .win-searchbox) { min-height: 44px; }
