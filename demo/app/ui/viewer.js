@@ -151,6 +151,10 @@ export function openViewer(ctx, items, at) {
 // ---------- the phone viewer: full screen over everything (the tab bar too), round buttons on top, the actions in
 // one floating bar at the bottom; photos zoom with two fingers or a double tap, one tap hides the bars ----------
 const P = {
+    down: '<path d="M6 9l6 6 6-6"/>', list: '<path d="M4 6h16M4 12h10M4 18h7M17 15v6l4-3z"/>',
+    shuffle: '<path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>', repeat: '<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
+    repeat1: '<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/><path d="M11 10h1v5"/>',
+    prev: '<path d="M19 5L9 12l10 7z" fill="currentColor"/><path d="M5 5v14"/>', next: '<path d="M5 5l10 7-10 7z" fill="currentColor"/><path d="M19 5v14"/>',
     x: '<path d="M6 6l12 12M18 6L6 18"/>', more: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
     share: '<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>', save: '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/>',
     folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', open: '<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
@@ -190,7 +194,13 @@ function phoneViewer(ctx, items, at) {
     const dots = h('div', { class: 'mvp-dots' });
     const extra = h('div', { class: 'mvp-extra' }); // play controls and the seek bar (video, audio)
     const more = h('button', { class: 'mvp-rb', 'aria-label': 'More' }, pi('more'));
-    const box = h('div', { class: 'overlay mv mvp' }, stage, extra, h('div', { class: 'mvp-top' }, h('button', { class: 'mvp-rb', 'aria-label': 'Close', onclick: () => close() }, pi('x')), h('div', { class: 'mvp-title' }, name, meta), more), dots, bar);
+    const closeBtn = h('button', { class: 'mvp-rb', 'aria-label': 'Close', onclick: () => close() }, pi('x'));
+    // songs: one sound element for all of them (the next one may start by itself), the order they play in
+    const song = new Audio();
+    song.preload = 'metadata';
+    const songs = items.map((x, k) => (mediaType(x.path) === 'audio' ? k : -1)).filter((k) => k >= 0);
+    let order = [];
+    const box = h('div', { class: 'overlay mv mvp' }, stage, extra, h('div', { class: 'mvp-top' }, closeBtn, h('div', { class: 'mvp-title' }, name, meta), more), dots, bar);
     let cleanup = null;
     const act = (k, label, run) => { const b = h('button', { class: 'mvp-act', onclick: run }, pi(k), h('span', null, label)); return b; };
     // a second tap closes the menu (the tap outside it already closes it on touch-down: then it must not open again)
@@ -251,6 +261,9 @@ function phoneViewer(ctx, items, at) {
         extra.textContent = '';
         bar.textContent = '';
         box.className = `overlay mv mvp ${t ?? 'file'}`;
+        closeBtn.replaceChildren(pi(t === 'audio' ? 'down' : 'x'));
+        if (t !== 'audio')
+            song.pause();
         zoomEl = null;
         z = 1;
         tx = 0;
@@ -300,15 +313,7 @@ function phoneViewer(ctx, items, at) {
                 cleanup = () => v.pause();
             }
             else if (t === 'audio') {
-                const a = h('audio', { src: u, preload: 'metadata' });
-                stage.append(h('div', { class: 'mvp-cover' }, pi('music', 64)), h('div', { class: 'mvp-atitle' }, fileName(it.path).replace(/\.[^.]+$/, ''), h('small', null, fileName(it.path).split('.').pop().toLowerCase())), a);
-                player(a, true);
-                const rates = [1, 1.25, 1.5, 2, 0.75];
-                const sp = act('speed', '1×', () => { a.playbackRate = rates[(rates.indexOf(a.playbackRate) + 1) % rates.length]; sp.lastElementChild.textContent = `${a.playbackRate}×`.replace('.', ','); });
-                bar.append(sp, share, save, ...(folder ? [folder] : []));
-                a.addEventListener('loadedmetadata', () => { if (items[i] === it)
-                    meta.textContent = [pos, 'Audio', dur(a.duration)].filter(Boolean).join(' · '); });
-                cleanup = () => a.pause();
+                audioView(it, u);
             }
             else {
                 // PDFs and other files: Safari can only show the first page of a PDF inside a page, so it opens full screen
@@ -322,7 +327,108 @@ function phoneViewer(ctx, items, at) {
                 fs.textContent = `${fs.textContent} · ${sizeLabel(b.size)}`; }).catch(() => { });
         })();
     };
-    const step = (n) => { i = (i + n + items.length) % items.length; show(); };
+    /** the order songs play in: as in the folder, or shuffled (the one playing first) */
+    const makeOrder = () => { order = [...songs]; if (playMode.shuffle) {
+        const rest = order.filter((k) => k !== i);
+        for (let x = rest.length - 1; x > 0; x--) {
+            const y = Math.floor(Math.random() * (x + 1));
+            [rest[x], rest[y]] = [rest[y], rest[x]];
+        }
+        order = [i, ...rest];
+    } };
+    const nextSong = (dir, auto = false) => {
+        if (!order.includes(i))
+            makeOrder();
+        if (auto && playMode.repeat === 'one') {
+            song.currentTime = 0;
+            void song.play();
+            return true;
+        }
+        let k = order.indexOf(i) + dir;
+        if (k >= order.length || k < 0) {
+            if (!auto || playMode.repeat === 'all')
+                k = (k + order.length) % order.length;
+            else
+                return false;
+        }
+        i = order[k];
+        show();
+        return true;
+    };
+    song.addEventListener('ended', () => { if (!nextSong(1, true)) {
+        song.currentTime = 0;
+    } });
+    const audioView = (it, u) => {
+        const title = fileName(it.path).replace(/\.[^.]+$/, ''), ext = (fileName(it.path).split('.').pop() ?? '').toLowerCase();
+        const place = it.place ?? '';
+        name.textContent = place;
+        meta.textContent = '';
+        const nth = songs.indexOf(i) + 1;
+        stage.append(h('div', { class: 'mvp-cover' }, pi('music', 64)), h('div', { class: 'mvp-atitle' }, title, h('small', null, [ext, songs.length > 1 ? `${nth} of ${songs.length}${place ? ` in ${place.split(' › ').pop()}` : ''}` : ''].filter(Boolean).join(' · '))));
+        if (song.src !== u) {
+            song.src = u;
+            song.playbackRate = playMode.rate;
+        }
+        void song.play().catch(() => { });
+        // the waveform: tap or drag to go there
+        const bars = 64;
+        const wave = h('div', { class: 'mvp-wave' }, ...Array.from({ length: bars }, () => h('i')));
+        const cur = h('span'), left = h('span');
+        const paint = () => {
+            const d = song.duration || 0, f = d ? song.currentTime / d : 0;
+            [...wave.children].forEach((b, k) => b.classList.toggle('on', k / bars < f));
+            cur.textContent = dur(song.currentTime || 0);
+            left.textContent = `−${dur(Math.max(0, d - (song.currentTime || 0)))}`;
+        };
+        void peaksOf(it.path, u).then((pk) => { if (!pk || items[i] !== it)
+            return; [...wave.children].forEach((b, k) => { b.style.height = `${Math.max(8, pk[k] * 100)}%`; }); });
+        const seek = (e) => { const r = wave.getBoundingClientRect(); if (song.duration)
+            song.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * song.duration; paint(); };
+        wave.addEventListener('pointerdown', (e) => { e.stopPropagation(); wave.setPointerCapture(e.pointerId); seek(e); const mv = (ev) => seek(ev); wave.addEventListener('pointermove', mv); wave.addEventListener('pointerup', () => wave.removeEventListener('pointermove', mv), { once: true }); });
+        wave.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+        const play = h('button', { class: 'mvp-play', 'aria-label': 'Play or pause' });
+        const paintPlay = () => play.replaceChildren(pi(song.paused ? 'play' : 'pause', 30));
+        play.addEventListener('click', () => { if (song.paused)
+            void song.play();
+        else
+            song.pause(); });
+        const shuf = h('button', { class: 'mvp-mode' + (playMode.shuffle ? ' on' : ''), 'aria-label': 'Shuffle', onclick: () => { playMode.shuffle = !playMode.shuffle; saveMode(); makeOrder(); shuf.classList.toggle('on', playMode.shuffle); toast(playMode.shuffle ? 'Shuffle on' : 'Shuffle off', 1200); } }, pi('shuffle', 22));
+        const rep = h('button', { class: 'mvp-mode' + (playMode.repeat !== 'off' ? ' on' : ''), 'aria-label': 'Repeat' });
+        const paintRep = () => { rep.classList.toggle('on', playMode.repeat !== 'off'); rep.replaceChildren(pi(playMode.repeat === 'one' ? 'repeat1' : 'repeat', 22)); };
+        rep.addEventListener('click', () => { playMode.repeat = playMode.repeat === 'off' ? 'all' : playMode.repeat === 'all' ? 'one' : 'off'; saveMode(); paintRep(); toast(playMode.repeat === 'off' ? 'Repeat off' : playMode.repeat === 'all' ? 'Repeat the folder' : 'Repeat this song', 1200); });
+        paintRep();
+        const prev = h('button', { class: 'mvp-skip', 'aria-label': 'Previous', onclick: () => { if (song.currentTime > 3 || songs.length < 2) {
+                song.currentTime = 0;
+                return;
+            } nextSong(-1); } }, pi('prev', 30));
+        const next = h('button', { class: 'mvp-skip', 'aria-label': 'Next', onclick: () => { if (songs.length > 1)
+                nextSong(1); } }, pi('next', 30));
+        const rates = [1, 1.25, 1.5, 2, 0.75];
+        const chip = (icon, label, run) => { const b = h('button', { class: 'mvp-chip' }, pi(icon, 16), h('span', null, label)); b.addEventListener('click', () => run(b)); return b; };
+        const speed = chip('speed', `${playMode.rate}×`.replace('.', ','), (b) => { playMode.rate = rates[(rates.indexOf(playMode.rate) + 1) % rates.length]; song.playbackRate = playMode.rate; saveMode(); b.lastElementChild.textContent = `${playMode.rate}×`.replace('.', ','); b.classList.toggle('on', playMode.rate !== 1); });
+        speed.classList.toggle('on', playMode.rate !== 1);
+        const upNext = chip('list', 'Up next', (b) => {
+            if (!order.includes(i))
+                makeOrder();
+            const from = order.indexOf(i);
+            const list = [...order.slice(from), ...order.slice(0, from)];
+            const r = b.getBoundingClientRect();
+            menu({ x: r.left, y: r.top }, [{ section: playMode.shuffle ? 'Up next · shuffled' : 'Up next' }, ...list.map((k) => ({ label: fileName(items[k].path).replace(/\.[^.]+$/, ''), icon: menuIcon('music'), checked: k === i, run: () => { i = k; show(); } }))]);
+        });
+        const share = chip('share', 'Share', () => void shareMedia(ctx, it.path));
+        extra.append(h('div', { class: 'mvp-seek2' }, wave, h('div', { class: 'mvp-times' }, cur, left)), h('div', { class: 'mvp-ctl2' }, shuf, prev, play, next, rep), h('div', { class: 'mvp-chips' }, speed, upNext, share));
+        const on = () => { paint(); paintPlay(); };
+        song.addEventListener('timeupdate', paint);
+        song.addEventListener('play', paintPlay);
+        song.addEventListener('pause', paintPlay);
+        song.addEventListener('loadedmetadata', paint);
+        on();
+        cleanup = () => { song.removeEventListener('timeupdate', paint); song.removeEventListener('play', paintPlay); song.removeEventListener('pause', paintPlay); song.removeEventListener('loadedmetadata', paint); };
+    };
+    const step = (n) => { if (mediaType(items[i].path) === 'audio' && songs.length > 1) {
+        nextSong(n > 0 ? 1 : -1);
+        return;
+    } i = (i + n + items.length) % items.length; show(); };
     // touch: pinch / pan / double tap on photos, swipe sideways for the next one, down to close, tap for the bars
     let start = null, pinch = null;
     let pan = null, lastTap = 0, moved = false, tapTimer = 0;
@@ -438,9 +544,53 @@ function phoneViewer(ctx, items, at) {
         e.stopPropagation();
         close();
     } };
-    function close() { cleanup?.(); box.remove(); document.removeEventListener('keydown', key, true); }
+    function close() { cleanup?.(); song.pause(); song.removeAttribute('src'); box.remove(); document.removeEventListener('keydown', key, true); }
     document.body.append(box);
     document.addEventListener('keydown', key, true);
     show();
+}
+// ---------- songs: shuffle, repeat and speed stay as you left them; the waveform of each song once ----------
+const MODE = 'nook:play-mode';
+const playMode = (() => { try {
+    return { shuffle: false, repeat: 'off', rate: 1, ...JSON.parse(localStorage.getItem(MODE) ?? '{}') };
+}
+catch {
+    return { shuffle: false, repeat: 'off', rate: 1 };
+} })();
+const saveMode = () => { try {
+    localStorage.setItem(MODE, JSON.stringify(playMode));
+}
+catch { /* only a convenience */ } };
+const peaks = new Map();
+async function peaksOf(path, url, n = 64) {
+    if (peaks.has(path))
+        return peaks.get(path);
+    try {
+        const buf = await (await fetch(url)).arrayBuffer();
+        const AC = window.AudioContext ?? window.webkitAudioContext;
+        const ac = new AC();
+        const audio = await ac.decodeAudioData(buf);
+        void ac.close();
+        const d = audio.getChannelData(0), step = Math.max(1, Math.floor(d.length / n));
+        const out = [];
+        for (let k = 0; k < n; k++) {
+            let m = 0;
+            const end = Math.min(d.length, (k + 1) * step);
+            for (let x = k * step; x < end; x += 16) {
+                const v = Math.abs(d[x]);
+                if (v > m)
+                    m = v;
+            }
+            out.push(m);
+        }
+        const top = Math.max(...out, 0.0001);
+        const res = out.map((v) => Math.sqrt(v / top));
+        peaks.set(path, res);
+        return res;
+    }
+    catch {
+        peaks.set(path, null);
+        return null;
+    }
 }
 //# sourceMappingURL=viewer.js.map

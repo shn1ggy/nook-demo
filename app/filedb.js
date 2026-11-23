@@ -317,7 +317,10 @@ export async function uploadFiles(ws, db, files, folder = folderOf(db)) {
     for (const f of files) {
         const taken = new Set([...ws.files].filter((x) => dirOf(x) === dir).map((x) => baseOf(x).toLowerCase()));
         const ext = f.name.match(/\.[^.]+$/)?.[0] ?? '';
-        const name = uniqueName((ext ? f.name.slice(0, -ext.length) : f.name) || 'File', taken, ext);
+        // a photo or video just taken comes as "image.jpg" / "video.mov": named by when it was taken instead
+        const stem0 = ext ? f.name.slice(0, -ext.length) : f.name;
+        const stem = /^(image|video|photo|capturedvideo|capturedimage)$/i.test(stem0) ? takenName(f.lastModified || Date.now()) : stem0;
+        const name = uniqueName(stem || 'File', taken, ext.toLowerCase() === '.jpeg' ? '.jpg' : ext);
         const path = `${dir}/${name}`;
         await ws.storage.writeBinary(path, new Uint8Array(await f.arrayBuffer()));
         ws.files.add(path);
@@ -428,5 +431,10 @@ export async function deleteFileRows(ws, db, rows) {
     }
     buildRows(ws, db);
     await saveSidecar(ws, db);
+}
+/** "2026-11-23 21-35-08": when a photo was taken (colons can't be in file names on Windows and in Finder) */
+function takenName(t) {
+    const d = new Date(t), p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
 }
 //# sourceMappingURL=filedb.js.map

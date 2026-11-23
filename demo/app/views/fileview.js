@@ -162,7 +162,7 @@ export function openFileEntry(ctx, db, row) {
     if (!row.file || !mediaType(row.file))
         return false;
     const here = db.rows.filter((r) => !r.isDir && parentOf(r) === parentOf(row) && r.file && mediaType(r.file)).sort((a, b) => (a.rel ?? '').localeCompare(b.rel ?? ''));
-    openViewer(ctx, here.map((r) => ({ path: r.file, open: () => ctx.openRow(db, r, { info: true }), entryName: baseOf(r.rel) })), Math.max(0, here.indexOf(row)));
+    openViewer(ctx, here.map((r) => ({ path: r.file, open: () => ctx.openRow(db, r, { info: true }), entryName: baseOf(r.rel), place: [db.schema.name, ...(parentOf(r) ? parentOf(r).split('/') : [])].join(' › ') })), Math.max(0, here.indexOf(row)));
     return true;
 }
 /** in an entry's window: what to do with the file */
