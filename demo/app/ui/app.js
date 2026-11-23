@@ -57,6 +57,7 @@ export class App {
     libraryOn = false;
     /** where each Library list was scrolled to (back from a page returns there) */
     libScroll = new Map();
+    bellTap = 0;
     libScrollWatch = document.addEventListener('scroll', (e) => {
         const t = e.target;
         if (this.libraryOn && t instanceof HTMLElement && t.matches('.main > .scroll'))
@@ -1894,6 +1895,19 @@ export class App {
         const home = this.ws.homePage();
         const onHome = !this.libraryOn && this.route?.kind === 'page' && this.route.id === home?.id;
         const tab = (label, icon, run, on = false) => h('button', { class: 'tab tab-' + label.toLowerCase() + (on ? ' on' : ''), onclick: () => {
+                // Notifications, tapped twice quickly: straight to a new reminder (on the Notifications page)
+                if (label === 'Notifications') {
+                    const now = Date.now();
+                    if (now - this.bellTap < 380) {
+                        this.bellTap = 0;
+                        if (!this.notes.panelOpen)
+                            run();
+                        if (!document.querySelector('.own-window'))
+                            this.notes.ownForm();
+                        return;
+                    }
+                    this.bellTap = now;
+                }
                 // Settings and Notifications are pages of their own (phone): a tab shows one page – tapping the page
                 // that is open stays on it, any other tab leaves it at once (no closing slide over the bar)
                 // windows open on top (an entry, a page …) go first – the bar stays above them, so a tab means leaving them
