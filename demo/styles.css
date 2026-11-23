@@ -5385,3 +5385,11 @@ html.phone body:has(.select-bar) .fdb-li.is-selected::before { background: var(-
 .mvp.audio .mvp-ctl2 { padding: 12px 0 0; }
 .mvp.audio .mvp-chips { padding: 20px 0 0; }
 .mvp.audio .mvp-stage { overflow-y: auto; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); }
+/* songs: the cover as big as it fits, title and controls at the bottom (as in a music app) */
+.mvp.audio .mvp-stage { justify-content: flex-start; gap: 18px; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 28px); }
+.mvp.audio .mvp-cover { width: min(86vw, 46vh, 420px); margin-top: 8px; }
+.mvp.audio .mvp-atitle { margin-top: auto; }
+.mvp.audio .mvp-chips { padding-top: 18px; }
+.mvp.audio .mvp-cover { width: min(86vw, calc(100dvh - 380px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)), 420px); min-width: 120px; }
+.mvp.audio .mvp-cover { margin-top: auto; margin-bottom: auto; }
+.mvp.audio .mvp-atitle { margin-top: 0; }
