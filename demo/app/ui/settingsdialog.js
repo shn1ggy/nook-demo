@@ -51,6 +51,7 @@ export function openSettings(app, start) {
             { heading: 'Workspace' },
             { title: 'Name', desc: 'In the sidebar and the window title', control: name, keywords: 'workspace name' },
             { title: 'Saved in', desc: 'Settings travel with the workspace folder', value: ws.storage.label, control: app.shell.showInFolder ? h('button', { class: 'set-btn', onclick: () => app.shell.showInFolder() }, 'Show in folder') : undefined, keywords: 'where location folder dropbox' },
+            ...(document.documentElement.classList.contains('phone') && syncRows().length ? [{ heading: 'Sync' }] : []),
             ...syncRows(),
             { heading: 'Start page' },
             { title: 'Start page', desc: 'Opens first; first favorite in the sidebar', control: pickerControl({ value: ws.meta.home ?? '', items: () => pageItems(ws), change: (v) => { ws.meta.home = v; apply(true); }, label: 'Start page' }) },
@@ -761,12 +762,12 @@ export function openSettings(app, start) {
                 { title: 'Workspace folder', desc: 'Exactly as saved, as .zip – opens again in Nook', keywords: 'backup zip copy',
                     control: h('button', { class: 'set-btn', onclick: () => void app.runExport(() => exportRaw(app.ws)) }, 'Download') },
             ] },
-        { id: 'files', group: 'Data', label: 'Files', icon: 'folder', subtitle: 'Images and files in the workspace.', items: files },
+        { id: 'files', group: 'Data', inWorkspace: true, label: 'Files', icon: 'folder', subtitle: 'Images and files in the workspace.', items: files },
         // phone: what used to sit under Pages → Workspace lives here now
         ...(document.documentElement.classList.contains('phone') ? [
-            { id: 'switchws', group: 'More', label: 'Switch workspace', icon: 'layers', summary: () => ws.meta.name, items: () => [], run: () => { const b = document.querySelector('.pset-row:last-child') ?? document.body; app.shell.workspaceMenu(b); } },
+            { id: 'switchws', group: 'More', inWorkspace: true, label: 'Switch workspace', icon: 'layers', summary: () => ws.meta.name, items: () => [], run: () => { const b = document.querySelector('.pset-row:last-child') ?? document.body; app.shell.workspaceMenu(b); } },
         ] : []),
-        { id: 'about', group: '', label: `About ${APP.name}`, icon: 'info', subtitle: 'Pages, databases and calendars as plain files in a folder you own.', items: about },
+        { id: 'about', group: '', inWorkspace: true, label: `About ${APP.name}`, icon: 'info', subtitle: 'Pages, databases and calendars as plain files in a folder you own.', items: about },
     ];
     // the tabs in their groups: Workspace, Look, Content, Keyboard, Data, then About on its own
     const ORDER = ['Workspace', 'Look', 'Content', 'Keyboard', 'Data', 'More', ''];

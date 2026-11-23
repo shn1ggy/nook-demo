@@ -151,6 +151,16 @@ function phoneSettings(sections, start) {
             bar.replaceChildren(h('button', { class: 'pset-back', onclick: () => go(null) }, svgIcon(ICONS.chevron, 15), 'Settings'), h('span', { class: 'pset-title' }, p.label), h('span'));
             const inner = h('div', { class: 'set-inner pset-page' });
             cards(inner, p.items());
+            // the workspace page gathers the pages that belong to it (files, other workspaces, about)
+            const more = p.card ? sections.filter((x) => x.inWorkspace) : [];
+            if (more.length) {
+                const card = h('div', { class: 'set-card pset-list' });
+                for (const x of more) {
+                    const v = x.summary?.() ?? '';
+                    card.append(h('button', { class: 'pset-row', onclick: () => (x.run ? x.run() : go(x)) }, h('span', { class: 'pset-tile', style: { background: tileColor(x.id) } }, iconSvg(x.icon, 17)), h('span', { class: 'pset-label' }, x.label), v ? h('span', { class: 'pset-val' }, v) : null, chev()));
+                }
+                inner.append(h('section', { class: 'set-sec' }, h('div', { class: 'set-heading' }, h('h3', null, 'On this phone')), card));
+            }
             body.append(inner);
             body.scrollTop = keep;
             return;
@@ -180,7 +190,7 @@ function phoneSettings(sections, start) {
             if (top)
                 inner.append(h('button', { class: 'pset-ws', onclick: () => go(top) }, h('span', { class: 'pset-ws-ico' }, (top.summary?.() || 'N').trim().charAt(0).toUpperCase()), h('span', { class: 'pset-ws-text' }, h('b', null, top.summary?.() || top.label), h('small', null, h('i', { class: 'pset-ok' }), top.card())), chev()));
             for (const s of sections) {
-                if (s === top || s.desktopOnly)
+                if (s === top || s.desktopOnly || s.inWorkspace)
                     continue;
                 if (s.group !== group || !card) {
                     group = s.group;
