@@ -71,6 +71,17 @@ export function installTouchDrag() {
             haptic();
             ghost = host.cloneNode(true);
             ghost.classList.add('touch-ghost');
+            // out of its list the copy would lose the list's type (size, weight, colour come from where it sits):
+            // it takes the look of the original, element by element
+            const src0 = [host, ...host.querySelectorAll('*')], dst0 = [ghost, ...ghost.querySelectorAll('*')];
+            src0.forEach((a, i) => {
+                const b = dst0[i];
+                if (!b)
+                    return;
+                const c = getComputedStyle(a);
+                for (const k of ['font-family', 'font-size', 'font-weight', 'font-style', 'line-height', 'letter-spacing', 'color', 'background-color', 'border-radius', 'padding', 'gap', 'display', 'align-items', 'white-space', 'text-overflow', 'overflow'])
+                    b.style.setProperty(k, c.getPropertyValue(k));
+            });
             ghost.style.cssText += `;position:fixed;left:${box.left}px;top:${box.top}px;width:${box.width}px;height:${box.height}px;margin:0;`;
             document.body.appendChild(ghost);
             host.classList.add('touch-lifted');
