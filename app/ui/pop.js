@@ -402,7 +402,7 @@ export function menu(anchor, entries, opts = {}) {
             keepPlace(pop ?? null);
         }
         void old;
-        if (input && !document.documentElement.classList.contains('phone'))
+        if (input && kbFocusOk())
             input.focus();
         else if (!input)
             (items()[hi] ?? box).focus();
@@ -487,7 +487,7 @@ export function menu(anchor, entries, opts = {}) {
     }
     {
         const inp = input;
-        if (inp && !document.documentElement.classList.contains('phone'))
+        if (inp && kbFocusOk())
             inp.focus();
         else if (!inp)
             items()[0]?.focus();
@@ -943,5 +943,10 @@ function phoneFormHead(box) {
     head.append(btns[1]);
     if (!foot.children.length)
         foot.hidden = true;
+}
+/** filter fields take the focus on desktop, and on the phone when the keyboard is already up (typing "/") */
+function kbFocusOk() {
+    const r = document.documentElement, a = document.activeElement;
+    return !r.classList.contains('phone') || r.classList.contains('kb-open') || !!a?.isContentEditable || a instanceof HTMLInputElement || a instanceof HTMLTextAreaElement;
 }
 //# sourceMappingURL=pop.js.map

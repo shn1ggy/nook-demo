@@ -2267,7 +2267,7 @@ export class Editor {
             this.changed();
         };
         const viewable = made.filter((b) => b.type !== 'file');
-        if (!viewable.length || direct) {
+        if (!viewable.length || direct || document.documentElement.classList.contains('phone')) {
             insert();
             return;
         }
