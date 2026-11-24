@@ -5519,8 +5519,9 @@ html.phone .fdb-crumb { position: sticky; top: calc(env(safe-area-inset-top) - 4
 /* stuck at the top: nothing of the list shows above it (up to the screen's edge) */
 html.phone .fdb-crumb.stuck::before { content: ""; position: absolute; left: -16px; right: -72px; bottom: 100%; height: 100vh; background: var(--bg); pointer-events: none; }
 /* pinned: the page's floating ⋯ button sits to its right, not on top of it */
-html.phone .fdb-crumb.anim { transition: margin-right .18s; }
-html.phone .fdb-crumb.stuck { margin-right: 56px; }
+html.phone .fdb-crumb.stuck { margin-right: 56px; box-shadow: -16px 0 0 var(--bg); }
+/* …and beside it, next to the ⋯ button, down to the bar's lower edge */
+html.phone .fdb-crumb.stuck::after { content: ""; position: absolute; left: 100%; width: 72px; top: 0; bottom: 0; background: var(--bg); pointer-events: none; z-index: -1; }
 html.phone .fdb-crumb > .fdb-crumb-b { white-space: nowrap; }
 html.phone .fdb-crumb .fdb-sbtn { margin-left: auto; width: 32px; height: 32px; min-width: 32px; min-height: 32px; border-radius: 9px; }
 html.phone .fdb-crumb.searching { flex-wrap: nowrap; gap: 6px; }
