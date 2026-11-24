@@ -57,7 +57,7 @@ export function renderValue(db, def, v) {
     switch (type) {
         case 'select': return tag(String(v), db.optionColor(def.name, String(v)));
         case 'multi_select': {
-            const arr = Array.isArray(v) ? v : [String(v)];
+            const arr = optOrder(def, Array.isArray(v) ? v.map(String) : [String(v)]);
             return h('span', { class: 'tags' }, arr.map((x) => tag(x, db.optionColor(def.name, x))));
         }
         case 'date':
@@ -474,7 +474,7 @@ function multiMenu(ws, db, def, row, cell, set) {
     const list = h('div', { class: 'opt-list', style: { display: 'flex', flexDirection: 'column' } });
     box.append(chips, input, list);
     let hi = 0;
-    const commit = () => set([...cur]);
+    const commit = () => set(optOrder(def, cur));
     const toggle = (name) => { const i = cur.indexOf(name); if (i >= 0)
         cur.splice(i, 1);
     else
@@ -879,4 +879,9 @@ function relationMenu(ws, db, def, row, cell, done) {
 /** a picker's search field: focused right away with a keyboard; on a phone only when it is tapped, so the keyboard does not cover the choices */
 function focusField(input) { if (!document.documentElement.classList.contains('phone'))
     input.focus(); }
+/** multi-select values in the order of the property's options (unknown ones last, as they were) */
+export function optOrder(def, vals) {
+    const ix = new Map((def.options ?? []).map((o, i) => [o.name, i]));
+    return vals.map((v, i) => [v, ix.get(v) ?? 1e6 + i]).sort((a, b) => a[1] - b[1]).map((x) => x[0]);
+}
 //# sourceMappingURL=cells.js.map
