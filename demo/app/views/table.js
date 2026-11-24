@@ -325,14 +325,18 @@ export function renderTable(env, res) {
         return r;
     };
     const startEdit = (td, row, p, initial) => {
-        table.querySelectorAll('td.sel').forEach((x) => x.classList.remove('sel'));
-        td.classList.add('sel');
+        // a checkbox is just ticked: no cell frame, nothing selected
+        const quiet = p.type === 'checkbox';
+        if (!quiet) {
+            table.querySelectorAll('td.sel').forEach((x) => x.classList.remove('sel'));
+            td.classList.add('sel');
+        }
         editValue(ctx.ws, db, row, p.name, td, () => {
             // a value the view sorts, filters or groups by: draw the view again so the entry moves to
             // its place right away; the selected cell comes along (and the keys stay with the table)
             const affects = view.sorts?.some((x) => x.prop === p.name) || view.groupBy?.prop === p.name || JSON.stringify(view.filter ?? '').includes(JSON.stringify(p.name)) || view.period?.prop === p.name;
             if (affects) {
-                if (!db.schema.files)
+                if (!db.schema.files && !quiet)
                     state.cell = { row: row.id, prop: p.name };
                 env.redraw();
                 return;
@@ -342,6 +346,8 @@ export function renderTable(env, res) {
             const fresh = rowEl(row);
             (table.querySelector(`tr.row[data-id="${CSS.escape(row.id)}"]`) ?? td.closest('tr'))?.replaceWith(fresh);
             updateFooter();
+            if (quiet)
+                return;
             // a database of files: after a rename the file stays selected as a whole (arrows go on from it), no cell frame
             if (db.schema.files) {
                 table.querySelectorAll('td.sel').forEach((x) => x.classList.remove('sel'));
