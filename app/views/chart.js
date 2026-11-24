@@ -391,6 +391,8 @@ function renderGraph(env, res, cfg, show) {
             const base = Y(Math.max(0, y0));
             for (const p of s.pts) {
                 if (p.v == null) {
+                    if (!zero)
+                        continue; // "Skip": the line goes on to the next value
                     if (open && series.length === 1)
                         area += ` L ${lastX} ${base} L ${firstX} ${base} Z`;
                     open = false;
