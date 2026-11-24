@@ -45,9 +45,15 @@ function cards(into, items) {
 export function openSettingsWindow(sections, start) {
     if (document.documentElement.classList.contains('phone'))
         return phoneSettings(sections, start);
-    let current = sections.find((s) => s.id === start) ?? sections[0];
+    // as on the phone: the workspace is a card on top of the list; its page also holds Files and About
+    const wsSec = sections.find((s) => s.card);
+    const inWs = sections.filter((s) => s.inWorkspace);
+    const pick = (id) => { const s = sections.find((x) => x.id === id); return s && wsSec && inWs.includes(s) ? wsSec : s; };
+    let current = pick(start) ?? sections[0];
     let query = '';
     const list = h('div', { class: 'set-nav-list' });
+    const pageItems = (s) => s !== wsSec ? s.items()
+        : [...s.items(), ...inWs.flatMap((x) => { const its = x.items(); return 'heading' in (its[0] ?? {}) ? its : [{ heading: x.label }, ...its]; })];
     const main = h('div', { class: 'set-main' });
     // the search field stays in place while the list below it is redrawn, so typing keeps focus
     const search = h('input', { class: 'set-search', placeholder: 'Search settings', 'aria-label': 'Search settings' });
@@ -70,7 +76,14 @@ export function openSettingsWindow(sections, start) {
         const keepScroll = main.scrollTop;
         list.textContent = '';
         let group = '';
+        if (wsSec) {
+            const name = String(wsSec.summary?.() ?? '');
+            list.appendChild(h('button', { class: 'set-nav-ws' + (!query && current === wsSec ? ' on' : ''), onclick: () => { current = wsSec; setQuery(''); main.scrollTop = 0; } }, h('span', { class: 'set-nav-ws-av' }, (name.trim()[0] ?? 'N').toUpperCase()), h('span', { class: 'set-nav-ws-t' }, h('b', null, name || 'Workspace'), h('small', null, wsSec.card()))));
+            group = wsSec.group;
+        }
         for (const s of sections) {
+            if (s === wsSec || inWs.includes(s))
+                continue;
             // a section without a group (About) sits on its own at the end, after a gap
             if (s.group !== group) {
                 group = s.group;
@@ -98,8 +111,8 @@ export function openSettingsWindow(sections, start) {
                 inner.appendChild(h('p', { class: 'set-desc' }, `Nothing found for “${search.value}”.`));
         }
         else {
-            inner.appendChild(h('div', { class: 'set-head' }, h('h2', null, current.title ?? current.label), current.subtitle ? h('p', { class: 'set-subtitle' }, current.subtitle) : null));
-            cards(inner, current.items());
+            inner.appendChild(h('div', { class: 'set-head' }, h('h2', null, current === wsSec ? 'Workspace' : current.title ?? current.label), current === wsSec ? h('p', { class: 'set-subtitle' }, 'Its name, where it is saved, its files – and about Nook.') : current.subtitle ? h('p', { class: 'set-subtitle' }, current.subtitle) : null));
+            cards(inner, pageItems(current));
         }
         main.appendChild(inner);
         // after the content is back: the window stays where it was (a change never jumps to the top)
