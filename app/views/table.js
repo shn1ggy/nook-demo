@@ -310,6 +310,12 @@ export function renderTable(env, res) {
                 r.appendChild(td);
                 continue;
             }
+            // a database of files: a value from the file itself (size, type, dates …) can't be edited – a click selects the row
+            if (db.schema.files && p.file) {
+                td.addEventListener('click', (e) => { e.stopPropagation(); table.querySelectorAll('td.sel').forEach((x) => x.classList.remove('sel')); grip.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey })); });
+                r.appendChild(td);
+                continue;
+            }
             td.addEventListener('click', (e) => { if (td.querySelector('.cell-edit'))
                 return; if (e.shiftKey || e.metaKey || e.ctrlKey) {
                 grip.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey }));
@@ -326,7 +332,7 @@ export function renderTable(env, res) {
     };
     const startEdit = (td, row, p, initial) => {
         // a checkbox is just ticked: no cell frame, nothing selected
-        const quiet = p.type === 'checkbox';
+        const quiet = p.type === 'checkbox' || !!db.schema.files;
         if (!quiet) {
             table.querySelectorAll('td.sel').forEach((x) => x.classList.remove('sel'));
             td.classList.add('sel');
