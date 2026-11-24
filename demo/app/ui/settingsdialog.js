@@ -757,7 +757,7 @@ export function openSettings(app, start) {
                 ];
             } },
         { id: 'shortcuts', group: 'Keyboard', desktopOnly: true, label: 'Shortcuts', icon: 'key', subtitle: 'Click a shortcut, then press the new keys.', items: shortcuts },
-        { id: 'custom-shortcuts', group: 'Keyboard', desktopOnly: true, label: 'Your shortcuts', icon: 'zap', subtitle: 'One key that sets a property, runs a button or opens a page.', items: customShortcuts },
+        { id: 'custom-shortcuts', group: 'Keyboard', desktopOnly: true, label: 'Your Shortcuts', icon: 'zap', subtitle: 'One key that sets a property, runs a button or opens a page.', items: customShortcuts },
         calendarSection(() => app.ws, () => win?.refresh()),
         sourcesSection(() => app.ws, () => win?.refresh(), () => win?.close()),
         { id: 'import', group: 'Data', label: 'Import', icon: 'arrow-down', subtitle: 'Bring content from other apps.', items: () => [
