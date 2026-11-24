@@ -515,4 +515,27 @@ export function mountPhoneBar(nav, onPlus) {
 }
 /** a song was started: on the phone the bar shows the player once the full player is closed */
 export function showPlayerBar() { flipped = true; emit('state'); }
+/* ---- now playing in views: the song's row gets moving bars instead of its icon, a tint and its name in accent ---- */
+let npQueued = false;
+function markNowPlaying() {
+    npQueued = false;
+    const it = nowPlaying(), path = it?.path ?? '';
+    document.documentElement.classList.toggle('np-paused', audio.paused);
+    for (const ic of document.querySelectorAll('[data-np]')) {
+        const on = !!path && (path === ic.dataset.np || path.endsWith('/files/' + ic.dataset.np));
+        if (on === ic.classList.contains('np'))
+            continue;
+        ic.classList.toggle('np', on);
+        ic.querySelector('.np-eq')?.remove();
+        if (on)
+            ic.append(Object.assign(document.createElement('span'), { className: 'np-eq', innerHTML: '<i></i><i></i><i></i><i></i>' }));
+        ic.closest('tr, .fdb-li, .list-row, .card, .g-card')?.classList.toggle('np-row', on);
+    }
+}
+const queueMark = () => { if (!npQueued) {
+    npQueued = true;
+    requestAnimationFrame(markNowPlaying);
+} };
+onPlayer(queueMark);
+new MutationObserver(queueMark).observe(document.body, { childList: true, subtree: true });
 //# sourceMappingURL=player.js.map

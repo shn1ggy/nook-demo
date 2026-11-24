@@ -121,7 +121,7 @@ export function entryTitle(db, row) {
 export function entryIcon(row, size) {
     if (row.rel != null) {
         const k = iconKind(row.rel, row.isDir);
-        return h('span', { class: `auto-icon file-ico fk-${k}` }, iconSvg(FILE_KINDS.find((x) => x.key === k).icon, size));
+        return h('span', { class: `auto-icon file-ico fk-${k}`, ...(k === 'audio' ? { 'data-np': row.rel } : {}) }, iconSvg(FILE_KINDS.find((x) => x.key === k).icon, size));
     }
     if (row.icon)
         return renderIcon(row.icon, size);
