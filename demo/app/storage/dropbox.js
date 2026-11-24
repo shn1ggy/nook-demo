@@ -1095,6 +1095,8 @@ export class DropboxStorage {
         return path;
     }
     sent(path, rev, data) {
+        if (rev)
+            ownMark(this.abs(this.forward(path)), { rev });
         const to = this.forward(path);
         if (typeof data === 'string')
             this.tell({ t: 'w', path: to, rev, text: data });
@@ -1141,6 +1143,7 @@ export class DropboxStorage {
         const a = this.attempted.get(path) ?? [];
         a.push(data);
         this.attempted.set(path, a.slice(-5));
+        ownMark(this.abs(path), { hash: hashText(data) });
     }
     async uploadOne(path, data, base, rev) {
         this.attempt(path, data);
@@ -1198,7 +1201,9 @@ export class DropboxStorage {
                 catch { /* unknown */ }
                 // nobody else changed it (its version number changed with a move, say): this device's version simply goes up
                 // Dropbox has a text this device sent before without hearing back: its own save – this newer one simply goes on top
-                const own = theirs === data || (this.attempted.get(path) ?? []).includes(theirs);
+                // …also after a reload or on the next day: this device remembers the versions it wrote (its device memory) –
+                // when Dropbox's version is one of them, nobody else wrote since, so there is nothing to merge
+                const own = theirs === data || (this.attempted.get(path) ?? []).includes(theirs) || ownHas(this.abs(path), rev, hashText(theirs));
                 const merged = !rev ? null : own ? data : base !== undefined && theirs === base ? data : autoMerge3(path, base, data, theirs);
                 if (merged !== null) {
                     const meta = await (await content('/2/files/upload', { path: this.abs(path), mode: { '.tag': 'update', update: rev }, autorename: false, mute: true }, new Blob([merged]))).json();
@@ -1676,4 +1681,46 @@ export class DropboxStorage {
         return () => { stopped = true; this.changeListeners.delete(onChange); doc?.removeEventListener('visibilitychange', onVisible); };
     }
 }
+// ---------- device memory: which versions of a file this device wrote ----------
+// Per browser (all tabs of it): for each file the last Dropbox versions this device saved, and fingerprints of the
+// texts it sent. A "conflict" with a version this device made itself is no conflict – this device simply goes on.
+const OWN_KEY = 'nook:own-versions';
+let ownCache = null;
+function ownLoad() { if (ownCache)
+    return ownCache; try {
+    ownCache = JSON.parse(localStorage.getItem(OWN_KEY) ?? '{}');
+}
+catch {
+    ownCache = {};
+} return ownCache; }
+let ownTimer = 0;
+function ownMark(path, v) {
+    const o = ownLoad(), k = path.toLowerCase(), e = (o[k] ??= { t: 0 });
+    if (v.rev)
+        e.r = [...(e.r ?? []).filter((x) => x !== v.rev), v.rev].slice(-8);
+    if (v.hash)
+        e.h = [...(e.h ?? []).filter((x) => x !== v.hash), v.hash].slice(-8);
+    e.t = Date.now();
+    clearTimeout(ownTimer);
+    ownTimer = window.setTimeout(() => {
+        const keys = Object.keys(o);
+        if (keys.length > 3000)
+            for (const x of keys.sort((a, b) => o[a].t - o[b].t).slice(0, keys.length - 3000))
+                delete o[x];
+        try {
+            localStorage.setItem(OWN_KEY, JSON.stringify(o));
+        }
+        catch { /* full: kept for this session */ }
+    }, 400);
+}
+function ownHas(path, rev, hash) {
+    ownCache = null; // another tab may have written
+    const e = ownLoad()[path.toLowerCase()];
+    return !!e && ((!!rev && !!e.r?.includes(rev)) || !!e.h?.includes(hash));
+}
+function hashText(t) { let h = 2166136261 >>> 0, g = 0x9e3779b9; for (let i = 0; i < t.length; i++) {
+    const c = t.charCodeAt(i);
+    h = Math.imul(h ^ c, 16777619) >>> 0;
+    g = Math.imul(g ^ c, 2246822519) >>> 0;
+} return `${t.length}:${h.toString(36)}${g.toString(36)}`; }
 //# sourceMappingURL=dropbox.js.map
