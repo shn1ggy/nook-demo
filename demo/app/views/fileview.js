@@ -164,13 +164,10 @@ export function openFileEntry(ctx, db, row) {
     if (!row.file || !mediaType(row.file))
         return false;
     // the entries the view shows (its filter and sorting) – else the folder, by name
-    // (inside closed folders of the tree: not shown)
-    const top = folderOf(db);
-    const open = (r) => { for (let d = parentOf(r); d && d !== top; d = dirOf(d))
-        if (!subOpen(`${db.key}:d:${d}`, false))
-            return false; return true; };
-    const shown = (visibleRows.get(db.key) ?? []).filter((r) => db.rows.includes(r) && open(r));
-    const pool = shown.includes(row) ? shown : db.rows.filter((r) => parentOf(r) === parentOf(row)).sort((a, b) => (a.rel ?? '').localeCompare(b.rel ?? ''));
+    // exactly what the view shows: its filter and sorting, the open folders of its tree (as the table draws them)
+    const listed = visibleRows.get(db.key);
+    const shown = listed ? nestRows(db, listed.filter((r) => db.rows.includes(r)), (id, ghost) => subOpen(`${db.key}:${id}`, ghost)).filter((x) => !x.ghost && !x.add).map((x) => x.row) : [];
+    const pool = shown.includes(row) ? shown : listed ? [row] : db.rows.filter((r) => parentOf(r) === parentOf(row)).sort((a, b) => (a.rel ?? '').localeCompare(b.rel ?? ''));
     const here = pool.filter((r) => !r.isDir && r.file && mediaType(r.file));
     openViewer(ctx, here.map((r) => ({ path: r.file, open: () => ctx.openRow(db, r, { info: true }), entryName: baseOf(r.rel), place: [db.schema.name, ...(parentOf(r) ? parentOf(r).split('/') : [])].join(' › ') })), Math.max(0, here.indexOf(row)));
     return true;
