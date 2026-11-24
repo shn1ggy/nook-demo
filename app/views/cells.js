@@ -48,6 +48,9 @@ export function tag(name, color) {
     return h('span', { class: 'tag', style: { background: COLORS[color]?.tag ?? COLORS.default.tag } }, name);
 }
 export function renderValue(db, def, v) {
+    // a checkbox is always there, also before it was ever ticked
+    if (def?.type === 'checkbox' && (v == null || v === ''))
+        return checkbox(false);
     if (v == null || v === '')
         return '';
     const type = def?.type ?? 'text';
