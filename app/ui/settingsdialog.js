@@ -774,7 +774,7 @@ export function openSettings(app, start) {
                 { title: 'Workspace folder', desc: 'Exactly as saved, as .zip – opens again in Nook', keywords: 'backup zip copy',
                     control: h('button', { class: 'set-btn', onclick: () => void app.runExport(() => exportRaw(app.ws)) }, 'Download') },
             ] },
-        { id: 'files', group: 'Data', inWorkspace: true, label: 'Files', icon: 'folder', subtitle: 'Images and files in the workspace.', items: files },
+        { id: 'files', group: 'Workspace', inWorkspace: true, label: 'Files', icon: 'folder', subtitle: 'Images and files in the workspace.', items: files },
         // phone: what used to sit under Pages → Workspace lives here now
         ...(document.documentElement.classList.contains('phone') ? [
             { id: 'switchws', group: 'More', inWorkspace: true, label: 'Switch workspace', icon: 'layers', summary: () => ws.meta.name, items: () => [], run: () => { const b = document.querySelector('.pset-row:last-child') ?? document.body; app.shell.workspaceMenu(b); } },

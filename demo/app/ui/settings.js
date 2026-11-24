@@ -47,7 +47,7 @@ export function openSettingsWindow(sections, start) {
         return phoneSettings(sections, start);
     // as on the phone: the workspace is a card on top of the list; its page also holds Files and About
     const wsSec = sections.find((s) => s.card);
-    const inWs = sections.filter((s) => s.inWorkspace);
+    const inWs = [];
     const pick = (id) => { const s = sections.find((x) => x.id === id); return s && wsSec && inWs.includes(s) ? wsSec : s; };
     let current = pick(start) ?? sections[0];
     let query = '';
@@ -111,7 +111,7 @@ export function openSettingsWindow(sections, start) {
                 inner.appendChild(h('p', { class: 'set-desc' }, `Nothing found for “${search.value}”.`));
         }
         else {
-            inner.appendChild(h('div', { class: 'set-head' }, h('h2', null, current === wsSec ? 'Workspace' : current.title ?? current.label), current === wsSec ? h('p', { class: 'set-subtitle' }, 'Its name, where it is saved, its files – and about Nook.') : current.subtitle ? h('p', { class: 'set-subtitle' }, current.subtitle) : null));
+            inner.appendChild(h('div', { class: 'set-head' }, h('h2', null, current === wsSec ? 'Workspace' : current.title ?? current.label), current.subtitle ? h('p', { class: 'set-subtitle' }, current.subtitle) : null));
             cards(inner, pageItems(current));
         }
         main.appendChild(inner);

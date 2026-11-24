@@ -5496,10 +5496,11 @@ html.phone .csvm-arrow { display: none; }
 /* phone: the path is a plain row under the view's toolbar – it scrolls with the list */
 html.phone .fdb-crumb { background: none; border-radius: 0; border-bottom: 1px solid var(--border); padding-inline: 0; }
 /* desktop settings: the workspace as a card on top of the list (as on the phone) */
-.set-nav-ws { box-sizing: border-box; min-width: 0; display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; margin: 0 0 6px; border: 1px solid var(--border); border-radius: 9px; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.set-nav-ws { box-sizing: border-box; width: 100%; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 7px 9px; margin: 2px 0 10px; border: 1px solid var(--border); border-radius: 9px; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
 .set-nav-ws:hover { background: var(--bg-hover); }
-.set-nav-ws.on { background: var(--bg-active, var(--bg-hover)); }
-.set-nav-ws-av { width: 30px; height: 30px; border-radius: 8px; background: var(--bg-hover); display: grid; place-items: center; font-weight: 600; color: var(--fg-strong); flex: none; }
-.set-nav-ws-t { display: flex; flex-direction: column; min-width: 0; }
-.set-nav-ws-t b { font-weight: 600; color: var(--fg-strong); white-space: nowrap; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
-.set-nav-ws-t small { font-size: 12px; color: var(--fg-muted); white-space: nowrap; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.set-nav-ws.on { border-color: var(--border-strong); background: var(--bg-hover); }
+.set-nav-ws-av { width: 28px; height: 28px; border-radius: 7px; background: var(--bg-hover); border: 1px solid var(--border); display: grid; place-items: center; font-size: 13px; font-weight: 600; color: var(--fg-strong); flex: none; }
+.set-nav-ws.on .set-nav-ws-av { background: var(--bg); }
+.set-nav-ws-t { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.set-nav-ws-t b { font-weight: 500; color: var(--fg-strong); overflow-wrap: anywhere; }
+.set-nav-ws-t small { font-size: 12px; color: var(--fg-muted); }
