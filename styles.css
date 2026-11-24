@@ -5519,7 +5519,10 @@ html.phone .tb-stage.tb-snap .tb-face, html.phone .tb-stage.tb-snap .tb-player >
 /* phone: the path bar stays at the top while scrolling; search sits at its right end */
 html.phone .fdb-crumb { position: sticky; top: calc(8px + env(safe-area-inset-top)); z-index: 5; background: color-mix(in srgb, var(--fg) 4%, var(--bg)); height: 46px; box-sizing: border-box; flex-wrap: nowrap; overflow: visible; }
 /* stuck at the top: nothing of the list shows above it (up to the screen's edge) */
-html.phone .fdb-crumb.stuck::before { content: ""; position: absolute; left: -16px; right: -16px; bottom: 100%; height: calc(8px + env(safe-area-inset-top)); background: var(--bg); }
+html.phone .fdb-crumb.stuck::before { content: ""; position: absolute; left: -16px; right: -72px; bottom: 100%; height: 100vh; background: var(--bg); pointer-events: none; }
+/* pinned: the page's floating ⋯ button sits to its right, not on top of it */
+html.phone .fdb-crumb { transition: margin-right .18s; }
+html.phone .fdb-crumb.stuck { margin-right: 56px; }
 html.phone .fdb-crumb > .fdb-crumb-b { white-space: nowrap; }
 html.phone .fdb-crumb .fdb-sbtn { margin-left: auto; width: 32px; height: 32px; min-width: 32px; min-height: 32px; border-radius: 9px; }
 html.phone .fdb-crumb.searching { flex-wrap: nowrap; gap: 6px; }
@@ -5528,3 +5531,4 @@ html.phone .fdb-crumb .vsearch { flex: 1; min-width: 0; border: 0; background: n
 html.phone .fdb-crumb .clear-x { display: none !important; }
 html.phone .fdb-crumb .clearable { flex: 1; min-width: 0; display: flex; }
 html.phone .fdb-crumb .clearable .vsearch { width: 100%; }
+.fdb-stuck-mark { height: 0; }

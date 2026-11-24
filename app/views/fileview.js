@@ -52,10 +52,18 @@ export function fileCrumb(ctx, db, search) {
 }
 /** the phone's path bar knows when it is pinned to the top (then it covers what scrolls above it) */
 function watchStuck(el) {
-    const check = () => { if (!el.isConnected) {
-        document.removeEventListener('scroll', check, true);
-        return;
-    } const top = parseFloat(getComputedStyle(el).top) || 0; el.classList.toggle('stuck', el.getBoundingClientRect().top <= top + 0.5 && (el.parentElement?.getBoundingClientRect().top ?? 0) < top); };
+    // a marker where the bar would be: once the bar sits lower than it, the bar is pinned
+    const mark = h('div', { class: 'fdb-stuck-mark' });
+    const check = () => {
+        if (!el.isConnected) {
+            document.removeEventListener('scroll', check, true);
+            mark.remove();
+            return;
+        }
+        if (mark.nextSibling !== el)
+            el.before(mark);
+        el.classList.toggle('stuck', el.getBoundingClientRect().top - mark.getBoundingClientRect().top > 1);
+    };
     document.addEventListener('scroll', check, true);
     requestAnimationFrame(check);
 }
