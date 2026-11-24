@@ -325,7 +325,8 @@ export class Workspace {
         while (this.dbs.has(key))
             key = `${base}-${i++}`;
         const schema = { name, icon: 'i:database', properties: [{ name: 'Name', type: 'title' }, { name: 'Date', type: 'date' }, { name: 'Tags', type: 'multi_select', options: [] }] };
-        const db = new Database(key, schema, [defaultView(schema)]);
+        // new entries: “New” at the top, and you stay in the view to type the name (opened entries: center peek)
+        const db = new Database(key, schema, [{ ...defaultView(schema), newAt: 'top', newOpens: 'stay' }]);
         if (this.layout2)
             db.dir = join(DATABASES, uniqueName(safeName(name), this.takenIn(DATABASES)));
         this.dbs.set(key, db);
