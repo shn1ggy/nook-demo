@@ -1693,7 +1693,7 @@ function ownLoad() { if (ownCache)
 catch {
     ownCache = {};
 } return ownCache; }
-let ownTimer = 0;
+let ownTimer;
 function ownMark(path, v) {
     const o = ownLoad(), k = path.toLowerCase(), e = (o[k] ??= { t: 0 });
     if (v.rev)
@@ -1702,7 +1702,7 @@ function ownMark(path, v) {
         e.h = [...(e.h ?? []).filter((x) => x !== v.hash), v.hash].slice(-8);
     e.t = Date.now();
     clearTimeout(ownTimer);
-    ownTimer = window.setTimeout(() => {
+    ownTimer = setTimeout(() => {
         const keys = Object.keys(o);
         if (keys.length > 3000)
             for (const x of keys.sort((a, b) => o[a].t - o[b].t).slice(0, keys.length - 3000))
