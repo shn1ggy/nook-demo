@@ -42,8 +42,6 @@ const listeners = new Set();
 const emit = (kind) => listeners.forEach((f) => f(kind));
 export const onPlayer = (f) => { listeners.add(f); return () => listeners.delete(f); };
 export const nowPlaying = () => (cur >= 0 ? queue[cur] ?? null : null);
-export const isPlaying = () => !audio.paused;
-export const playerAudio = audio;
 function makeOrder() {
     order = queue.map((_, k) => k);
     if (playMode.shuffle) {
@@ -291,7 +289,6 @@ export function openFullPlayer() {
     else
         desktopFull();
 }
-export const closeFullPlayer = () => { closePop(); openView?.remove(); openView = null; };
 function phoneFull() {
     const name = h('span', { class: 'mvp-name' });
     const stage = h('div', { class: 'mvp-stage' });

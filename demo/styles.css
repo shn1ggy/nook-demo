@@ -4646,11 +4646,6 @@ html.phone .np-tr .np-acts .icon-btn { width: 64px; height: 100%; border-radius:
 html.phone .np-tr .np-acts .icon-btn:last-child { background: var(--danger); }
 html.phone .np-tr .np-when { display: inline; }
 /* the reminder window: Cancel and Done at the top, above the keyboard */
-.own-head-phone { display: flex; align-items: center; gap: 8px; padding: 10px 12px 6px !important; }
-.own-head-phone b { flex: 1; text-align: center; font-size: 15px; }
-.own-head-phone button { height: 32px; padding: 0 12px; }
-.own-foot-phone > .set-btn:not(:first-child), .own-foot-phone > .btn-new { display: none; }
-.own-foot-phone:not(:has(> .set-btn:first-child svg)) { display: none; }
 /* cards on the phone: below the status bar, full width with 8px sides */
 html.phone .ncards { left: 8px !important; right: 8px !important; top: calc(env(safe-area-inset-top, 0px) + 8px) !important; }
 html.phone .ncard.np-due { width: auto; max-width: none; padding: 12px 10px 12px 14px !important; border-radius: 14px; }
@@ -4667,18 +4662,9 @@ html.phone .np2 .np-body { overflow-y: auto; }
 html.phone .np2 .np-add { height: 48px !important; font-size: 15px; border-radius: 12px; }
 /* phone reminder window: one clean sheet – Cancel and Done the same size, no line under them, full width */
 html.phone .own-window { border: 0 !important; box-shadow: none !important; width: 100% !important; max-width: none !important; margin: 0 !important; background: none !important; }
-html.phone .own-head-phone { border-bottom: 0 !important; }
-html.phone .own-head-phone button { justify-content: center; display: inline-flex; align-items: center; border: 0 !important; }
-html.phone .own-head-phone b { color: var(--fg-strong); }
 html.phone .own-body { padding-top: 6px !important; }
 html.phone .own-title { font-size: 24px !important; }
 /* phone reminder window: Cancel and Done exactly like every other sheet header (settings, windows) */
-html.phone .own-head-phone button, html.phone .own-head-phone .btn-new, html.phone .own-head-phone .set-btn { height: 34px !important; min-width: 0; border-radius: 17px !important; padding: 0 14px !important; background: color-mix(in srgb, var(--fg) 8%, transparent) !important; color: var(--fg) !important; font-size: 15px !important; font-weight: 400; box-shadow: none !important; }
-html.phone .own-head-phone .btn-new { font-weight: 600 !important; }
-html.phone .own-head-phone { display: grid !important; grid-template-columns: 1fr auto 1fr; padding: 6px 12px 0 !important; }
-html.phone .own-head-phone > button:first-child { justify-self: start; }
-html.phone .own-head-phone > button:last-child { justify-self: end; }
-html.phone .own-head-phone b { font-size: 16px; font-weight: 600; }
 /* phone checklist / Keep windows: only as tall as needed; with the keyboard up full height, and the list
    can scroll its last line well above the keyboard */
 html.phone .keep-window:not(.ws-window) { height: auto !important; max-height: calc(var(--full-h, 100dvh) - env(safe-area-inset-top) - 24px) !important; }
@@ -4692,18 +4678,9 @@ html.phone .np2 { padding-bottom: max(12px, env(safe-area-inset-bottom)) !import
 .own-body-phone .og { background: color-mix(in srgb, var(--fg) 6%, transparent); overflow: hidden; }
 .own-body-phone .og > .own-title { display: block; width: 100%; box-sizing: border-box; margin: 0; border: 0; background: none; border-bottom: 1px solid color-mix(in srgb, var(--fg) 8%, transparent) !important; }
 .own-body-phone .og > .own-notes { display: block; width: 100%; box-sizing: border-box; margin: 0 !important; border: 0 !important; background: none; }
-.og-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 0 12px 0 14px; border: 0; background: none; color: var(--fg); font: inherit; font-size: 15px; text-align: left; cursor: pointer; box-sizing: border-box; }
-.og-row + .og-row { border-top: 1px solid color-mix(in srgb, var(--fg) 8%, transparent); }
-.og-row > svg:first-child { color: var(--fg-muted); flex: none; }
-.og-k { flex: 1; }
 .og-v { color: var(--fg-muted); display: inline-flex; }
 .og-v .own-val { background: none; border: 0; padding: 0; color: inherit; font: inherit; }
 .og-when { color: var(--accent); }
-.og-row > svg:last-child { color: color-mix(in srgb, var(--fg) 35%, transparent); flex: none; }
-.og-cap { font-size: 12.5px; font-weight: 600; color: var(--fg-muted); padding: 16px 4px 6px; }
-.og-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.og-chip { height: 34px; padding: 0 14px; border-radius: 17px; border: 0; background: color-mix(in srgb, var(--fg) 9%, transparent); color: var(--fg); font: inherit; font-size: 14px; cursor: pointer; }
-.og-chip.on { background: var(--accent); color: #fff; font-weight: 600; }
 /* ⋯ and other menus on the phone: the same smooth slide and fading shade as the sheets */
 html.phone .pop { animation: sheet-in-2 .5s var(--ios-ease) !important; will-change: transform; }
 html.phone body:has(.pop)::after { animation: scrim-in .4s ease-out; }
@@ -4714,10 +4691,6 @@ html.phone body:has(.pop)::after { animation: scrim-in .4s ease-out; }
 .own-body-phone .og > .own-notes { padding: 13px 16px !important; min-height: 92px; resize: none; }
 .own-body-phone .og > .own-title::placeholder, .own-body-phone .og > .own-notes::placeholder { font-weight: 400; }
 .own-body-phone .og { margin-top: 12px; border-radius: 14px; }
-.own-body-phone .og-row { min-height: 50px; padding: 0 14px 0 16px; font-size: 16px; }
-.own-body-phone .og-cap { padding: 20px 4px 8px; font-size: 13px; }
-.own-body-phone .og-chips { gap: 8px; }
-.own-body-phone .og-chip { height: 36px; padding: 0 15px; border-radius: 18px; font-size: 15px; }
 /* phone reminder window: edge to edge like the other sheets (no outline at the sides), and real room at the bottom */
 html.phone .dialog:has(> .own-window) { width: 100vw !important; max-width: none; left: 0; right: 0; margin-left: 0 !important; margin-right: 0 !important; box-shadow: none; border: 0; border-radius: 16px 16px 0 0; overflow-y: auto; }
 html.phone .own-window .own-body.own-body-phone { padding: 2px 16px calc(env(safe-area-inset-bottom, 0px) + 28px) !important; }
@@ -4762,12 +4735,6 @@ body:has(.overlay) .np, body:has(.overlay) .ncards { z-index: 85 !important; }
 /* phone month: the chosen day is shown by its round number only – no square frame */
 html.phone .compact-month-day[aria-pressed="true"], html.phone .compact-month-day:focus, html.phone .compact-month-day:focus-visible { outline: none !important; box-shadow: none !important; background: transparent !important; }
 /* phone reminder window: Delete as its own group at the end, like the rows above (red, centred) */
-html.phone .own-foot-phone { padding: 0 16px calc(env(safe-area-inset-bottom, 0px) + 20px) !important; border: 0 !important; margin-top: 12px; }
-html.phone .own-foot-phone > .set-btn:first-child { width: 100%; height: 50px; justify-content: center; border-radius: 14px; border: 0; background: color-mix(in srgb, var(--fg) 6%, transparent) !important; color: var(--danger) !important; font-size: 16px; font-weight: 400; }
-html.phone .own-foot-phone:not(:has(> .set-btn:first-child svg)) { display: block; }
-html.phone .own-foot-phone > span { display: none; }
-html.phone .own-window:has(.own-foot-phone > .set-btn:first-child:only-of-type) .own-body-phone { padding-bottom: 20px !important; }
-html.phone .own-foot-phone:not(:has(.own-del)) { display: none !important; }
 html.phone .own-window:has(.own-del) .own-body-phone { padding-bottom: 16px !important; }
 /* phone: ⋯ page options at the top right of the page (scrolls away with the title) */
 html.phone .main > .scroll { position: relative; }
@@ -5172,9 +5139,6 @@ html.phone .trp-x { grid-column: 2; display: flex; justify-content: space-betwee
 html.phone .trv .trmod { outline: 0 !important; }
 html.phone { --glass-bg: color-mix(in srgb, var(--bg-side) 38%, transparent); --glass-blur: blur(16px) saturate(2.2) brightness(1.05); }
 /* phone Day view: the same head and cards as Trends */
-html.phone .trp-steps { display: flex; gap: 2px; background: color-mix(in srgb, var(--fg) 5.5%, transparent); border-radius: 12px; padding: 3px; }
-html.phone .trp-step { flex: 1; border: 0; background: none; color: var(--fg-muted); border-radius: 9px; padding: 7px 0; font-size: 14.5px; display: grid; place-items: center; }
-html.phone .trp-step.on { background: color-mix(in srgb, var(--fg) 12%, transparent); color: var(--fg); font-weight: 600; }
 html.phone .trp-sub .dayv-back { margin-right: 6px; }
 html.phone .dayv .dmod { border: 0 !important; outline: 0 !important; box-shadow: none !important; background: color-mix(in srgb, var(--fg) 5.5%, transparent) !important; border-radius: 14px !important; padding: 12px 14px !important; }
 html.phone .dayv .dmod .w-label { font-size: 15px; font-weight: 600; color: var(--fg); }
@@ -5183,10 +5147,7 @@ html.phone .dayv :is(.dayv-main, .dayv-side) { gap: 8px !important; }
 html.phone .trp-top { display: flex; align-items: center; gap: 8px; }
 html.phone .trp-top .dayv-titlebtn { flex: 1; min-width: 0; }
 html.phone .trp-navs { display: flex; gap: 6px; flex: none; }
-html.phone .trp-nav { width: 38px; height: 38px; border-radius: 19px; border: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--fg) 6.5%, transparent); color: var(--fg); }
-html.phone .trp-nav:active { transform: scale(.92); }
 html.phone .trp-sub { display: flex; align-items: center; gap: 8px; min-height: 28px; }
-html.phone .trp-today { border: 0; border-radius: 13px; height: 26px; padding: 0 11px; font-size: 13px; font-weight: 500; background: color-mix(in srgb, var(--fg) 9%, transparent); color: var(--fg); margin-left: auto; }
 html.phone .trp-row > * { height: 40px; box-sizing: border-box; }
 html.phone .trp-row :is(.seg, .segmented) { height: 40px; padding: 3px; border-radius: 12px; }
 html.phone .trp-row :is(.seg, .segmented) > * { height: 34px; display: flex; align-items: center; font-size: 14.5px; }
@@ -5361,9 +5322,6 @@ html.phone body:has(.select-bar) .fdb-li.is-selected::before { background: var(-
 .mvp.audio .mvp-extra { bottom: calc(env(safe-area-inset-bottom, 0px) + 22px); }
 .mvp.audio .mvp-bar, .mvp.audio .mvp-dots, .mvp.audio .mvp-meta { display: none; }
 .mvp-seek2 { padding: 0 28px; }
-.mvp-wave { height: 52px; display: flex; align-items: center; gap: 2.5px; touch-action: none; cursor: pointer; }
-.mvp-wave i { flex: 1; height: 22%; border-radius: 2px; background: rgba(255,255,255,.24); transition: height .3s; }
-.mvp-wave i.on { background: #fff; }
 .mvp-seek2 .mvp-times { margin-top: 6px; }
 .mvp-ctl2 { display: flex; justify-content: space-between; align-items: center; padding: 14px 30px 0; }
 .mvp-ctl2 .mvp-play { width: 72px; height: 72px; border-radius: 36px; }

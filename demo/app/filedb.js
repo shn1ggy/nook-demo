@@ -10,7 +10,6 @@ export const FILE_PROPS = [
 ];
 /** the empty file that keeps an empty folder (hidden) */
 export const FOLDER_MARK = '.nook-folder';
-export const isFileDb = (db) => !!db?.schema.files;
 export const filesDir = (db) => `${db.dir}/files`;
 const sidecarPath = (db) => `${db.dir}/files.json`;
 const sides = new WeakMap();
@@ -513,7 +512,6 @@ function takenName(t) {
 function dropSide(db, rel) { const s = side(db); for (const k of Object.keys(s))
     if (k === rel || k.startsWith(rel + '/'))
         delete s[k]; }
-export const sidecarOf = sidecarPath;
 /** the database of files a files.json belongs to */
 export function dbOfSidecar(ws, path) { return [...ws.dbs.values()].find((d) => d.schema.files && sidecarPath(d) === path); }
 /** History → Restore: the tags and values of that version, for files that are still there (sizes etc. stay as they are now) */
