@@ -204,7 +204,8 @@ export function renderViewBlock(ctx, b, savePage, fullPage = false) {
         };
         if (db.schema.files) {
             fileInfoOnce(ctx, db);
-            root.appendChild(fileCrumb(ctx, db));
+            root.appendChild(fileCrumb(ctx, db, onPhone() ? { open: state.searchOpen, field: () => searchInput(env), toggle: (on) => { state.searchOpen = on; if (!on)
+                    state.search = ''; env.redraw(); } } : undefined));
             if (!root.dataset.fdb) {
                 root.dataset.fdb = '1';
                 viewDrop(ctx, db, root);

@@ -22,7 +22,7 @@ export function fileInfoOnce(ctx, db) {
 export function go(ctx, db, rel) { setFolder(db, rel); ctx.ws.emit(); }
 /** the path bar of a database of files: always there (nothing below jumps when a folder opens), like a file
  *  manager's address bar – ↑ goes one folder up, each part of the path opens that folder */
-export function fileCrumb(ctx, db) {
+export function fileCrumb(ctx, db, search) {
     const cur = folderOf(db);
     const parts = cur ? cur.split('/') : [];
     const up = parts.length ? parts.slice(0, -1).join('/') : null;
@@ -37,6 +37,15 @@ export function fileCrumb(ctx, db) {
     };
     add(db.schema.name, '', !parts.length);
     parts.forEach((p, i) => { el.append(h('span', { class: 'fdb-sep' }, svgIcon(ICONS.chevron, 11))); add(p, parts.slice(0, i + 1).join('/'), i === parts.length - 1); });
+    // phone: search lives in the path bar – the magnifier on the right turns the bar into the search field
+    if (search) {
+        if (search.open) {
+            el.classList.add('searching');
+            el.replaceChildren(h('span', { class: 'fdb-sico' }, svgIcon(ICONS.search, 16)), search.field(), h('button', { class: 'icon-btn fdb-sbtn', 'aria-label': 'Close search', onclick: () => search.toggle(false) }, svgIcon(ICONS.close, 16)));
+        }
+        else
+            el.append(h('button', { class: 'icon-btn fdb-sbtn', 'aria-label': 'Search', onclick: () => search.toggle(true) }, svgIcon(ICONS.search, 16)));
+    }
     return el;
 }
 export function pickUpload(ctx, db) {
