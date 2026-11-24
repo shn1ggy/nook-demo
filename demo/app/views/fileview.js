@@ -47,25 +47,34 @@ export function fileCrumb(ctx, db, search) {
             el.append(h('button', { class: 'icon-btn fdb-sbtn', 'aria-label': 'Search', onclick: () => search.toggle(true) }, svgIcon(ICONS.search, 16)));
     }
     if (search)
-        watchStuck(el);
+        watchStuck(el, db.key);
     return el;
 }
 /** the phone's path bar knows when it is pinned to the top (then it covers what scrolls above it) */
-function watchStuck(el) {
+const wasStuck = new Map();
+function watchStuck(el, key) {
     // a marker where the bar would be: once the bar sits lower than it, the bar is pinned
     const mark = h('div', { class: 'fdb-stuck-mark' });
-    const check = () => {
+    // a redraw (opening a folder) starts as it was – no jump, no animation
+    el.classList.toggle('stuck', !!wasStuck.get(key));
+    const check = (animate) => {
         if (!el.isConnected) {
-            document.removeEventListener('scroll', check, true);
+            document.removeEventListener('scroll', onScroll, true);
             mark.remove();
             return;
         }
         if (mark.nextSibling !== el)
             el.before(mark);
-        el.classList.toggle('stuck', el.getBoundingClientRect().top - mark.getBoundingClientRect().top > (parseFloat(getComputedStyle(el).marginTop) || 0) + 1);
+        const on = el.getBoundingClientRect().top - mark.getBoundingClientRect().top > (parseFloat(getComputedStyle(el).marginTop) || 0) + 1;
+        if (on === el.classList.contains('stuck'))
+            return;
+        el.classList.toggle('anim', animate);
+        el.classList.toggle('stuck', on);
+        wasStuck.set(key, on);
     };
-    document.addEventListener('scroll', check, true);
-    requestAnimationFrame(check);
+    const onScroll = () => check(true);
+    document.addEventListener('scroll', onScroll, true);
+    queueMicrotask(() => check(false));
 }
 export function pickUpload(ctx, db) {
     const input = h('input', { type: 'file', multiple: true, style: { display: 'none' } });

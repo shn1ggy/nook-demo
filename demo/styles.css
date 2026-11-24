@@ -5521,7 +5521,7 @@ html.phone .fdb-crumb { position: sticky; top: calc(env(safe-area-inset-top) - 4
 /* stuck at the top: nothing of the list shows above it (up to the screen's edge) */
 html.phone .fdb-crumb.stuck::before { content: ""; position: absolute; left: -16px; right: -72px; bottom: 100%; height: 100vh; background: var(--bg); pointer-events: none; }
 /* pinned: the page's floating ⋯ button sits to its right, not on top of it */
-html.phone .fdb-crumb { transition: margin-right .18s; }
+html.phone .fdb-crumb.anim { transition: margin-right .18s; }
 html.phone .fdb-crumb.stuck { margin-right: 56px; }
 html.phone .fdb-crumb > .fdb-crumb-b { white-space: nowrap; }
 html.phone .fdb-crumb .fdb-sbtn { margin-left: auto; width: 32px; height: 32px; min-width: 32px; min-height: 32px; border-radius: 9px; }
