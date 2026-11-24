@@ -5534,3 +5534,23 @@ html.phone .fdb-crumb .clearable .vsearch { width: 100%; }
 /* selecting on the phone: the selection's actions take the bottom bar's place (as in Photos / Files) */
 html.phone body:has(.select-bar) .tab-bar { visibility: hidden; }
 html.phone .select-bar { z-index: 75; }
+/* Import CSV into a database: where each column goes */
+.csvm { width: min(720px, 100%); }
+.csvm-list { overflow-y: auto; max-height: min(70vh, 640px); padding: 6px 14px; }
+.csvm-row { display: grid; grid-template-columns: minmax(0, 1fr) 20px minmax(0, 220px); align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.csvm-row:last-child { border-bottom: 0; }
+.csvm-row.off .csvm-col { opacity: .5; }
+.csvm-col { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.csvm-col b { font-weight: 500; color: var(--fg-strong); overflow: hidden; white-space: nowrap; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.csvm-ex { font-size: 12.5px; color: var(--fg-muted); overflow: hidden; white-space: nowrap; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.csvm-ex.bad, .csvm-warn { color: var(--danger); }
+.csvm-empty { font-style: italic; }
+.csvm-arrow { color: var(--fg-faint); text-align: center; }
+.csvm-pick { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px 0 10px; border: 1px solid var(--border-strong); border-radius: 7px; background: var(--bg-input); color: var(--fg); font: inherit; font-size: 13px; cursor: pointer; min-width: 0; }
+.csvm-pick.skip { color: var(--fg-muted); }
+.csvm-pick > :first-child, .csvm-pick { overflow: hidden; white-space: nowrap; }
+.csvm-t { display: inline-flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.csvm-chev { margin-left: auto; color: var(--fg-faint); }
+.csvm-count { font-size: 12.5px; color: var(--fg-muted); }
+html.phone .csvm-row { grid-template-columns: minmax(0, 1fr) minmax(0, 150px); }
+html.phone .csvm-arrow { display: none; }

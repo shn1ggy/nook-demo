@@ -148,6 +148,11 @@ function parseOneDate(s) {
     s = s.trim();
     if (!s)
         return null;
+    // "Dienstag, 07.04.2026", "Sun, 15.11.2026": the weekday goes
+    s = s.replace(/^[A-Za-zäöüÄÖÜ]{2,}\.?,\s*(?=\d|[A-Za-zäöüÄÖÜ]+\s+\d)/, '');
+    // two-digit years (07.04.26) and dd-mm-yyyy
+    s = s.replace(/^(\d{1,2})\.(\d{1,2})\.(\d{2})(?!\d)/, (_, d, mo, y) => `${d}.${mo}.${+y < 70 ? 2000 + +y : 1900 + +y}`);
+    s = s.replace(/^(\d{1,2})-(\d{1,2})-(\d{4})/, '$1.$2.$3');
     let m;
     let date = null, rest = '';
     if ((m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(.*)$/))) {
@@ -173,10 +178,21 @@ function parseOneDate(s) {
         rest = m[4];
     }
     else if ((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(.*)$/))) {
-        date = `${m[3]}-${pad2(+m[1])}-${pad2(+m[2])}`;
+        const dayFirst = +m[1] > 12;
+        date = `${m[3]}-${pad2(+(dayFirst ? m[2] : m[1]))}-${pad2(+(dayFirst ? m[1] : m[2]))}`;
         rest = m[4];
     }
+    else if ((m = s.match(/^(\d{1,2})\s+([A-Za-zäöüÄÖÜ]+)\.?,?\s+(\d{4})(.*)$/))) {
+        const mo = MONTHS[m[2].toLowerCase()];
+        if (mo) {
+            date = `${m[3]}-${pad2(mo)}-${pad2(+m[1])}`;
+            rest = m[4];
+        }
+    }
     if (!date)
+        return null;
+    const [yy, mm, dd] = date.split('-').map(Number);
+    if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || new Date(yy, mm - 1, dd).getDate() !== dd)
         return null;
     const t = rest.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
     if (t) {

@@ -19,7 +19,7 @@ const LAST = /^(last ?name|family ?name|surname|nachname|name, nachname)$/i;
 /** reads a CSV: header and rows, without columns that are empty in every row; the name comes first */
 export function readCsv(text) {
     const all = parseCsv(text.replace(/^﻿/, ''), separator(text));
-    const head = (all.shift() ?? []).map((h) => h.trim());
+    const head = (all.shift() ?? []).map((h, i) => h.trim() || `Column ${i + 1}`);
     const rows = all.filter((r) => r.some((c) => c.trim()));
     const keep = head.map((_, i) => rows.some((r) => (r[i] ?? '').trim())).map((k, i) => (k && head[i] ? i : -1)).filter((i) => i >= 0);
     let header = keep.map((i) => head[i]);
@@ -41,8 +41,11 @@ export function readCsv(text) {
     return { header, rows: data };
 }
 /** the CSV as a new database named after the file (or into `into`: its columns become properties when missing) */
-export async function importCsv(ws, file, into) {
-    const { header, rows } = readCsv(await file.text());
+/** `map` (into a database): per column the property it goes to, '' for a new property, null to leave it out */
+export async function importCsv(ws, file, into, map, table) {
+    if (into && map)
+        return importMapped(ws, table ?? readCsv(await file.text()), into, map);
+    const { header, rows } = table ?? readCsv(await file.text());
     if (!header.length)
         throw new Error('This file has no columns.');
     const props = header.map((h, i) => inferProp(h, i, rows));
@@ -86,5 +89,42 @@ export async function importCsv(ws, file, into) {
         await ws.addRow(db, values, '');
     }
     return { db, added: rows.length };
+}
+async function importMapped(ws, t, db, map) {
+    const targets = t.header.map((h, i) => {
+        const m = map[i];
+        if (m == null)
+            return null;
+        if (m === '') {
+            const p = inferProp(h, i, t.rows);
+            if (p.type === 'title')
+                p.type = 'text';
+            let n = h, k = 2;
+            while (db.schema.properties.some((q) => q.name.toLowerCase() === n.toLowerCase()))
+                n = `${h} ${k++}`;
+            p.name = n;
+            db.schema.properties.push(p);
+            return p;
+        }
+        return db.schema.properties.find((q) => q.name === m) ?? null;
+    });
+    ws.boundary();
+    await ws.saveSchema(db);
+    // a date column that is the database's date: rows where it can't be read are left out (sums, notes …)
+    const dateCol = targets.findIndex((p) => p?.type === 'date');
+    let added = 0;
+    for (const r of t.rows) {
+        const values = {};
+        targets.forEach((p, i) => { if (!p)
+            return; const v = convertValue(p, r[i] ?? ''); if (v !== null && v !== '')
+            values[p.name] = v; });
+        if (!Object.keys(values).length)
+            continue;
+        if (dateCol >= 0 && (r[dateCol] ?? '').trim() && values[targets[dateCol].name] == null)
+            continue;
+        await ws.addRow(db, values, '');
+        added++;
+    }
+    return { db, added };
 }
 //# sourceMappingURL=csv.js.map

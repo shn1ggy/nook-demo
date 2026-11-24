@@ -635,7 +635,9 @@ export function parseNumber(s) {
     let t = s.replace(/[€$£¥\s\u00a0]/g, '').replace(/^\+/, '').replace(/(CHF|EUR|USD|GBP)/gi, '');
     if (t === '' || t === '-')
         return null;
-    if (/,\d{1,2}$/.test(t))
+    if (/^-?\d{1,3}(\.\d{3})+$/.test(t))
+        t = t.replace(/\./g, '');
+    else if (/,\d{1,2}$/.test(t))
         t = t.replace(/\./g, '').replace(',', '.');
     else
         t = t.replace(/,/g, '');

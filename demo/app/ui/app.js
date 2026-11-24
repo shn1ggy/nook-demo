@@ -1634,7 +1634,24 @@ export class App {
             if (!f)
                 return;
             try {
-                const { importCsv } = await import('../importer/csv.js');
+                const { importCsv, readCsv } = await import('../importer/csv.js');
+                if (into) {
+                    const table = readCsv(await f.text());
+                    if (!table.header.length)
+                        throw new Error('This file has no columns.');
+                    const { mapCsv } = await import('./csvmap.js');
+                    mapCsv(into, f.name, table, (map) => void (async () => {
+                        try {
+                            const { added } = await importCsv(this.ws, f, into, map, table);
+                            toast(`${added} ${added === 1 ? 'entry' : 'entries'} imported into “${into.schema.name}”`);
+                            this.openDb(into.key);
+                        }
+                        catch (e) {
+                            toast(`Could not import: ${e.message}`);
+                        }
+                    })());
+                    return;
+                }
                 const { db, added } = await importCsv(this.ws, f, into);
                 toast(`${added} ${added === 1 ? 'entry' : 'entries'} imported into “${db.schema.name}”`);
                 this.openDb(db.key);
