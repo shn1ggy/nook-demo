@@ -1,5 +1,5 @@
 import { asDate, h, svgIcon, ICONS } from '../util.js';
-import { dialog, panel, toast } from '../ui/pop.js';
+import { confirmDialog, dialog, panel, toast } from '../ui/pop.js';
 import { renderValue, typeIcon } from './cells.js';
 import { moreControl, switchControl } from '../ui/settings.js';
 import { prettyKey } from '../ui/commands.js';
@@ -48,11 +48,27 @@ export function openDuplicates(ctx, db) {
         return [...map.values()].filter((g) => g.length > 1);
     };
     const sub = h('span', { class: 'muted' });
+    // all groups at once: the oldest entry of each stays, the others go (to the trash – undo works)
+    const keepAll = h('button', { class: 'set-btn', title: 'Keep the oldest entry of every group, delete the others', onclick: () => {
+            const gs = groups();
+            if (!gs.length)
+                return;
+            const extra = gs.flatMap((g) => [...g].sort((a, b) => String(a.created ?? '').localeCompare(String(b.created ?? ''))).slice(1));
+            confirmDialog({ title: `Delete ${extra.length} duplicate${extra.length === 1 ? '' : 's'}?`, lines: [`Of each of the ${gs.length} group${gs.length === 1 ? '' : 's'}, the oldest entry is kept and the others are deleted.`, `They go to the trash · ${prettyKey('Mod+Z')} to undo.`], ok: `Delete ${extra.length}`, danger: true, onOk: async () => {
+                    ctx.ws.boundary();
+                    for (const r of extra)
+                        await ctx.ws.deleteRow(db, r);
+                    toast(`Deleted ${extra.length} duplicate${extra.length === 1 ? '' : 's'} · ${prettyKey('Mod+Z')} to undo`);
+                    ctx.refresh();
+                    draw();
+                } });
+        } }, 'Keep one of each');
     const body = h('div', { class: 'dialog-body bwin dupe-body' });
     const cols = () => [db.titleProp, ...picked.filter((n) => n !== db.titleProp)];
     const draw = () => {
         const gs = groups();
         sub.textContent = gs.length ? `${gs.length} group${gs.length === 1 ? '' : 's'} · ${gs.reduce((s, g) => s + g.length, 0)} entries · compared by ${picked.join(', ')}` : `No duplicates · compared by ${picked.join(', ')}`;
+        keepAll.hidden = !gs.length;
         if (!gs.length) {
             body.replaceChildren(h('div', { class: 'keep-empty' }, 'No entries share the same values.'));
             return;
@@ -86,7 +102,7 @@ export function openDuplicates(ctx, db) {
                         nav.refresh();
                     }, `Compare ${p.name}`)))) },
             ] }) }, 'Compare by', svgIcon(ICONS.chevron, 11));
-    const head = h('div', { class: 'dialog-head drill-head' }, h('span', { class: 'drill-titles' }, h('strong', null, `Duplicates in ${db.schema.name}`), sub), cmpBtn, h('button', { class: 'icon-btn', 'aria-label': 'Close', title: 'Close (Esc)', onclick: () => close() }, svgIcon(ICONS.close, 15)));
+    const head = h('div', { class: 'dialog-head drill-head' }, h('span', { class: 'drill-titles' }, h('strong', null, `Duplicates in ${db.schema.name}`), sub), keepAll, cmpBtn, h('button', { class: 'icon-btn', 'aria-label': 'Close', title: 'Close (Esc)', onclick: () => close() }, svgIcon(ICONS.close, 15)));
     draw();
     const close = dialog(h('div', { class: 'bwindow drill-window' }, head, body), { wide: true });
 }
