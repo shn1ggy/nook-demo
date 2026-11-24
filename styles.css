@@ -5482,3 +5482,10 @@ body:has(.overlay.spl) .pop { z-index: 1100 !important; }
 html.phone .tb-stage.tb-snap-tabs .tb-tabs { transition: none !important; transform: rotateX(-90deg) !important; opacity: 0 !important; }
 html.phone .tb-stage.tb-up-out .tb-player { transform: rotateX(90deg); opacity: 0; pointer-events: none; }
 html.phone .tb-stage.tb-snap .tb-face, html.phone .tb-stage.tb-snap .tb-player > * { transition: none !important; }
+/* checkboxes: round, the app's accent colour when ticked (everywhere; toggles stay toggles) */
+.cb { width: 18px; height: 18px; flex: 0 0 18px; border-radius: 50% !important; outline: none !important; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--fg) 34%, transparent) !important; background: none; transition: background .12s, box-shadow .12s, transform .12s; }
+.cb:hover { background: none; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--fg) 55%, transparent) !important; }
+.cb.on, .cb.on:hover { background: var(--accent); box-shadow: none !important; color: #fff; }
+.cb svg { width: 11px; height: 11px; }
+.cb:active { transform: scale(.88); }
+.cb:focus-visible { outline: 2px solid var(--accent) !important; outline-offset: 2px; }
