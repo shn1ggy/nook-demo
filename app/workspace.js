@@ -2378,6 +2378,7 @@ export class Workspace {
     // Earlier versions of pages and entries: at most one every 10 minutes per file, the last 50 kept,
     // in .workspace/history (one JSON file per page or entry).
     snapAt = new Map();
+    /** keeps `content` as an earlier version of `path` (at most every 10 minutes) */
     async snapshot(path, content) {
         const now = Date.now();
         if (now - (this.snapAt.get(path) ?? 0) < 10 * 60_000)

@@ -1122,6 +1122,8 @@ export function openViewSettings(env, anchor, selectTab, start) {
                 if (!env.ctx.isDbPage?.(db.key))
                     dbRows.push({ label: 'Open database as full page', icon: menuIcon('maximize'), run: () => env.ctx.openDb(db.key) });
                 dbRows.push({ label: 'Find duplicates…', icon: menuIcon('layers'), run: () => openDuplicates(env.ctx, db) });
+                if (db.schema.files && env.ctx.openHistory)
+                    dbRows.push({ label: 'History of tags & values', icon: menuIcon('clock'), run: () => env.ctx.openHistory(`${db.dir}/files.json`) });
                 if (env.ctx.importCsvFile && !db.schema.files)
                     dbRows.push({ label: 'Import CSV…', icon: menuIcon('arrow-down'), run: () => env.ctx.importCsvFile(db) });
                 return dbRows;

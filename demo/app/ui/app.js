@@ -829,6 +829,7 @@ export class App {
             { label: 'Favourite', icon: menuIcon('star'), toggle: fav, onToggle: async (on) => { s.favorites = on ? [...s.favorites.filter((x) => x !== key), key] : s.favorites.filter((x) => x !== key); await ws.saveSettings(); this.render(); } },
             { section: 'Info' },
             { label: 'Find duplicates…', run: () => openDuplicates(this, db) },
+            ...(db.schema.files ? [{ label: 'History of tags & values', run: () => this.openHistory(`${db.dir}/files.json`) }] : []),
             this.usedInEntry(db),
             ...this.revealEntry(`${db.dir}/database.json`),
             'sep',

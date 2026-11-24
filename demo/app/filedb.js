@@ -252,7 +252,9 @@ async function saveMerged(ws, db) {
     const mine = side(db), base = based.get(db) ?? {};
     let theirs = {};
     try {
-        theirs = JSON.parse(await ws.storage.read(sidecarPath(db)));
+        const t = await ws.storage.read(sidecarPath(db));
+        theirs = JSON.parse(t);
+        void ws.snapshot(sidecarPath(db), t);
     }
     catch {
         theirs = clone(base);
@@ -511,4 +513,35 @@ function takenName(t) {
 function dropSide(db, rel) { const s = side(db); for (const k of Object.keys(s))
     if (k === rel || k.startsWith(rel + '/'))
         delete s[k]; }
+export const sidecarOf = sidecarPath;
+/** the database of files a files.json belongs to */
+export function dbOfSidecar(ws, path) { return [...ws.dbs.values()].find((d) => d.schema.files && sidecarPath(d) === path); }
+/** History → Restore: the tags and values of that version, for files that are still there (sizes etc. stay as they are now) */
+export async function restoreSidecar(ws, db, content) {
+    const old = JSON.parse(content), s = side(db);
+    for (const rel of Object.keys(s)) {
+        const v = old[rel]?.v;
+        if (v && Object.keys(v).length)
+            s[rel].v = clone(v);
+        else
+            delete s[rel].v;
+    }
+    // measured against the newest version: everything that differs from the old one is put back
+    try {
+        based.set(db, JSON.parse(await ws.storage.read(sidecarPath(db))));
+    }
+    catch { /* as it was */ }
+    buildRows(ws, db);
+    ws.emit();
+    await saveSidecar(ws, db);
+}
+/** what a files.json holds, for the history preview: each file with your values */
+export function sidecarEntries(content) {
+    try {
+        return Object.entries(JSON.parse(content)).filter(([, e]) => e.v && Object.keys(e.v).length).map(([k, e]) => [k, e.v]).sort((a, b) => a[0].localeCompare(b[0]));
+    }
+    catch {
+        return [];
+    }
+}
 //# sourceMappingURL=filedb.js.map

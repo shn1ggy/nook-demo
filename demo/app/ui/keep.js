@@ -1,4 +1,5 @@
 // Trash (deleted pages and entries, 30 days) and history (earlier versions of a page or entry).
+import { dbOfSidecar, restoreSidecar, sidecarEntries } from '../filedb.js';
 import { moreControl } from './settings.js';
 import { iconSvg } from './icons.js';
 import { h, svgIcon, ICONS, fmtDate, fmtTime, isoOfDate, segmented } from '../util.js';
@@ -146,13 +147,28 @@ export async function openTrash(ws, onRestored) {
 export async function openHistory(ws, ctx, path, onRestored) {
     const versions = await ws.versions(path);
     const current = await ws.readExtra(path);
-    const d = describe(ws, path, current ?? '');
+    const fdb = dbOfSidecar(ws, path);
+    const d = fdb ? { title: fdb.schema.name, icon: renderIcon(fdb.schema.icon, 16, 'database'), where: 'Tags & values' } : describe(ws, path, current ?? '');
     const list = h('div', { class: 'hist-list' });
     const preview = h('div', { class: 'hist-preview' });
     const restoreBtn = h('button', { class: 'btn-new' }, 'Restore this version');
     let picked = null;
     const show = (content) => {
         preview.textContent = '';
+        if (fdb) {
+            const props = fdb.schema.properties.filter((p) => !p.file && p.type !== 'title');
+            const ents = sidecarEntries(content);
+            if (!ents.length) {
+                preview.appendChild(h('div', { class: 'keep-empty' }, 'No tags or values in this version.'));
+                return;
+            }
+            const tb = h('table', { class: 'hist-files' });
+            tb.appendChild(h('tr', null, h('th', null, 'File'), ...props.map((p) => h('th', null, p.name))));
+            for (const [rel, v] of ents)
+                tb.appendChild(h('tr', null, h('td', null, rel.split('/').pop()), ...props.map((p) => h('td', null, v[p.name] == null ? '' : renderValue(fdb, p, v[p.name])))));
+            preview.appendChild(tb);
+            return;
+        }
         if (ws.whatIs(path)?.kind === 'page') {
             const p = parsePageFile(content, path);
             preview.append(h('h1', { class: 'hist-title' }, p.title || 'Untitled'), new Editor(p.blocks, ctx, () => { }, true).el);
@@ -196,10 +212,13 @@ export async function openHistory(ws, ctx, path, onRestored) {
     restoreBtn.addEventListener('click', async () => {
         if (!picked)
             return;
-        await ws.restoreVersion(path, picked.content);
+        if (fdb)
+            await restoreSidecar(ws, fdb, picked.content);
+        else
+            await ws.restoreVersion(path, picked.content);
         close();
         onRestored();
-        toast(`Restored the version from ${when(picked.t)} · undo with Ctrl+Z`);
+        toast(fdb ? `Restored the tags & values from ${when(picked.t)}` : `Restored the version from ${when(picked.t)} · undo with Ctrl+Z`);
     });
     const close = dialog(h('div', { class: 'bwindow hist-window' }, h('div', { class: 'dialog-head' }, h('span', { class: 'keep-ico' }, d.icon), h('strong', { style: { padding: '0 6px', flex: 1 } }, `History of “${d.title}”`), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => close() }, svgIcon(ICONS.close))), h('div', { class: 'hist-body' }, list, preview), h('div', { class: 'bfooter' }, h('button', { class: 'set-btn', onclick: () => close() }, 'Close'), restoreBtn)), { wide: true });
     pick(versions[0] ?? null, list.children[versions.length ? 1 : 0]);
