@@ -33,6 +33,8 @@ audio.volume = playMode.vol;
 let ctx = null;
 let queue = [];
 let cur = -1;
+/** songs played before (newest last), shown dimmed above Up next */
+let played = [];
 let order = [];
 /** the playing song as a file (for Share), once fetched */
 let songFile = null;
@@ -54,6 +56,9 @@ function makeOrder() {
     }
 }
 async function load(k, play = true) {
+    if (cur >= 0 && cur !== k) {
+        played = [...played.filter((x) => x !== cur && x !== k), cur].slice(-10);
+    }
     cur = k;
     const it = queue[k];
     if (!it || !ctx)
@@ -91,6 +96,7 @@ export function playSongs(c, songs, at) {
         return;
     }
     queue = songs;
+    played = [];
     makeOrder();
     cur = at;
     makeOrder();
@@ -133,6 +139,7 @@ export function stopPlayer() {
     queue = [];
     cur = -1;
     order = [];
+    played = [];
     try {
         const m = navigator.mediaSession;
         if (m) {
@@ -362,8 +369,18 @@ function desktopFull() {
     const drawList = () => {
         win.querySelector('.spl-rt').textContent = playMode.shuffle ? 'UP NEXT · SHUFFLED' : 'UP NEXT';
         win.querySelector('.spl-n').textContent = `${queue.length} song${queue.length === 1 ? '' : 's'}`;
-        list.replaceChildren(...upNextOrder().map((k, n) => h('button', { class: 'spl-q' + (k === cur ? ' cur' : ''), onclick: () => playAt(k) }, h('span', { class: 'spl-qn' }, k === cur ? pi(audio.paused ? 'play' : 'pause', 12) : String(n + 1)), h('span', { class: 'spl-qt' }, titleOf(queue[k].path)))));
+        const prev = played.filter((k) => k !== cur && k < queue.length).map((k) => h('button', { class: 'spl-q played', onclick: () => playAt(k) }, h('span', { class: 'spl-qn' }, pi('prev', 11)), h('span', { class: 'spl-qt' }, titleOf(queue[k].path))));
+        const keep = list.scrollTop;
+        list.replaceChildren(...prev, ...upNextOrder().map((k, n) => h('button', { class: 'spl-q' + (k === cur ? ' cur' : ''), onclick: () => playAt(k) }, h('span', { class: 'spl-qn' }, k === cur ? pi(audio.paused ? 'play' : 'pause', 12) : String(n + 1)), h('span', { class: 'spl-qt' }, titleOf(queue[k].path)))));
+        // the song playing stays at the top; what played before is a scroll up
+        const c = list.querySelector('.spl-q.cur');
+        if (c && (drawnCur !== cur || !prev.length))
+            list.scrollTop = c.offsetTop;
+        else
+            list.scrollTop = keep;
+        drawnCur = cur;
     };
+    let drawnCur = -2;
     const draw = () => {
         const it = nowPlaying();
         if (!it) {

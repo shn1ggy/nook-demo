@@ -5511,3 +5511,6 @@ html.phone .tb-stage.tb-snap .tb-face, html.phone .tb-stage.tb-snap .tb-player >
 .hist-files { border-collapse: collapse; font-size: 13px; width: 100%; }
 .hist-files th { text-align: left; font-weight: 500; color: var(--fg-muted); padding: 4px 10px 6px 0; border-bottom: 1px solid var(--border); }
 .hist-files td { padding: 5px 10px 5px 0; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.spl-q.played { color: #8b8e93; }
+.spl-q.played .spl-qn { opacity: .7; }
+.spl-list { padding-right: 12px; scrollbar-gutter: stable; position: relative; }
