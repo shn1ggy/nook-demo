@@ -5514,8 +5514,6 @@ html.phone .tb-stage.tb-snap .tb-face, html.phone .tb-stage.tb-snap .tb-player >
 .spl-q.played { color: #8b8e93; }
 .spl-q.played .spl-qn { opacity: .7; }
 .spl-list { padding-right: 12px; scrollbar-gutter: stable; position: relative; }
-.fdb-li .fdb-cb { flex: none; align-self: center; padding: 10px; margin: -10px -6px -10px 0; display: grid; place-items: center; }
-.fdb-li .fdb-cb .cb { width: 24px; height: 24px; }
 /* phone: the path bar stays at the top while scrolling; search sits at its right end */
 html.phone .fdb-crumb { position: sticky; top: calc(env(safe-area-inset-top) - 4px); z-index: 5; background: linear-gradient(color-mix(in srgb, var(--fg) 4%, transparent), color-mix(in srgb, var(--fg) 4%, transparent)) var(--bg) !important; opacity: 1; height: 46px; box-sizing: border-box; flex-wrap: nowrap; overflow: visible; }
 /* stuck at the top: nothing of the list shows above it (up to the screen's edge) */
@@ -5535,4 +5533,3 @@ html.phone .fdb-crumb .clearable .vsearch { width: 100%; }
 /* selecting on the phone: the selection's actions take the bottom bar's place (as in Photos / Files) */
 html.phone body:has(.select-bar) .tab-bar { visibility: hidden; }
 html.phone .select-bar { z-index: 75; }
-html.phone body:has(.select-bar) .fdb-li .fdb-cb { display: none; }
