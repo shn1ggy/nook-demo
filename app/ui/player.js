@@ -523,9 +523,9 @@ function markNowPlaying() {
     document.documentElement.classList.toggle('np-paused', audio.paused);
     for (const ic of document.querySelectorAll('[data-np]')) {
         const on = !!path && (path === ic.dataset.np || path.endsWith('/files/' + ic.dataset.np));
-        if (on === ic.classList.contains('np'))
+        if (on === ic.classList.contains('np-on'))
             continue;
-        ic.classList.toggle('np', on);
+        ic.classList.toggle('np-on', on);
         ic.querySelector('.np-eq')?.remove();
         if (on)
             ic.append(Object.assign(document.createElement('span'), { className: 'np-eq', innerHTML: '<i></i><i></i><i></i><i></i>' }));
