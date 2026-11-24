@@ -21,7 +21,7 @@ export function fileInfoOnce(ctx, db) {
 export function go(ctx, db, rel) { setFolder(db, rel); ctx.ws.emit(); }
 /** the path bar of a database of files: always there (nothing below jumps when a folder opens), like a file
  *  manager's address bar – ↑ goes one folder up, each part of the path opens that folder */
-export function fileCrumb(ctx, db, search) {
+export function fileCrumb(ctx, db) {
     const cur = folderOf(db);
     const parts = cur ? cur.split('/') : [];
     const up = parts.length ? parts.slice(0, -1).join('/') : null;
@@ -36,44 +36,7 @@ export function fileCrumb(ctx, db, search) {
     };
     add(db.schema.name, '', !parts.length);
     parts.forEach((p, i) => { el.append(h('span', { class: 'fdb-sep' }, svgIcon(ICONS.chevron, 11))); add(p, parts.slice(0, i + 1).join('/'), i === parts.length - 1); });
-    // phone: search lives in the path bar – the magnifier on the right turns the bar into the search field
-    if (search) {
-        if (search.open) {
-            el.classList.add('searching');
-            el.replaceChildren(h('span', { class: 'fdb-sico' }, svgIcon(ICONS.search, 16)), search.field(), h('button', { class: 'icon-btn fdb-sbtn', 'aria-label': 'Close search', onclick: () => search.toggle(false) }, svgIcon(ICONS.close, 16)));
-        }
-        else
-            el.append(h('button', { class: 'icon-btn fdb-sbtn', 'aria-label': 'Search', onclick: () => search.toggle(true) }, svgIcon(ICONS.search, 16)));
-    }
-    if (search)
-        watchStuck(el, db.key);
     return el;
-}
-/** the phone's path bar knows when it is pinned to the top (then it covers what scrolls above it) */
-const wasStuck = new Map();
-function watchStuck(el, key) {
-    // a marker where the bar would be: once the bar sits lower than it, the bar is pinned
-    const mark = h('div', { class: 'fdb-stuck-mark' });
-    // a redraw (opening a folder) starts as it was – no jump, no animation
-    el.classList.toggle('stuck', !!wasStuck.get(key));
-    const check = (animate) => {
-        if (!el.isConnected) {
-            document.removeEventListener('scroll', onScroll, true);
-            mark.remove();
-            return;
-        }
-        if (mark.nextSibling !== el)
-            el.before(mark);
-        const on = el.getBoundingClientRect().top - mark.getBoundingClientRect().top > (parseFloat(getComputedStyle(el).marginTop) || 0) + 1;
-        if (on === el.classList.contains('stuck'))
-            return;
-        el.classList.toggle('anim', animate);
-        el.classList.toggle('stuck', on);
-        wasStuck.set(key, on);
-    };
-    const onScroll = () => check(true);
-    document.addEventListener('scroll', onScroll, true);
-    queueMicrotask(() => check(false));
 }
 export function pickUpload(ctx, db) {
     const input = h('input', { type: 'file', multiple: true, style: { display: 'none' } });

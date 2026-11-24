@@ -204,8 +204,7 @@ export function renderViewBlock(ctx, b, savePage, fullPage = false) {
         };
         if (db.schema.files) {
             fileInfoOnce(ctx, db);
-            root.appendChild(fileCrumb(ctx, db, onPhone() ? { open: state.searchOpen, field: () => searchInput(env), toggle: (on) => { state.searchOpen = on; if (!on)
-                    state.search = ''; env.redraw(); } } : undefined));
+            root.appendChild(fileCrumb(ctx, db));
             if (!root.dataset.fdb) {
                 root.dataset.fdb = '1';
                 viewDrop(ctx, db, root);
@@ -422,8 +421,7 @@ function toolbar(env, tabs, selectTab) {
     const settings = (page) => (e) => openViewSettings(env, e.currentTarget, selectTab, page);
     right.append(tool(ICONS.filter, nFilters ? `Filter · ${view.filter.rules.map((r) => ('rules' in r ? 'group' : describeRule(r))).join(', ')}` : 'Filter', nFilters > 0, settings('filter'), nFilters), tool(ICONS.sort, view.sorts?.length ? `Sort · ${view.sorts.map((s) => s.prop).join(', ')}` : 'Sort', !!view.sorts?.length, settings('sort')));
     // grouping is in the ⋯ settings
-    if (env.db.schema.files && onPhone()) { /* the phone's path bar has the search */ }
-    else if (state.searchOpen)
+    if (state.searchOpen)
         right.append(searchInput(env));
     else {
         right.append(tool(ICONS.search, 'Search', false, () => { state.searchOpen = true; env.redraw(); }));
@@ -566,7 +564,7 @@ function compactBar(env, tabs, selectTab, noTabs = false) {
     if (view.period) {
         bar.append(periodPill(env));
     }
-    if (state.searchOpen && !(env.db.schema.files && onPhone()))
+    if (state.searchOpen)
         bar.append(searchInput(env));
     else
         bar.append(h('span', { class: 'vc-gap' }));

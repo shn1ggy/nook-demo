@@ -5350,8 +5350,6 @@ html.phone body:has(.mvp) .pop { padding-bottom: calc(env(safe-area-inset-bottom
 .fdb-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--fg-muted); margin-top: 3px; }
 .fdb-sub:empty { display: none; }
 .fdb-empty { color: var(--fg-muted); padding: 18px 16px; font-size: 15px; }
-html.phone .fdb-crumb { margin: 6px 0 4px; padding: 5px 6px; border-radius: 12px; background: color-mix(in srgb, var(--fg) 4%, transparent); font-size: 15px; }
-html.phone .fdb-crumb .fdb-up { width: 32px; height: 32px; border-radius: 9px; background: color-mix(in srgb, var(--fg) 6%, transparent); }
 /* select mode: round markers */
 html.phone body:has(.select-bar) .fdb-li::before { content: ''; width: 20px; height: 20px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--fg) 28%, transparent); margin-right: 2px; }
 html.phone body:has(.select-bar) .fdb-li.is-selected::before { background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E") center/12px no-repeat; border-color: var(--accent); }
@@ -5514,23 +5512,6 @@ html.phone .tb-stage.tb-snap .tb-face, html.phone .tb-stage.tb-snap .tb-player >
 .spl-q.played { color: #8b8e93; }
 .spl-q.played .spl-qn { opacity: .7; }
 .spl-list { padding-right: 12px; scrollbar-gutter: stable; position: relative; }
-/* phone: the path bar stays at the top while scrolling; search sits at its right end */
-html.phone .fdb-crumb { position: sticky; top: calc(env(safe-area-inset-top) - 4px); z-index: 5; background: linear-gradient(color-mix(in srgb, var(--fg) 4%, transparent), color-mix(in srgb, var(--fg) 4%, transparent)) var(--bg) !important; opacity: 1; height: 46px; box-sizing: border-box; flex-wrap: nowrap; overflow: visible; }
-/* stuck at the top: nothing of the list shows above it (up to the screen's edge) */
-html.phone .fdb-crumb.stuck::before { content: ""; position: absolute; left: -16px; right: -72px; bottom: 100%; height: 100vh; background: var(--bg); pointer-events: none; }
-/* pinned: the page's floating ⋯ button sits to its right, not on top of it */
-html.phone .fdb-crumb.stuck { margin-right: 56px; box-shadow: -16px 0 0 var(--bg); }
-/* …and beside it, next to the ⋯ button, down to the bar's lower edge */
-html.phone .fdb-crumb.stuck::after { content: ""; position: absolute; left: 100%; width: 72px; top: 0; bottom: 0; background: var(--bg); pointer-events: none; z-index: -1; }
-html.phone .fdb-crumb > .fdb-crumb-b { white-space: nowrap; }
-html.phone .fdb-crumb .fdb-sbtn { margin-left: auto; width: 32px; height: 32px; min-width: 32px; min-height: 32px; border-radius: 9px; }
-html.phone .fdb-crumb.searching { flex-wrap: nowrap; gap: 6px; }
-html.phone .fdb-crumb .fdb-sico { display: grid; place-items: center; width: 32px; color: var(--fg-muted); flex: none; }
-html.phone .fdb-crumb .vsearch { flex: 1; min-width: 0; border: 0; background: none; outline: none; font: inherit; font-size: 16px; color: var(--fg); padding: 4px 0; }
-html.phone .fdb-crumb .clear-x { display: none !important; }
-html.phone .fdb-crumb .clearable { flex: 1; min-width: 0; display: flex; }
-html.phone .fdb-crumb .clearable .vsearch { width: 100%; }
-.fdb-stuck-mark { height: 0; }
 /* selecting on the phone: the selection's actions take the bottom bar's place (as in Photos / Files) */
 html.phone body:has(.select-bar) .tab-bar { visibility: hidden; }
 html.phone .select-bar { z-index: 75; }
@@ -5554,3 +5535,5 @@ html.phone .select-bar { z-index: 75; }
 .csvm-count { font-size: 12.5px; color: var(--fg-muted); }
 html.phone .csvm-row { grid-template-columns: minmax(0, 1fr) minmax(0, 150px); }
 html.phone .csvm-arrow { display: none; }
+/* phone: the path is a plain row under the view's toolbar – it scrolls with the list */
+html.phone .fdb-crumb { background: none; border-radius: 0; border-bottom: 1px solid var(--border); padding-inline: 0; }
