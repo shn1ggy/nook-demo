@@ -127,7 +127,8 @@ export function checkbox(checked, onToggle, label = 'Checkbox') {
     const el = h('span', { class: 'cb' + (checked ? ' on' : ''), role: 'checkbox', 'aria-checked': String(checked), 'aria-label': label, tabindex: onToggle ? 0 : -1 });
     el.appendChild(svgIcon(ICONS.check, 12, { stroke: 2 }));
     if (onToggle) {
-        const flip = (e) => { e.stopPropagation(); e.preventDefault(); checked = !checked; el.classList.toggle('on', checked); el.setAttribute('aria-checked', String(checked)); onToggle(checked); };
+        const flip = (e) => { e.stopPropagation(); e.preventDefault(); checked = !checked; el.classList.toggle('on', checked); el.classList.remove('cb-anim'); void el.offsetWidth; if (checked)
+            el.classList.add('cb-anim'); el.setAttribute('aria-checked', String(checked)); onToggle(checked); };
         el.addEventListener('click', flip);
         el.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter')
             flip(e); });

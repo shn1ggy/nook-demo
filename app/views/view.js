@@ -112,8 +112,13 @@ export function renderViewBlock(ctx, b, savePage, fullPage = false) {
         fresh.add(view.id);
         // "Open pages in": center peek (default) or full page
         const vctx = view.openIn === 'page' ? new Proxy(ctx, { get: (t, k) => (k === 'openRow' ? (d, r, o) => (o?.isNew ? t.openRow(d, r, o) : t.openRowPage(d, r)) : Reflect.get(t, k, t)) }) : ctx;
+        // a database of files: a song opened here plays this view's entries next (its filter and sorting), whichever
+        // other view of the same database was drawn last
+        let shownRows = [];
+        const fctx = db.schema.files ? new Proxy(vctx, { get: (t, k) => (k === 'openRow' ? (d, r, o) => { if (d === db)
+                visibleRows.set(db.key, shownRows); return t.openRow(d, r, o); } : Reflect.get(t, k, t)) }) : vctx;
         const env = {
-            ctx: vctx, db, view, state, selectionRoot: root, fullPage,
+            ctx: fctx, db, view, state, selectionRoot: root, fullPage,
             redraw: draw,
             saveView: () => { ctx.ws.saveViews(db); },
             newRow: async (extra = {}, open = false, template) => {
@@ -206,8 +211,10 @@ export function renderViewBlock(ctx, b, savePage, fullPage = false) {
             }
         }
         const res = query(db, view, state.offset, state.search, state.keep);
-        if (db.schema.files)
-            visibleRows.set(db.key, res.groups ? res.groups.flatMap((g) => g.rows) : res.rows);
+        if (db.schema.files) {
+            shownRows = res.groups ? res.groups.flatMap((g) => g.rows) : res.rows;
+            visibleRows.set(db.key, shownRows);
+        }
         switch (view.type) {
             case 'daylog':
             case 'table':

@@ -5489,3 +5489,12 @@ html.phone .tb-stage.tb-snap .tb-face, html.phone .tb-stage.tb-snap .tb-player >
 .cb svg { width: 11px; height: 11px; }
 .cb:active { transform: scale(.88); }
 .cb:focus-visible { outline: 2px solid var(--accent) !important; outline-offset: 2px; }
+/* checkbox: a little pop and the tick drawn when it is ticked */
+@keyframes cbpop { 0% { transform: scale(.7); } 55% { transform: scale(1.14); } 100% { transform: scale(1); } }
+@keyframes cbdraw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+.cb.on.cb-anim { animation: cbpop .3s cubic-bezier(.3, 1.4, .5, 1); }
+.cb.on.cb-anim svg path, .cb.on.cb-anim svg polyline { stroke-dasharray: 24; animation: cbdraw .28s ease-out .06s both; }
+@media (prefers-reduced-motion: reduce) { .cb.on.cb-anim, .cb.on.cb-anim svg * { animation: none; } }
+/* volume: the mute button */
+.spl-vb.on { color: #fff; }
+.spl-vtrack.muted i, .spl-vtrack.muted i::after { opacity: .35; }

@@ -245,9 +245,19 @@ export function editValue(ws, db, row, prop, cell, done, opts = {}) {
         case 'last_edited_time':
         case 'rollup': return;
         case 'relation': return relationMenu(ws, db, def, row, cell, done);
-        case 'checkbox':
-            set(!(row.values[prop] === true));
+        case 'checkbox': {
+            // the tick shows (with its little animation) right away; saved a moment later
+            const on = !(row.values[prop] === true), box = cell.querySelector('.cb');
+            if (box) {
+                box.classList.toggle('on', on);
+                if (on)
+                    box.classList.add('cb-anim');
+                setTimeout(() => void set(on), on ? 260 : 0);
+            }
+            else
+                void set(on);
             return;
+        }
         case 'select': return selectMenu(ws, db, def, row, cell, set);
         case 'multi_select': return multiMenu(ws, db, def, row, cell, set);
         case 'date': return dateEditor(row.values[prop], cell, set);

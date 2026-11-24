@@ -188,7 +188,15 @@ function volBar() {
     track.addEventListener('pointerdown', (e) => { track.setPointerCapture(e.pointerId); set(e); const mv = (ev) => set(ev); track.addEventListener('pointermove', mv); track.addEventListener('pointerup', () => { track.removeEventListener('pointermove', mv); saveMode(); }, { once: true }); });
     track.addEventListener('wheel', (e) => { e.preventDefault(); audio.volume = Math.max(0, Math.min(1, audio.volume - Math.sign(e.deltaY) * 0.05)); playMode.vol = audio.volume; saveMode(); paint(); }, { passive: false });
     paint();
-    return h('div', { class: 'spl-vol', title: 'Volume' }, h('button', { class: 'spl-vb', 'aria-label': 'Quieter', onclick: () => { audio.volume = Math.max(0, audio.volume - 0.1); playMode.vol = audio.volume; saveMode(); paint(); } }, pi('vol0', 16)), track, h('button', { class: 'spl-vb', 'aria-label': 'Louder', onclick: () => { audio.volume = Math.min(1, audio.volume + 0.1); playMode.vol = audio.volume; saveMode(); paint(); } }, pi('vol', 16)));
+    // one button mutes (and unmutes); the slider does the rest
+    const mute = h('button', { class: 'spl-vb', 'aria-label': 'Mute', title: 'Mute', onclick: () => { audio.muted = !audio.muted; paintMute(); } });
+    const paintMute = () => { mute.replaceChildren(pi(audio.muted || audio.volume === 0 ? 'mute' : 'vol', 16)); mute.classList.toggle('on', audio.muted); track.classList.toggle('muted', audio.muted); };
+    track.addEventListener('pointerdown', () => { if (audio.muted) {
+        audio.muted = false;
+        paintMute();
+    } });
+    paintMute();
+    return h('div', { class: 'spl-vol', title: 'Volume' }, mute, track);
 }
 function seekBar() {
     const fill = h('i'), track = h('div', { class: 'mvp-track' }, fill), a = h('span'), b = h('span');
