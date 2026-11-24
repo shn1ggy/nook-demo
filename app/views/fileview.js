@@ -62,7 +62,7 @@ function watchStuck(el) {
         }
         if (mark.nextSibling !== el)
             el.before(mark);
-        el.classList.toggle('stuck', el.getBoundingClientRect().top - mark.getBoundingClientRect().top > 1);
+        el.classList.toggle('stuck', el.getBoundingClientRect().top - mark.getBoundingClientRect().top > (parseFloat(getComputedStyle(el).marginTop) || 0) + 1);
     };
     document.addEventListener('scroll', check, true);
     requestAnimationFrame(check);
