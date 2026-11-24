@@ -5517,8 +5517,14 @@ html.phone .tb-stage.tb-snap .tb-face, html.phone .tb-stage.tb-snap .tb-player >
 .fdb-li .fdb-cb { flex: none; align-self: center; padding: 10px; margin: -10px -6px -10px 0; display: grid; place-items: center; }
 .fdb-li .fdb-cb .cb { width: 24px; height: 24px; }
 /* phone: the path bar stays at the top while scrolling; search sits at its right end */
-html.phone .fdb-crumb { position: sticky; top: calc(50px + env(safe-area-inset-top)); z-index: 5; background: color-mix(in srgb, var(--fg) 4%, var(--bg)); box-shadow: 0 -8px 0 var(--bg); }
+html.phone .fdb-crumb { position: sticky; top: calc(8px + env(safe-area-inset-top)); z-index: 5; background: color-mix(in srgb, var(--fg) 4%, var(--bg)); height: 46px; box-sizing: border-box; flex-wrap: nowrap; overflow: visible; }
+/* stuck at the top: nothing of the list shows above it (up to the screen's edge) */
+html.phone .fdb-crumb.stuck::before { content: ""; position: absolute; left: -16px; right: -16px; bottom: 100%; height: calc(8px + env(safe-area-inset-top)); background: var(--bg); }
+html.phone .fdb-crumb > .fdb-crumb-b { white-space: nowrap; }
 html.phone .fdb-crumb .fdb-sbtn { margin-left: auto; width: 32px; height: 32px; min-width: 32px; min-height: 32px; border-radius: 9px; }
 html.phone .fdb-crumb.searching { flex-wrap: nowrap; gap: 6px; }
 html.phone .fdb-crumb .fdb-sico { display: grid; place-items: center; width: 32px; color: var(--fg-muted); flex: none; }
 html.phone .fdb-crumb .vsearch { flex: 1; min-width: 0; border: 0; background: none; outline: none; font: inherit; font-size: 16px; color: var(--fg); padding: 4px 0; }
+html.phone .fdb-crumb .clear-x { display: none !important; }
+html.phone .fdb-crumb .clearable { flex: 1; min-width: 0; display: flex; }
+html.phone .fdb-crumb .clearable .vsearch { width: 100%; }
