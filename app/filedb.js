@@ -14,6 +14,9 @@ export const isFileDb = (db) => !!db?.schema.files;
 export const filesDir = (db) => `${db.dir}/files`;
 const sidecarPath = (db) => `${db.dir}/files.json`;
 const sides = new WeakMap();
+/** files.json as last read from / written to the workspace: what this device's changes are measured against */
+const based = new WeakMap();
+const clone = (x) => JSON.parse(JSON.stringify(x ?? {}));
 const side = (db) => { let s = sides.get(db); if (!s) {
     s = {};
     sides.set(db, s);
@@ -67,12 +70,13 @@ function skipCache(ws, db) {
 }
 export async function loadFileRows(ws, db, read) {
     skipCache(ws, db);
+    let got = {};
     try {
-        sides.set(db, JSON.parse((await read(sidecarPath(db))) ?? '{}'));
+        got = JSON.parse((await read(sidecarPath(db))) ?? '{}');
     }
-    catch {
-        sides.set(db, {});
-    }
+    catch { /* none yet */ }
+    sides.set(db, got);
+    based.set(db, clone(got));
     buildRows(ws, db);
 }
 /** (again) every entry from the list of files: after uploads, moves, changes from elsewhere */
@@ -233,14 +237,69 @@ function mediaLength(url, video) {
         el.src = url;
     });
 }
-export async function saveSidecar(ws, db) {
-    const s = side(db);
-    // only files that are still there
-    const live = new Set(db.rows.map((r) => r.rel));
-    for (const k of Object.keys(s))
-        if (!live.has(k))
-            delete s[k];
-    await ws.write(sidecarPath(db), JSON.stringify(s, null, 1) + '\n', false);
+/** Saves files.json – merged: only what this device changed since it read the file goes on top of the newest
+ *  version (another device may have saved in the meantime, and this device may have opened with an old copy).
+ *  Never the whole file from memory: that let a phone opened later put back its old tags and ratings. */
+const saving = new WeakMap();
+export function saveSidecar(ws, db) {
+    const p = (saving.get(db) ?? Promise.resolve()).catch(() => { }).then(() => saveMerged(ws, db));
+    saving.set(db, p);
+    return p;
+}
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+async function saveMerged(ws, db) {
+    await ws.whenFresh();
+    const mine = side(db), base = based.get(db) ?? {};
+    let theirs = {};
+    try {
+        theirs = JSON.parse(await ws.storage.read(sidecarPath(db)));
+    }
+    catch {
+        theirs = clone(base);
+    }
+    const out = clone(theirs);
+    for (const rel of new Set([...Object.keys(base), ...Object.keys(mine)])) {
+        const a = base[rel], b = mine[rel];
+        if (same(a, b))
+            continue;
+        if (!b) {
+            delete out[rel];
+            continue;
+        } // removed or moved away on this device
+        const e = (out[rel] ??= {});
+        for (const k of new Set([...Object.keys(a ?? {}), ...Object.keys(b)])) {
+            if (k === 'v') {
+                // your values: property by property (a rating set here, tags set there – both stay)
+                const av = a?.v ?? {}, bv = b.v ?? {}, v = { ...(e.v ?? {}) };
+                for (const n of new Set([...Object.keys(av), ...Object.keys(bv)])) {
+                    if (same(av[n], bv[n]))
+                        continue;
+                    if (bv[n] === undefined)
+                        delete v[n];
+                    else
+                        v[n] = bv[n];
+                }
+                if (Object.keys(v).length)
+                    e.v = v;
+                else
+                    delete e.v;
+            }
+            else if (!same(a?.[k], b[k])) {
+                if (b[k] === undefined)
+                    delete e[k];
+                else
+                    e[k] = b[k];
+            }
+        }
+    }
+    const text = JSON.stringify(out, null, 1) + '\n';
+    sides.set(db, out);
+    based.set(db, clone(out));
+    if (!same(out, mine)) {
+        buildRows(ws, db);
+        ws.emit();
+    }
+    await ws.write(sidecarPath(db), text, false);
 }
 /** an entry was changed: your properties go to files.json; a new name renames the file */
 export async function saveFileRow(ws, db, row) {
@@ -313,6 +372,7 @@ export async function removeFileRow(ws, db, row) {
             ws.files.delete(f);
             ws.files.add(b + f.slice(a.length));
         }
+    dropSide(db, row.rel);
     buildRows(ws, db);
     await saveSidecar(ws, db);
 }
@@ -438,6 +498,7 @@ export async function deleteFileRows(ws, db, rows) {
         for (const f of [...ws.files])
             if (f === a || f.startsWith(a + '/'))
                 ws.files.delete(f);
+        dropSide(db, row.rel);
     }
     buildRows(ws, db);
     await saveSidecar(ws, db);
@@ -447,4 +508,7 @@ function takenName(t) {
     const d = new Date(t), p = (n) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
 }
+function dropSide(db, rel) { const s = side(db); for (const k of Object.keys(s))
+    if (k === rel || k.startsWith(rel + '/'))
+        delete s[k]; }
 //# sourceMappingURL=filedb.js.map
