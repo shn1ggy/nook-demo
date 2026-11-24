@@ -1,6 +1,7 @@
 import { nestRows } from '../workspace.js';
 import { subOpen, toggleSub, selectable, selectedRows } from './rowselect.js';
 import { entryIcon, renderValue } from './cells.js';
+import { checkbox } from '../util.js';
 import { dirOf } from '../layout.js';
 import { h, svgIcon, ICONS, fmtNumber as _fmt } from '../util.js';
 import { iconSvg } from '../ui/icons.js';
@@ -285,11 +286,26 @@ export function renderFilePhone(env, rows) {
         const key = `${db.key}:${r.id}`;
         const open = it.kids ? subOpen(key, !!it.ghost) : false;
         const tri = r.isDir ? h('button', { class: 'fdb-tri' + (open ? ' open' : ''), 'aria-label': open ? 'Close folder' : 'Show what’s inside', onclick: (e) => { e.stopPropagation(); toggleSub(key, !!it.ghost); env.redraw(); } }, it.kids ? iconSvg('chevron-right', 13) : null) : h('span', { class: 'fdb-tri none' });
-        const tags = db.schema.properties.filter((p) => !p.file && p.type !== 'title').flatMap((p) => { const v = r.values[p.name]; return v == null || v === '' || (Array.isArray(v) && !v.length) ? [] : [renderValue(db, p, v)]; });
+        const tags = db.schema.properties.filter((p) => !p.file && p.type !== 'title' && p.type !== 'checkbox').flatMap((p) => { const v = r.values[p.name]; return v == null || v === '' || (Array.isArray(v) && !v.length) ? [] : [renderValue(db, p, v)]; });
         const len = db.schema.properties.find((p) => p.file === 'length'), size = db.schema.properties.find((p) => p.file === 'size');
         const n = r.isDir ? db.rows.filter((x) => x.rel && dirOf(x.rel) === r.rel).length : 0;
         const facts = r.isDir ? `${n} item${n === 1 ? '' : 's'}` : [len && r.values[len.name] != null ? _fmt(Number(r.values[len.name]), 'duration') : '', size && r.values[size.name] != null ? _fmt(Number(r.values[size.name]), 'bytes') : ''].filter(Boolean).join(' · ');
-        const el = h('div', { class: 'fdb-li', style: { paddingLeft: `${14 + it.depth * 22}px` } }, tri, entryIcon(r, 20), h('div', { class: 'fdb-tx' }, h('div', { class: 'fdb-name' }, baseOf(r.rel ?? '')), h('div', { class: 'fdb-sub' }, ...tags, facts ? h('span', null, facts) : null)));
+        const el = h('div', { class: 'fdb-li', style: { paddingLeft: `${14 + it.depth * 22}px` } }, tri, entryIcon(r, 20), h('div', { class: 'fdb-tx' }, h('div', { class: 'fdb-name' }, baseOf(r.rel ?? '')), h('div', { class: 'fdb-sub' }, ...tags, facts ? h('span', null, facts) : null)), 
+        // checkboxes: their own column on the right, always shown, ticked right there
+        ...(r.isDir ? [] : db.schema.properties.filter((p) => p.type === 'checkbox' && !p.file).map((p) => {
+            const box = checkbox(r.values[p.name] === true, (on) => { ctx.ws.boundary(); if (on)
+                r.values[p.name] = true;
+            else
+                delete r.values[p.name]; void ctx.ws.saveRow(db, r); }, p.name);
+            const hit = h('span', { class: 'fdb-cb' }, box);
+            for (const ev of ['click', 'touchstart', 'pointerdown', 'contextmenu'])
+                hit.addEventListener(ev, (e) => { e.stopPropagation(); if (ev === 'click') {
+                    e.preventDefault();
+                    if (e.target === hit)
+                        box.click();
+                } });
+            return hit;
+        })));
         selectable(el, env, r, () => ctx.openRow(db, r));
         el.addEventListener('nook-rename', () => renameByPrompt(ctx, db, r, el));
         el.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); const s = selectedRows(); fileRowMenu(ctx, db, r, s && s.env.db === db && s.rows.includes(r) ? s.rows : [r], el, () => env.redraw()); });
