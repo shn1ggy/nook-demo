@@ -5532,3 +5532,6 @@ html.phone .fdb-crumb .clear-x { display: none !important; }
 html.phone .fdb-crumb .clearable { flex: 1; min-width: 0; display: flex; }
 html.phone .fdb-crumb .clearable .vsearch { width: 100%; }
 .fdb-stuck-mark { height: 0; }
+/* selecting on the phone: the selection's actions take the bottom bar's place (as in Photos / Files) */
+html.phone body:has(.select-bar) .tab-bar { visibility: hidden; }
+html.phone .select-bar { z-index: 75; }
