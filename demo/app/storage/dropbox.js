@@ -815,6 +815,38 @@ export class DropboxStorage {
         return n;
     }
     /** what changed since the cursor: changed text files are fetched again, deleted ones dropped */
+    /** Coming back after a while: did anything change that this device didn't write itself? Only looks (the
+     *  changes are applied by sync() as always) – one quick request, so the app needn't block while it asks. */
+    async changedElsewhere() {
+        const files = this.files;
+        if (!files || !this.cursor)
+            return true;
+        const low = new Map([...files.keys()].map((k) => [k.toLowerCase(), k]));
+        let r = { entries: [], cursor: this.cursor, has_more: true };
+        while (r.has_more) {
+            r = await rpc('/2/files/list_folder/continue', { cursor: r.cursor });
+            for (const e of r.entries) {
+                const rel = this.rel(e.path_display ?? e.path_lower ?? '');
+                if (!rel || rel === FETCH_DIR || rel.startsWith(FETCH_DIR + '/') || !inTree(rel))
+                    continue;
+                const key = files.has(rel) ? rel : low.get(rel.toLowerCase()) ?? rel;
+                if (this.pendingFor(key))
+                    continue;
+                if (e['.tag'] === 'deleted') {
+                    if (files.has(key))
+                        return true;
+                    continue;
+                }
+                if (e['.tag'] !== 'file' || files.get(key)?.rev === e.rev)
+                    continue;
+                // a version this device saved itself (its answer may have been lost when the app went to the background)
+                if (e.rev && ownHas(this.abs(key), e.rev, ''))
+                    continue;
+                return true;
+            }
+        }
+        return false;
+    }
     async applyChanges() {
         const files = this.files;
         // a lower-case index only when Dropbox spells a name differently (rare)

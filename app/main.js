@@ -274,6 +274,12 @@ function catchUpOnWake(st) {
             return;
         hiddenAt = 0;
         const a = app;
+        // first a quick look, while you can go on: only when another device changed something does Nook wait
+        const elsewhere = await Promise.race([st.changedElsewhere().catch(() => true), new Promise((r) => setTimeout(() => r(true), 2000))]);
+        if (!elsewhere || app !== a) {
+            void st.sync().catch(() => { });
+            return;
+        }
         const shield = document.body.appendChild(h('div', { class: 'catchup', role: 'status' }, h('div', { class: 'catchup-bar' }, h('span', { class: 'catchup-spin' }), h('b', null, 'Getting the latest changes'), h('span', null, 'One moment – so nothing gets overwritten'))));
         const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
         for (const t of ['keydown', 'beforeinput', 'pointerdown', 'touchstart'])
