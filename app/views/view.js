@@ -564,7 +564,9 @@ function compactBar(env, tabs, selectTab, noTabs = false) {
     if (view.period) {
         bar.append(periodPill(env));
     }
-    if (state.searchOpen)
+    // on the phone the search field gets a full-width row of its own under the toolbar
+    const phone = onPhone();
+    if (state.searchOpen && !phone)
         bar.append(searchInput(env));
     else
         bar.append(h('span', { class: 'vc-gap' }));
@@ -573,9 +575,23 @@ function compactBar(env, tabs, selectTab, noTabs = false) {
     // everything else is in the view settings (with search and "open as full page" while narrow)
     const opts = h('button', { class: 'icon-btn vc-opts', 'data-filtered': active ? '1' : undefined, 'aria-label': 'View settings', title: 'View settings', onclick: () => open()(opts) }, iconSvg('sliders', 16));
     // simplified, if chosen: search stays one click away, left of the view settings
-    if (view.simplified && view.simpleSearch && !env.fullPage && !state.searchOpen)
+    // – and a database opened on its own on the phone always has it (there is room, and search is always useful)
+    const simple = !!view.simplified && !env.fullPage;
+    if (((simple && view.simpleSearch) || (phone && env.fullPage)) && !state.searchOpen)
         bar.append(h('button', { class: 'icon-btn vc-search', 'aria-label': 'Search', title: 'Search', onclick: () => { state.searchOpen = true; env.redraw(); } }, svgIcon(ICONS.search, 16)));
-    bar.append(opts, h('button', { class: 'icon-btn vc-new', 'aria-label': 'New entry', title: 'New entry', onclick: () => env.newRow({}, true) }, svgIcon(ICONS.plus, 16)));
+    // simplified: the view settings icon only when chosen – else they open with a right-click or a long press on the toolbar
+    if (!simple || view.simpleSettings)
+        bar.append(opts);
+    else {
+        bar.addEventListener('contextmenu', (e) => { e.preventDefault(); open()(bar); });
+        let t = 0;
+        bar.addEventListener('touchstart', () => { t = window.setTimeout(() => open()(bar), 550); }, { passive: true });
+        for (const ev of ['touchend', 'touchmove', 'touchcancel'])
+            bar.addEventListener(ev, () => clearTimeout(t), { passive: true });
+    }
+    if (state.searchOpen && phone)
+        bar.append(h('div', { class: 'vc-srow' }, searchInput(env), h('button', { class: 'icon-btn', 'aria-label': 'Close search', onclick: () => { state.search = ''; state.searchOpen = false; env.redraw(); } }, svgIcon(ICONS.close, 16))));
+    bar.append(h('button', { class: 'icon-btn vc-new', 'aria-label': 'New entry', title: 'New entry', onclick: () => env.newRow({}, true) }, svgIcon(ICONS.plus, 16)));
     return bar;
 }
 /** full or compact toolbar, whichever fits (measured after layout; the full one stays laid out, hidden, to measure it) */

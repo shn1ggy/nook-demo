@@ -1157,7 +1157,7 @@ export function openViewSettings(env, anchor, selectTab, start) {
                 return forDevice(tabRows);
             };
             rows.push('sep', { label: 'Views, tabs & icons', icon: menuIcon('columns'), hint: `${db.views.length} view${db.views.length > 1 ? 's' : ''}`, go: () => ({ title: 'Views, tabs & icons', rows: viewControls }) });
-            if (!env.fullPage && !phone)
+            if (!env.fullPage)
                 rows.push({ label: 'Toolbar', icon: menuIcon('layout'), hint: view.barAt === 'bottom' ? 'Bottom' : 'Top', go: () => ({ title: 'Toolbar', rows: () => [
                             { label: 'Top', checked: view.barAt !== 'bottom', pick: () => { delete view.barAt; save(); }, back: true },
                             { label: 'Bottom', checked: view.barAt === 'bottom', pick: () => { view.barAt = 'bottom'; save(); }, back: true },
@@ -1174,6 +1174,10 @@ export function openViewSettings(env, anchor, selectTab, start) {
                                     delete view.simpleSearch;
                                 else
                                     view.simpleSearch = true; save(); } },
+                            { label: 'Settings icon', toggle: !!view.simpleSettings, disabled: !view.simplified, onToggle: () => { if (view.simpleSettings)
+                                    delete view.simpleSettings;
+                                else
+                                    view.simpleSettings = true; save(); } },
                         ] }) });
             rows.push('sep', { label: 'Rename view', icon: menuIcon('pencil'), run: () => prompt(anchor, 'View name', view.name, (name) => { if (name.trim()) {
                     view.name = name.trim();
