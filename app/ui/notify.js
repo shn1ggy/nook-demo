@@ -731,7 +731,7 @@ export class Notifications {
             }
             const up = this.upcoming();
             seg.textContent = '';
-            for (const [k, l] of [['up', up.length ? `Upcoming ${up.length}` : 'Upcoming'], ['past', 'Earlier']])
+            for (const [k, l] of [['up', 'Upcoming'], ['past', 'Earlier']])
                 seg.append(h('button', { class: k === tab ? 'on' : '', onclick: () => { tab = k; draw(); } }, l));
             body.textContent = '';
             foot.textContent = '';

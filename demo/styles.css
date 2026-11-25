@@ -5511,4 +5511,5 @@ html.phone .fdb-crumb { background: none; border-radius: 0; border-bottom: 1px s
 .vtoolbar.compact .vc-srow .clear-x { display: none !important; }
 html.phone .vbar.is-compact > .vtoolbar.compact { flex-wrap: wrap; }
 .date-t { color: var(--fg-muted); }
-.set-nav-list { padding-top: 6px; }
+.set-nav-list { padding-top: 6px; flex: 1; }
+.set-nav-list > .set-group-gap { flex: 1; min-height: 18px; }
