@@ -503,7 +503,34 @@ export function fmtDate(v, format, weekday) {
         const out = (weekday && day ? `${weekday === 'short' ? day.slice(0, 3) : day}, ` : '') + fmtDay(d, format);
         return t ? `${out} ${fmtTime(t.slice(0, 5))}` : out;
     };
-    return v.end && v.end !== v.start ? `${one(v.start)} → ${one(v.end)}` : one(v.start);
+    if (!v.end || v.end === v.start)
+        return one(v.start);
+    // the same day: the day once, then the time frame (26.11.2026 10:00 – 10:30)
+    const [d1, t1] = v.start.split('T'), [d2, t2] = v.end.split('T');
+    if (d1 === d2 && t1 && t2)
+        return `${one(d1)} ${fmtTime(t1.slice(0, 5))} – ${fmtTime(t2.slice(0, 5))}`;
+    return `${one(v.start)} → ${one(v.end)}`;
+}
+/** the same as fmtDate, as an element: the times in grey, so the day reads first */
+export function dateEl(v, format, weekday) {
+    const el = document.createElement('span');
+    el.className = 'date-v';
+    if (!v)
+        return el;
+    const t = (x) => { const s = document.createElement('span'); s.className = 'date-t'; s.textContent = x; return s; };
+    const part = (iso) => { const [d, tm] = iso.split('T'); el.append(fmtDate({ start: d }, format, weekday)); if (tm)
+        el.append(' ', t(fmtTime(tm.slice(0, 5)))); };
+    const [d1, t1] = v.start.split('T'), [d2, t2] = (v.end ?? '').split('T');
+    if (v.end && v.end !== v.start && d1 === d2 && t1 && t2) {
+        el.append(fmtDate({ start: d1 }, format, weekday), ' ', t(`${fmtTime(t1.slice(0, 5))} – ${fmtTime(t2.slice(0, 5))}`));
+        return el;
+    }
+    part(v.start);
+    if (v.end && v.end !== v.start) {
+        el.append(' → ');
+        part(v.end);
+    }
+    return el;
 }
 const MONTH_WORDS = {};
 ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].forEach((m, i) => { MONTH_WORDS[m] = i + 1; });

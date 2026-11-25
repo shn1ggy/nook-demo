@@ -76,18 +76,29 @@ export function openSettingsWindow(sections, start) {
         const keepScroll = main.scrollTop;
         list.textContent = '';
         let group = '';
-        if (wsSec) {
+        // the workspace sits at the end, with About (as an account does in many apps)
+        const wsCard = () => {
+            if (!wsSec)
+                return null;
             const name = String(wsSec.summary?.() ?? '');
-            list.appendChild(h('button', { class: 'set-nav-ws' + (!query && current === wsSec ? ' on' : ''), onclick: () => { current = wsSec; setQuery(''); main.scrollTop = 0; } }, h('span', { class: 'set-nav-ws-av' }, (name.trim()[0] ?? 'N').toUpperCase()), h('span', { class: 'set-nav-ws-t' }, h('b', null, name || 'Workspace'), h('small', null, wsSec.card()))));
+            return h('button', { class: 'set-nav-ws' + (!query && current === wsSec ? ' on' : ''), onclick: () => { current = wsSec; setQuery(''); main.scrollTop = 0; } }, h('span', { class: 'set-nav-ws-av' }, (name.trim()[0] ?? 'N').toUpperCase()), h('span', { class: 'set-nav-ws-t' }, h('b', null, name || 'Workspace'), h('small', null, wsSec.card())));
+        };
+        if (wsSec)
             group = wsSec.group;
-        }
         for (const s of sections) {
             if (s === wsSec || inWs.includes(s))
                 continue;
             // a section without a group (About) sits on its own at the end, after a gap
             if (s.group !== group) {
                 group = s.group;
-                list.appendChild(group ? h('div', { class: 'set-group' }, group) : h('div', { class: 'set-group-gap' }));
+                if (group)
+                    list.appendChild(h('div', { class: 'set-group' }, group));
+                else {
+                    list.appendChild(h('div', { class: 'set-group-gap' }));
+                    const c = wsCard();
+                    if (c)
+                        list.append(h('div', { class: 'set-nav-line' }), c);
+                }
             }
             const hits = query ? s.items().filter(searchable).length : 0;
             list.appendChild(h('button', {

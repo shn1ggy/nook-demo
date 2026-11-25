@@ -2,7 +2,7 @@ import { monthsGrid, yearsGrid, crumbParts, stepNav } from '../ui/zoomcal.js';
 import { prepareUpload } from '../ui/compress.js';
 import { Database } from '../workspace.js';
 import { iconSvg, renderIcon } from '../ui/icons.js';
-import { safeHref, openOrDownload, COLORS, ICONS, WEEKDAYS, asDate, checkbox, debounce, dayNum, fmtDate, fmtDay, fmtNumber, fmtTime, h, isoFromDay, pad2, parseDateInput, parseNumber, parseTime, svgIcon, todayISO, weekStart, nextTagColor } from '../util.js';
+import { safeHref, openOrDownload, COLORS, ICONS, WEEKDAYS, asDate, checkbox, debounce, dayNum, dateEl, fmtDate, fmtDay, fmtNumber, fmtTime, h, isoFromDay, pad2, parseDateInput, parseNumber, parseTime, svgIcon, todayISO, weekStart, nextTagColor } from '../util.js';
 import { menu, openPop, prompt } from '../ui/pop.js';
 import { singleOptionEntries } from './propmenu.js';
 import { switchControl } from '../ui/settings.js';
@@ -62,7 +62,7 @@ export function renderValue(db, def, v) {
         }
         case 'date':
         case 'created_time':
-        case 'last_edited_time': return fmtDate(asDate(v), def?.dateFormat, def?.weekday);
+        case 'last_edited_time': return dateEl(asDate(v), def?.dateFormat, def?.weekday);
         case 'checkbox': return checkbox(v === true);
         case 'files': {
             const arr = Array.isArray(v) ? v : [String(v)];
