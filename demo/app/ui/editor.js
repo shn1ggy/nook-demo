@@ -3143,7 +3143,9 @@ const AUTO_REPLACE = [
     ['--', '—'], ['(c)', '©'], ['(C)', '©'], ['(r)', '®'], ['(R)', '®'], ['(tm)', '™'], ['(TM)', '™'],
 ];
 function cloneBlock(b) {
-    return { ...b, id: ulid(), children: b.children?.map(cloneBlock) };
+    // its own copy of everything (a widget's settings, a table's rows …) – a duplicate must not share them
+    const { children, ...rest } = b;
+    return { ...structuredClone(rest), id: ulid(), children: children?.map(cloneBlock) };
 }
 // ---------- caret utilities ----------
 function hasSelection() { const s = getSelection(); return !!s && !s.isCollapsed; }
