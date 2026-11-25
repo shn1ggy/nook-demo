@@ -5513,3 +5513,10 @@ html.phone .vbar.is-compact > .vtoolbar.compact { flex-wrap: wrap; }
 .date-t { color: var(--fg-muted); }
 .set-nav-list { padding-top: 6px; flex: 1; }
 .set-nav-list > .set-group-gap { flex: 1; min-height: 18px; }
+/* tooltips (desktop): the menus' surface, edge and shadow, smaller */
+.ntip { position: fixed; z-index: 1000; pointer-events: none; max-width: 300px; background: var(--bg-pop); border-radius: 7px; box-shadow: 0 0 0 .5px color-mix(in srgb, var(--fg) 10%, transparent), 0 2px 6px rgba(0,0,0,.18), 0 16px 48px rgba(0,0,0,.42); padding: 4px 8px; font-size: 12.5px; line-height: 1.35; color: var(--fg-strong); display: flex; align-items: baseline; gap: 10px; white-space: pre-line; opacity: 0; transform: translateY(-2px); transition: opacity .12s, transform .12s; }
+.ntip.on { opacity: 1; transform: none; }
+.ntip.measure { transition: none; }
+.ntip-k { color: var(--fg-faint); font-size: 12px; white-space: nowrap; margin-left: auto; }
+:root[data-theme="light"] .ntip { box-shadow: 0 0 0 .5px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.06), 0 16px 48px rgba(0,0,0,.16); }
+@media (prefers-reduced-motion: reduce) { .ntip { transition: none; } }

@@ -5,6 +5,8 @@ import { sheetHead, bigTitle, tileIcon } from './ui/keep.js';
 import { moreControl } from './ui/settings.js';
 import { wcard, wrow } from './ui/win.js';
 import { selectControl, switchControl } from './ui/settings.js';
+import { initTooltips } from './ui/tooltip.js';
+initTooltips();
 import { setStorageFetch } from './sync/net.js';
 import { calendars } from './sync/service.js';
 import { installTouchDrag } from './ui/touchdrag.js';
