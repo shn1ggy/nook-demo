@@ -580,7 +580,7 @@ function compactBar(env, tabs, selectTab, noTabs = false) {
     if (((simple && view.simpleSearch) || (phone && env.fullPage)) && !state.searchOpen)
         bar.append(h('button', { class: 'icon-btn vc-search', 'aria-label': 'Search', title: 'Search', onclick: () => { state.searchOpen = true; env.redraw(); } }, svgIcon(ICONS.search, 16)));
     // simplified: the view settings icon only when chosen – else they open with a right-click or a long press on the toolbar
-    if (!simple || view.simpleSettings)
+    if (!simple || view.simpleSettings !== false)
         bar.append(opts);
     else {
         bar.addEventListener('contextmenu', (e) => { e.preventDefault(); open()(bar); });

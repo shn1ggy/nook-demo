@@ -1174,10 +1174,10 @@ export function openViewSettings(env, anchor, selectTab, start) {
                                     delete view.simpleSearch;
                                 else
                                     view.simpleSearch = true; save(); } },
-                            { label: 'Settings icon', toggle: !!view.simpleSettings, disabled: !view.simplified, onToggle: () => { if (view.simpleSettings)
+                            { label: 'Settings icon', toggle: view.simpleSettings !== false, disabled: !view.simplified, onToggle: () => { if (view.simpleSettings === false)
                                     delete view.simpleSettings;
                                 else
-                                    view.simpleSettings = true; save(); } },
+                                    view.simpleSettings = false; save(); } },
                         ] }) });
             rows.push('sep', { label: 'Rename view', icon: menuIcon('pencil'), run: () => prompt(anchor, 'View name', view.name, (name) => { if (name.trim()) {
                     view.name = name.trim();
