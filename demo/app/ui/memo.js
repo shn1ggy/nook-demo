@@ -374,10 +374,19 @@ async function writeDown(block, host, again = false, choose) {
         const total = pcm.length;
         let from = d.txAt != null ? Math.round(d.txAt * 16000) : d.txNext ? d.txNext * 300 * 16000 : 0;
         d.tx ??= [];
-        let rate = model === 'base' ? 0.15 : 0.4; // seconds of work per second of audio – measured as it goes
+        // seconds of work per second of audio: measured, and remembered on this device for next time
+        const RATE_KEY = `nook:tx-rate:${model}`;
+        let rate = (() => { try {
+            return Number(localStorage.getItem(RATE_KEY)) || (model === 'base' ? 0.3 : 0.8);
+        }
+        catch {
+            return 0.8;
+        } })();
         while (from < total) {
             const to = quietCut(pcm, from + 60 * 16000), secs = (to - from) / 16000, t0 = Date.now(), base = from;
-            const tick = window.setInterval(() => { job.pct = Math.min(99, Math.round(((base + Math.min(0.95, (Date.now() - t0) / 1000 / (secs * rate)) * (to - base)) / total) * 100)); changed(); }, 500);
+            // steady up to the expected end; if it takes longer, it keeps creeping on (slower and slower) instead of stopping
+            const frac = () => { const x = (Date.now() - t0) / 1000 / Math.max(0.5, secs * rate); return x < 0.9 ? x : 0.9 + 0.09 * (1 - Math.exp(-(x - 0.9) * 2)); };
+            const tick = window.setInterval(() => { job.pct = Math.min(99, Math.round(((base + frac() * (to - base)) / total) * 100)); changed(); }, 300);
             let r;
             try {
                 r = await run(pcm.slice(from, to), { task: 'transcribe', language: lang === 'en' ? 'english' : 'german', chunk_length_s: 30, stride_length_s: 5, return_timestamps: true });
@@ -385,7 +394,11 @@ async function writeDown(block, host, again = false, choose) {
             finally {
                 clearInterval(tick);
             }
-            rate = rate * 0.4 + ((Date.now() - t0) / 1000 / Math.max(1, secs)) * 0.6;
+            rate = rate * 0.3 + ((Date.now() - t0) / 1000 / Math.max(1, secs)) * 0.7;
+            try {
+                localStorage.setItem(RATE_KEY, String(rate));
+            }
+            catch { /* not kept */ }
             // paragraphs of about 30 seconds, each with the time it starts
             const parts = r.chunks?.length ? r.chunks : [{ timestamp: [0, null], text: r.text ?? '' }];
             const start = from / 16000;
@@ -531,7 +544,7 @@ export function memoBlock(b, host, readonly = false) {
         // the text
         const job = jobs.get(b.id);
         if (job)
-            box.append(h('div', { class: 'memo-prog' }, h('span', null, job.note), h('span', { class: 'memo-pbar busy' }, h('i', { style: { width: `${job.pct}%` } })), h('span', null, `${job.pct} %`)));
+            box.append(h('div', { class: 'memo-prog' }, h('span', null, job.note), h('span', { class: 'memo-pbar' + (workerFailed ? ' busy' : '') }, h('i', { style: { width: `${job.pct}%` } })), h('span', null, `${job.pct} %`)));
         if (d.tx?.length) {
             const paras = d.tx.map((x) => h('div', { class: 'memo-para' }, h('button', { class: 'memo-ts', title: 'Play from here', onclick: () => void playMemo(b, host, x.t) }, fmt(x.t)), h('span', null, x.text)));
             const long = paras.length > 3 || d.tx.reduce((n, x) => n + x.text.length, 0) > 600;
