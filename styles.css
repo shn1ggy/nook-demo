@@ -5621,3 +5621,4 @@ html.phone .vbar.is-compact > .vtoolbar.compact { flex-wrap: wrap; }
 .memo { background: var(--surface); border-radius: 14px; outline: var(--ring-1, 1px) solid var(--border); outline-offset: calc(-1 * var(--ring-1, 1px)); padding: 14px 16px; }
 .memo-more { width: 26px; height: 26px; color: var(--fg-muted); }
 .memo-more svg { fill: currentColor; }
+.memo [hidden] { display: none !important; }

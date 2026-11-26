@@ -66,7 +66,7 @@ document.addEventListener('scroll', (e) => {
     const t = e.target;
     if (!(t instanceof HTMLElement) || !t.matches('.scroll'))
         return;
-    if (lastTop >= 0 && Math.abs(t.scrollTop - lastTop) > 120 && !touching)
+    if (lastTop >= 0 && Math.abs(t.scrollTop - lastTop) > 8 && !touching)
         kbLog(`JUMP ${n(lastTop)}→${n(t.scrollTop)} h${n(t.scrollHeight)} act:${document.activeElement?.className?.toString().slice(0, 20) ?? '-'}`);
     lastTop = t.scrollTop;
 }, true);

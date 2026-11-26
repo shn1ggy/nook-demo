@@ -14,7 +14,7 @@ const fmt = (s) => { s = Math.max(0, Math.round(s)); const hh = Math.floor(s / 3
 const mb = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace('.', ',')} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
 /** the memo's name: its file's name, as in Dropbox (without the type) */
 const memoName = (b) => (b.src ? decodeURIComponent(b.src.split('/').pop() ?? '').replace(/\.[^.]+$/, '').replace(/^[0-9a-z]{6}-(?=.)/, '') : '') || b.text || 'Voice memo';
-const changed = () => { kbLog('memo redraw'); document.dispatchEvent(new CustomEvent('nook-memo')); };
+const changed = () => { const sc = document.querySelector('.main > .scroll'); kbLog(`memo update top${Math.round(sc?.scrollTop ?? -1)} h${sc?.scrollHeight ?? -1}`); document.dispatchEvent(new CustomEvent('nook-memo')); };
 let rec = null;
 export const recordingBlock = () => rec?.block ?? null;
 const elapsed = () => (rec ? rec.acc + (rec.paused ? 0 : Date.now() - rec.t0) : 0);
