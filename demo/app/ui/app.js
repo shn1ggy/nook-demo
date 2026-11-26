@@ -1419,7 +1419,10 @@ export class App {
         }
         // add to the page you are on – or, with no page open, to the Inbox (Settings → Voice memos)
         const here = !this.libraryOn && this.route?.kind === 'page' ? this.ws.pages.get(this.route.id) : undefined;
-        entries.push('sep', { section: `Add to ${here?.title || 'Inbox'}` }, { label: 'Voice memo', icon: menuIcon('mic'), run: () => void this.addMemo(here) }, { label: 'Photo or video', icon: menuIcon('image'), run: () => this.addMedia(here) });
+        // with no page open: the pages chosen in Settings → Media & Memos (one heading when both go to the same page)
+        const target = (k) => { const id = this.ws.settings[k]; return (id && this.ws.pages.get(id)?.title) || 'Inbox'; };
+        const memoTo = here?.title || target('memoInbox'), mediaTo = here?.title || target('mediaInbox');
+        entries.push('sep', ...(memoTo === mediaTo ? [{ section: `Add to ${memoTo}` }] : []), { label: 'Voice memo', icon: menuIcon('mic'), hint: memoTo === mediaTo ? undefined : memoTo, run: () => void this.addMemo(here) }, { label: 'Photo or video', icon: menuIcon('image'), hint: memoTo === mediaTo ? undefined : mediaTo, run: () => this.addMedia(here) });
         entries.push('sep', { label: 'New page', icon: menuIcon('file-plus'), run: () => { this.libraryOn = false; this.newPage(); } });
         menu(at, entries);
         // phone: the bottom bar stays on top of this sheet – its last row (New page) must end above the bar
