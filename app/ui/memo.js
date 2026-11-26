@@ -486,8 +486,20 @@ export function memoBlock(b, host, readonly = false) {
             document.removeEventListener('nook-memo', draw);
             return;
         }
-        box.dataset.drawn = '1';
         const d = (b.data ?? {});
+        // only when something about this memo changed – the others on the page stay exactly as they are
+        const job0 = jobs.get(b.id);
+        const sig = JSON.stringify([rec?.block === b, rec?.paused, b.src, playing?.block === b, playing?.block === b && !audio.paused, loading === b, job0?.pct, job0?.note, d.tx?.length, d.txDone, d.dur, d.lang, open]);
+        if (box.dataset.sig === sig)
+            return;
+        box.dataset.sig = sig;
+        box.dataset.drawn = '1';
+        // its height held while the new content goes in (Safari must never see a shorter page for a moment)
+        const hgt = box.offsetHeight;
+        if (hgt) {
+            box.style.minHeight = `${hgt}px`;
+            requestAnimationFrame(() => { box.style.minHeight = ''; });
+        }
         box.replaceChildren();
         // recording here
         if (rec?.block === b) {
