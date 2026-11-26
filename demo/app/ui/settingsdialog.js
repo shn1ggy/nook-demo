@@ -726,7 +726,7 @@ export function openSettings(app, start) {
         { id: 'appearance', group: 'Look', label: 'Appearance', icon: 'palette', subtitle: 'Theme, text and layout.', summary: () => ({ light: 'Light', dark: 'Dark', system: 'Auto' }[s.theme ?? 'dark'] ?? ''), items: appearance },
         { id: 'dates', group: 'Look', label: 'Dates & Numbers', icon: 'calendar', subtitle: 'How dates, times and numbers are written.', items: dates },
         { id: 'colors', group: 'Look', label: 'Colors', icon: 'circle-dot', subtitle: 'The colors of options, text, highlights and callouts.', items: colors },
-        { id: 'memos', group: 'Content', label: 'Voice memos', icon: 'mic', subtitle: 'Recorded in a page, written down on this device – free, the audio stays here.', items: () => [
+        { id: 'memos', group: 'Content', label: 'Media & Memos', icon: 'mic', subtitle: 'Where photos, videos and voice memos go, and how memos are transcribed – on this device, free.', items: () => [
                 { heading: 'Where things go with no page open' },
                 { title: 'Voice memos', desc: 'From ＋ → Voice memo', control: pickerControl({ value: s.memoInbox ?? '', items: () => [{ value: '', label: 'Inbox' }, ...pageItems(ws)], change: (v) => { if (v)
                             s.memoInbox = v;
