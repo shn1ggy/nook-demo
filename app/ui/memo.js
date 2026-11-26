@@ -136,6 +136,22 @@ const audio = document.createElement('audio');
 audio.preload = 'metadata';
 window.nookMemoAudio = audio; // for tests
 let playing = null;
+let memoUrl = '';
+/** recorded files often don't say how long they are (Chrome): until they do, jumping in them does nothing –
+ *  asking for a far-away time makes the browser read the file through once, then it knows */
+async function seekable() {
+    if (audio.readyState < 1)
+        await new Promise((r) => { audio.addEventListener('loadedmetadata', () => r(), { once: true }); audio.addEventListener('error', () => r(), { once: true }); });
+    if (Number.isFinite(audio.duration))
+        return;
+    await new Promise((r) => {
+        const done = () => { audio.removeEventListener('durationchange', done); clearTimeout(t); r(); };
+        const t = setTimeout(done, 3000);
+        audio.addEventListener('durationchange', done);
+        audio.currentTime = 1e7;
+    });
+    audio.currentTime = 0;
+}
 export const playingBlock = () => playing?.block ?? null;
 audio.addEventListener('play', () => { pauseMusic(); changed(); });
 audio.addEventListener('pause', changed);
@@ -149,20 +165,33 @@ async function playMemo(block, host, at) {
         return;
     }
     if (playing?.block !== block) {
+        // the whole file in memory (memos are small): jumping then works everywhere – some places don't serve parts of a file
+        let url;
         try {
-            audio.src = await host.ctx.assetUrl(block.src ?? '');
+            url = await host.ctx.assetUrl(block.src ?? '');
         }
         catch {
             toast('The memo’s audio file is missing');
             return;
         }
+        try {
+            if (!url.startsWith('blob:')) {
+                const r = await fetch(url);
+                if (r.ok)
+                    url = URL.createObjectURL(await r.blob());
+            }
+        }
+        catch { /* play it as it is */ }
+        if (memoUrl.startsWith('blob:') && memoUrl !== url)
+            URL.revokeObjectURL(memoUrl);
+        memoUrl = url;
+        audio.src = url;
+        await seekable();
         playing = { block, host };
         showMemoBars();
     }
     if (at != null) {
-        // a file just set: its length is not known yet – jump once it is
-        if (audio.readyState < 1)
-            await new Promise((r) => audio.addEventListener('loadedmetadata', () => r(), { once: true }));
+        await seekable();
         audio.currentTime = at;
     }
     await audio.play().catch(() => { });
