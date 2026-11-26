@@ -223,12 +223,26 @@ else
     audio.pause(); }
 export function stopMemo() { if (!playing)
     return; dropBarFocus(); audio.pause(); playing = null; setBarOverride(null); setPillOverride(null); changed(); }
+/** back to the memo: on its page already – just bring it into view (only if it isn't); else open the page first */
 function goBack() {
     const p = playing;
     if (!p?.host.pageId)
         return;
+    const find = () => document.querySelector(`[data-id="${p.block.id}"]`);
+    const show = (el) => {
+        if (!el)
+            return;
+        const r = el.getBoundingClientRect();
+        if (r.top < 60 || r.bottom > innerHeight - 110)
+            el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    };
+    const here = find();
+    if (here) {
+        show(here);
+        return;
+    }
     p.host.ctx.openPage(p.host.pageId);
-    setTimeout(() => document.querySelector(`[data-id="${p.block.id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 350);
+    setTimeout(() => show(find()), 350);
 }
 function showMemoBars() {
     const p = playing;
@@ -238,7 +252,7 @@ function showMemoBars() {
     document.addEventListener('nook-memo-time', tick);
     tick();
     const ppb = (n, cls) => { const b = h('button', { class: cls, 'aria-label': 'Play or pause', onclick: (e) => { e.stopPropagation(); toggleMemo(); } }); const d = () => b.replaceChildren(pi(audio.paused ? 'play' : 'pause', n)); d(); document.addEventListener('nook-memo', d); return b; };
-    const bar = h('div', { class: 'memo-bar', onclick: goBack }, h('span', { class: 'memo-ico' }, iconSvg('mic', 18)), h('span', { class: 'memo-bt' }, h('b', null, memoName(p.block)), sub), h('button', { class: 'memo-bb', 'aria-label': '15 seconds back', onclick: (e) => { e.stopPropagation(); audio.currentTime = Math.max(0, audio.currentTime - 15); } }, pi('back', 19)), ppb(20, 'memo-bb'), h('button', { class: 'memo-bb dim', 'aria-label': 'Close', onclick: (e) => { e.stopPropagation(); stopMemo(); } }, pi('x', 16)));
+    const bar = h('div', { class: 'memo-bar' }, h('span', { class: 'memo-ico', onclick: goBack }, iconSvg('mic', 18)), h('span', { class: 'memo-bt', onclick: goBack }, h('b', null, memoName(p.block)), sub), h('button', { class: 'memo-bb', 'aria-label': '15 seconds back', onclick: (e) => { e.stopPropagation(); audio.currentTime = Math.max(0, audio.currentTime - 15); } }, pi('back', 19)), ppb(20, 'memo-bb'), h('button', { class: 'memo-bb dim', 'aria-label': 'Close', onclick: (e) => { e.stopPropagation(); stopMemo(); } }, pi('x', 16)));
     setBarOverride(bar);
     setPillOverride(h('span', { class: 'memo-pill' }, h('button', { class: 'memo-pname', title: 'Back to the memo', onclick: goBack }, iconSvg('mic', 13), memoName(p.block)), pt, ppb(13, 'ppill-pp'), h('button', { class: 'ppill-b', 'aria-label': 'Close', title: 'Close', onclick: stopMemo }, pi('x', 13))));
 }
