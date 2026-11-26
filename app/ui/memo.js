@@ -13,7 +13,7 @@ const phone = () => document.documentElement.classList.contains('phone');
 const fmt = (s) => { s = Math.max(0, Math.round(s)); const hh = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return hh ? `${hh}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}` : `${m}:${String(x).padStart(2, '0')}`; };
 const mb = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace('.', ',')} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
 /** the memo's name: its file's name, as in Dropbox (without the type) */
-const memoName = (b) => (b.src ? decodeURIComponent(b.src.split('/').pop() ?? '').replace(/\.[^.]+$/, '') : '') || b.text || 'Voice memo';
+const memoName = (b) => (b.src ? decodeURIComponent(b.src.split('/').pop() ?? '').replace(/\.[^.]+$/, '').replace(/^[0-9a-z]{6}-(?=.)/, '') : '') || b.text || 'Voice memo';
 const changed = () => { kbLog('memo redraw'); document.dispatchEvent(new CustomEvent('nook-memo')); };
 let rec = null;
 export const recordingBlock = () => rec?.block ?? null;
@@ -69,7 +69,12 @@ export function pauseRecording() {
     }
     changed();
 }
-function endRec() { if (!rec)
+/** the bars must not hold focus when they go away – Safari would then scroll the page to the editor's caret */
+function dropBarFocus() { const a = document.activeElement; if (a?.closest('.memo-bar, .memo-pill'))
+    a.blur(); }
+document.addEventListener('mousedown', (e) => { if (e.target.closest?.('.memo-bar, .memo-pill'))
+    e.preventDefault(); }, true);
+function endRec() { dropBarFocus(); if (!rec)
     return; rec.stream.getTracks().forEach((t) => t.stop()); void rec.ac.close().catch(() => { }); rec = null; setBarOverride(null); setPillOverride(null); changed(); }
 export function cancelRecording() { if (!rec)
     return; rec.mr.onstop = null; try {
@@ -217,7 +222,7 @@ function toggleMemo() { if (audio.paused)
 else
     audio.pause(); }
 export function stopMemo() { if (!playing)
-    return; audio.pause(); playing = null; setBarOverride(null); setPillOverride(null); changed(); }
+    return; dropBarFocus(); audio.pause(); playing = null; setBarOverride(null); setPillOverride(null); changed(); }
 function goBack() {
     const p = playing;
     if (!p?.host.pageId)
@@ -457,6 +462,10 @@ export function memoBlock(b, host, readonly = false) {
     const box = h('div', { class: 'memo', contenteditable: 'false' });
     for (const ev of ['mousedown', 'touchstart', 'touchend', 'click'])
         box.addEventListener(ev, (e) => e.stopPropagation());
+    // no focus moves on a tap: on the iPhone a tap here otherwise focused the editor around it, and Safari
+    // scrolled the page to its caret (the jump on every play, stop and transcribe)
+    box.addEventListener('mousedown', (e) => { if (!e.target.closest('input, textarea'))
+        e.preventDefault(); });
     let open = false;
     const draw = () => {
         if (!box.isConnected && box.dataset.drawn) {
