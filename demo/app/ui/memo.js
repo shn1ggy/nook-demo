@@ -481,7 +481,7 @@ export function memoBlock(b, host, readonly = false) {
     box.addEventListener('mousedown', (e) => { if (!e.target.closest('input, textarea'))
         e.preventDefault(); });
     let open = false;
-    let small = null;
+    let small = null, repaint = null;
     const draw = () => {
         if (!box.isConnected && box.dataset.drawn) {
             document.removeEventListener('nook-memo', draw);
@@ -490,13 +490,14 @@ export function memoBlock(b, host, readonly = false) {
         const d = (b.data ?? {});
         // only when something about this memo changed – the others on the page stay exactly as they are
         const job0 = jobs.get(b.id);
-        const sig = JSON.stringify([rec?.block === b, rec?.paused, b.src, playing?.block === b, job0?.pct, job0?.note, d.tx?.length, d.txDone, d.dur, d.lang, open]);
-        const state = JSON.stringify([playing?.block === b && !audio.paused, loading === b]);
+        const sig = JSON.stringify([rec?.block === b, rec?.paused, b.src, job0?.pct, job0?.note, d.tx?.length, d.txDone, d.dur, d.lang, open]);
+        const state = JSON.stringify([playing?.block === b, playing?.block === b && !audio.paused, loading === b]);
         // play ⇄ pause, loading: only the button and its line change – nothing else on the page moves
         if (box.dataset.sig === sig) {
             if (box.dataset.state !== state) {
                 box.dataset.state = state;
                 small?.();
+                repaint?.();
             }
             return;
         }
@@ -542,7 +543,7 @@ export function memoBlock(b, host, readonly = false) {
             return;
         }
         // saved
-        const mine = playing?.block === b;
+        const mine = () => playing?.block === b; // asked each time: playing starts and stops without rebuilding the memo
         const pb = h('button', { class: 'memo-pb', onclick: () => { if (loading === b)
                 return; if (playing?.block === b)
                 toggleMemo();
@@ -576,11 +577,11 @@ export function memoBlock(b, host, readonly = false) {
         const fill = h('i'), knob = h('b'), cur = h('span', { class: 'memo-st' }), total = h('span', { class: 'memo-st' });
         const track = h('div', { class: 'memo-track' }, fill, knob);
         const seek = h('div', { class: 'memo-seekrow' }, cur, track, total);
-        const len = () => (mine && Number.isFinite(audio.duration) && audio.duration) || d.dur || 0;
+        const len = () => (mine() && Number.isFinite(audio.duration) && audio.duration) || d.dur || 0;
         let drag = null;
         const show = (f) => { const pc = `${Math.max(0, Math.min(1, f)) * 100}%`; fill.style.width = pc; knob.style.left = pc; cur.textContent = fmt(f * len()); };
-        const paint = () => { total.textContent = fmt(len()); if (drag == null)
-            show(mine && len() ? audio.currentTime / len() : 0); };
+        const paint = repaint = () => { total.textContent = fmt(len()); if (drag == null)
+            show(mine() && len() ? audio.currentTime / len() : 0); };
         const at = (e) => { const r = track.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); };
         seek.addEventListener('pointerdown', (e) => { if (e.button)
             return; e.preventDefault(); seek.setPointerCapture(e.pointerId); drag = at(e); seek.classList.add('drag'); show(drag); });
@@ -592,7 +593,7 @@ export function memoBlock(b, host, readonly = false) {
             const f = drag;
             drag = null;
             seek.classList.remove('drag');
-            if (mine)
+            if (mine())
                 audio.currentTime = f * len();
             else
                 void playMemo(b, host, f * len());
