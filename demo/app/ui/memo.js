@@ -481,50 +481,35 @@ export function memoBlock(b, host, readonly = false) {
     box.addEventListener('mousedown', (e) => { if (!e.target.closest('input, textarea'))
         e.preventDefault(); });
     let open = false;
-    let small = null, repaint = null;
+    // the memo is built once per kind (nothing yet · recording · recorded); after that, changes are made in place:
+    // the play button, the seek bar, the progress, new paragraphs of text – nothing is rebuilt, nothing on the page moves
+    let mode = '', update = null;
     const draw = () => {
         if (!box.isConnected && box.dataset.drawn) {
             document.removeEventListener('nook-memo', draw);
             return;
         }
-        const d = (b.data ?? {});
-        // only when something about this memo changed – the others on the page stay exactly as they are
-        const job0 = jobs.get(b.id);
-        const sig = JSON.stringify([rec?.block === b, rec?.paused, b.src, job0?.pct, job0?.note, d.tx?.length, d.txDone, d.dur, d.lang, open]);
-        const state = JSON.stringify([playing?.block === b, playing?.block === b && !audio.paused, loading === b]);
-        // play ⇄ pause, loading: only the button and its line change – nothing else on the page moves
-        if (box.dataset.sig === sig) {
-            if (box.dataset.state !== state) {
-                box.dataset.state = state;
-                small?.();
-                repaint?.();
-            }
+        const m = rec?.block === b ? 'rec' : !b.src ? 'empty' : 'saved';
+        if (m === mode) {
+            update?.();
             return;
         }
-        box.dataset.sig = sig;
-        box.dataset.state = state;
+        mode = m;
+        update = null;
         box.dataset.drawn = '1';
-        // its height held while the new content goes in (Safari must never see a shorter page for a moment)
-        const hgt = box.offsetHeight;
-        if (hgt) {
-            box.style.minHeight = `${hgt}px`;
-            requestAnimationFrame(() => { box.style.minHeight = ''; });
-        }
         box.replaceChildren();
-        // recording here
-        if (rec?.block === b) {
-            const t = h('small', null, 'Recording');
-            box.append(h('div', { class: 'memo-row' }, h('span', { class: 'memo-pb rec' }, iconSvg('mic', 16)), h('span', { class: 'memo-t' }, h('b', null, h('span', { class: 'memo-dot' }), h('span', { class: 'memo-time' }, fmt(elapsed() / 1000))), t), ...(phone() ? [] : [levelBars(),
-                h('button', { class: 'memo-btn', onclick: () => pauseRecording() }, pi(rec.paused ? 'play' : 'pause', 13), rec.paused ? 'Go on' : 'Pause'),
-                h('button', { class: 'memo-btn strong', onclick: () => stopRecording() }, 'Stop')])));
-            const tm = box.querySelector('.memo-time');
+        if (m === 'rec') {
+            const t = h('small', null, 'Recording'), tm = h('span', { class: 'memo-time' }, fmt(elapsed() / 1000));
+            const pauseBtn = h('button', { class: 'memo-btn', onclick: () => pauseRecording() });
+            box.append(h('div', { class: 'memo-row' }, h('span', { class: 'memo-pb rec' }, iconSvg('mic', 16)), h('span', { class: 'memo-t' }, h('b', null, h('span', { class: 'memo-dot' }), tm), t), ...(phone() ? [] : [levelBars(), pauseBtn, h('button', { class: 'memo-btn strong', onclick: () => stopRecording() }, 'Stop')])));
+            update = () => { pauseBtn.replaceChildren(pi(rec?.paused ? 'play' : 'pause', 13), rec?.paused ? 'Go on' : 'Pause'); };
+            update();
             const run = () => { if (rec?.block !== b)
                 return; tm.textContent = fmt(elapsed() / 1000); t.textContent = rec.paused ? 'Paused' : 'Recording'; setTimeout(run, 250); };
             run();
             return;
         }
-        // nothing yet
-        if (!b.src) {
+        if (m === 'empty') {
             const file = h('input', { type: 'file', accept: 'audio/*', style: { display: 'none' } });
             file.addEventListener('change', async () => {
                 const f = file.files?.[0];
@@ -542,26 +527,19 @@ export function memoBlock(b, host, readonly = false) {
                 h('button', { class: 'memo-btn red', onclick: () => void startRecording(b, host) }, 'Record')]), file));
             return;
         }
-        // saved
-        const mine = () => playing?.block === b; // asked each time: playing starts and stops without rebuilding the memo
+        // recorded
+        const dd = () => (b.data ?? {});
+        const mine = () => playing?.block === b;
         const pb = h('button', { class: 'memo-pb', onclick: () => { if (loading === b)
-                return; if (playing?.block === b)
+                return; if (mine())
                 toggleMemo();
             else
                 void playMemo(b, host); } });
         const subEl = h('small');
-        small = () => {
-            const isOn = playing?.block === b && !audio.paused, isWait = loading === b;
-            pb.classList.toggle('wait', isWait);
-            pb.setAttribute('aria-label', isWait ? 'Loading' : isOn ? 'Pause' : 'Play');
-            pb.replaceChildren(isWait ? h('span', { class: 'memo-spin' }) : pi(isOn ? 'pause' : 'play', 15));
-            subEl.textContent = isWait ? 'Loading…' : [d.dur ? fmt(d.dur) : '', d.txDone && d.tx?.length ? (d.lang ?? '') : d.size ? mb(d.size) : ''].filter(Boolean).join(' · ');
-        };
-        small();
         // the same ⋯ as on widgets
         const more = h('button', { class: 'icon-btn memo-more', 'aria-label': 'More', title: 'More' }, svgIcon(ICONS.more, 16, { fill: true }));
         more.addEventListener('click', () => {
-            const text = (d.tx ?? []).map((x) => x.text).join('\n\n');
+            const d = dd(), text = (d.tx ?? []).map((x) => x.text).join('\n\n');
             menu(more, [
                 ...(text ? [
                     { label: 'Copy text', icon: menuIcon('clipboard'), run: () => { void navigator.clipboard.writeText(text).then(() => toast('Copied')); } },
@@ -569,7 +547,7 @@ export function memoBlock(b, host, readonly = false) {
                     ...(!readonly ? [{ label: 'Transcribe again in German', icon: menuIcon('refresh'), run: () => void writeDown(b, host, true, 'de') }, { label: 'Transcribe again in English', icon: menuIcon('refresh'), run: () => void writeDown(b, host, true, 'en') }] : []),
                 ] : []),
                 { label: 'Download audio', icon: menuIcon('download'), run: async () => { const a = h('a', { href: await host.ctx.assetUrl(b.src ?? ''), download: (b.src ?? '').split('/').pop() ?? 'memo.m4a' }); document.body.appendChild(a); a.click(); a.remove(); } },
-                ...(host.remove && !readonly ? ['sep', { label: 'Delete', icon: menuIcon('trash'), danger: true, run: () => { if (playing?.block === b)
+                ...(host.remove && !readonly ? ['sep', { label: 'Delete', icon: menuIcon('trash'), danger: true, run: () => { if (mine())
                             stopMemo(); host.remove(); } }] : []),
             ]);
         });
@@ -577,50 +555,70 @@ export function memoBlock(b, host, readonly = false) {
         const fill = h('i'), knob = h('b'), cur = h('span', { class: 'memo-st' }), total = h('span', { class: 'memo-st' });
         const track = h('div', { class: 'memo-track' }, fill, knob);
         const seek = h('div', { class: 'memo-seekrow' }, cur, track, total);
-        const len = () => (mine() && Number.isFinite(audio.duration) && audio.duration) || d.dur || 0;
+        const len = () => (mine() && Number.isFinite(audio.duration) && audio.duration) || dd().dur || 0;
         let drag = null;
         const show = (f) => { const pc = `${Math.max(0, Math.min(1, f)) * 100}%`; fill.style.width = pc; knob.style.left = pc; cur.textContent = fmt(f * len()); };
-        const paint = repaint = () => { total.textContent = fmt(len()); if (drag == null)
+        const paint = () => { total.textContent = fmt(len()); if (drag == null)
             show(mine() && len() ? audio.currentTime / len() : 0); };
         const at = (e) => { const r = track.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); };
         seek.addEventListener('pointerdown', (e) => { if (e.button)
             return; e.preventDefault(); seek.setPointerCapture(e.pointerId); drag = at(e); seek.classList.add('drag'); show(drag); });
         seek.addEventListener('pointermove', (e) => { if (drag == null)
             return; drag = at(e); show(drag); });
-        const end = () => {
-            if (drag == null)
-                return;
-            const f = drag;
-            drag = null;
-            seek.classList.remove('drag');
-            if (mine())
-                audio.currentTime = f * len();
-            else
-                void playMemo(b, host, f * len());
-        };
-        seek.addEventListener('pointerup', end);
+        seek.addEventListener('pointerup', () => { if (drag == null)
+            return; const f = drag; drag = null; seek.classList.remove('drag'); if (mine())
+            audio.currentTime = f * len();
+        else
+            void playMemo(b, host, f * len()); });
         seek.addEventListener('pointercancel', () => { drag = null; seek.classList.remove('drag'); paint(); });
         document.addEventListener('nook-memo-time', function t() { if (!seek.isConnected) {
             document.removeEventListener('nook-memo-time', t);
             return;
         } paint(); });
-        paint();
-        box.append(h('div', { class: 'memo-row memo-main' }, pb, h('span', { class: 'memo-t' }, h('b', null, memoName(b)), subEl), seek, more));
-        // the text
-        const job = jobs.get(b.id);
-        if (job)
-            box.append(h('div', { class: 'memo-prog' }, h('span', null, job.note), h('span', { class: 'memo-pbar' + (workerFailed ? ' busy' : '') }, h('i', { style: { width: `${job.pct}%` } })), h('span', null, `${job.pct} %`)));
-        if (d.tx?.length) {
-            const paras = d.tx.map((x) => h('div', { class: 'memo-para' }, h('button', { class: 'memo-ts', title: 'Play from here', onclick: () => void playMemo(b, host, x.t) }, fmt(x.t)), h('span', null, x.text)));
-            const long = paras.length > 3 || d.tx.reduce((n, x) => n + x.text.length, 0) > 600;
-            box.append(h('div', { class: 'memo-tx' + (long && !open ? ' folded' : '') }, ...paras));
-            if (long)
-                box.append(h('button', { class: 'memo-btn', onclick: () => { open = !open; draw(); } }, open ? 'Show less' : 'Show all'));
-        }
-        if (TX_ENABLED && !job && !d.txDone && !readonly) {
-            const partly = !!d.tx?.length;
-            box.append(h('div', { class: 'memo-wd' }, h('button', { class: 'memo-btn', onclick: (e) => askLang(e.currentTarget, b, host, false) }, iconSvg('pen', 14), partly ? 'Continue transcribing' : 'Transcribe'), phone() && (d.dur ?? 0) > 120 ? h('span', { class: 'memo-hint' }, 'quicker on a computer') : null));
-        }
+        // the parts below: progress, text (paragraphs only ever added), "Show all", "Transcribe"
+        const prog = h('div', { class: 'memo-prog' }), progLabel = h('span'), progFill = h('i'), progPct = h('span');
+        prog.append(progLabel, h('span', { class: 'memo-pbar' + (workerFailed ? ' busy' : '') }, progFill), progPct);
+        const tx = h('div', { class: 'memo-tx' });
+        const toggle = h('button', { class: 'memo-btn', onclick: () => { open = !open; update?.(); } });
+        const wdBtn = h('button', { class: 'memo-btn', onclick: (e) => askLang(e.currentTarget, b, host, false) });
+        const wd = h('div', { class: 'memo-wd' }, wdBtn, phone() && (dd().dur ?? 0) > 120 ? h('span', { class: 'memo-hint' }, 'quicker on a computer') : null);
+        box.append(h('div', { class: 'memo-row memo-main' }, pb, h('span', { class: 'memo-t' }, h('b', null, memoName(b)), subEl), seek, more), prog, tx, toggle, wd);
+        let shown = [];
+        update = () => {
+            const d = dd(), isOn = mine() && !audio.paused, isWait = loading === b, job = jobs.get(b.id);
+            pb.classList.toggle('wait', isWait);
+            pb.setAttribute('aria-label', isWait ? 'Loading' : isOn ? 'Pause' : 'Play');
+            const icon = isWait ? 'wait' : isOn ? 'pause' : 'play';
+            if (pb.dataset.icon !== icon) {
+                pb.dataset.icon = icon;
+                pb.replaceChildren(isWait ? h('span', { class: 'memo-spin' }) : pi(isOn ? 'pause' : 'play', 15));
+            }
+            subEl.textContent = isWait ? 'Loading…' : [d.dur ? fmt(d.dur) : '', d.txDone && d.tx?.length ? (d.lang ?? '') : d.size ? mb(d.size) : ''].filter(Boolean).join(' · ');
+            paint();
+            prog.hidden = !job;
+            if (job) {
+                progLabel.textContent = job.note;
+                progFill.style.width = `${job.pct}%`;
+                progPct.textContent = `${job.pct} %`;
+            }
+            // text: new paragraphs are added; started over ("Transcribe again"): emptied first
+            const list = d.tx ?? [];
+            if (list.length < shown.length || shown.some((x, k) => list[k] !== x)) {
+                tx.replaceChildren();
+                shown = [];
+            }
+            for (const x of list.slice(shown.length))
+                tx.append(h('div', { class: 'memo-para' }, h('button', { class: 'memo-ts', title: 'Play from here', onclick: () => void playMemo(b, host, x.t) }, fmt(x.t)), h('span', null, x.text)));
+            shown = [...list];
+            tx.hidden = !list.length;
+            const long = list.length > 3 || list.reduce((n, x) => n + x.text.length, 0) > 600;
+            tx.classList.toggle('folded', long && !open);
+            toggle.hidden = !long;
+            toggle.textContent = open ? 'Show less' : 'Show all';
+            wd.hidden = !(TX_ENABLED && !job && !d.txDone && !readonly);
+            wdBtn.replaceChildren(iconSvg('pen', 14), d.tx?.length ? 'Continue transcribing' : 'Transcribe');
+        };
+        update();
     };
     document.addEventListener('nook-memo', draw);
     draw();
