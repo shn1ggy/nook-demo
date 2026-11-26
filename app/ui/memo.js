@@ -242,11 +242,69 @@ const TX_LIB = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2';
 let asr = null;
 const jobs = new Map();
 export const txSettings = (ctx) => ({ model: ctx.ws.settings.memoModel === 'base' ? 'base' : 'small', lang: ctx.ws.settings.memoLang ?? 'auto' });
+/** the model runs in a worker of its own: the page stays responsive (no "this page slows down the browser")
+ *  and the progress can move. Where a worker can't run it, it runs in the page as before. */
+const WORKER = `import { pipeline, env } from '${TX_LIB}';
+env.allowLocalModels = false;
+let pipe = null, cur = '';
+self.onmessage = async (e) => {
+  const { id, model, audio, opts } = e.data;
+  try {
+    if (!pipe || cur !== model) {
+      pipe = await pipeline('automatic-speech-recognition', 'onnx-community/whisper-' + model, { dtype: 'q8', device: 'wasm',
+        progress_callback: (p) => { if (p.status === 'progress' && p.progress != null) self.postMessage({ id, load: Math.round(p.progress) }); } });
+      cur = model;
+    }
+    self.postMessage({ id, ready: true });
+    if (audio) self.postMessage({ id, done: await pipe(audio, opts) });
+  } catch (err) { self.postMessage({ id, error: String((err && err.message) || err) }); }
+};`;
+let worker = null, workerFailed = false, seq = 0;
+const waiting = new Map();
+function talk(msg, note) {
+    if (!worker) {
+        worker = new Worker(URL.createObjectURL(new Blob([WORKER], { type: 'text/javascript' })), { type: 'module' });
+        worker.onmessage = (e) => {
+            const w = waiting.get(e.data.id);
+            if (!w)
+                return;
+            if (e.data.load != null)
+                w.note?.(`Loading the speech model (once)… ${e.data.load} %`);
+            else if (e.data.error) {
+                waiting.delete(e.data.id);
+                w.no(new Error(e.data.error));
+            }
+            else if (e.data.done !== undefined) {
+                waiting.delete(e.data.id);
+                w.ok(e.data.done);
+            }
+            else if (e.data.ready && w.init) {
+                waiting.delete(e.data.id);
+                w.ok(true);
+            }
+        };
+        worker.onerror = () => { workerFailed = true; for (const w of waiting.values())
+            w.no(new Error('worker')); waiting.clear(); worker?.terminate(); worker = null; };
+    }
+    const id = ++seq;
+    return new Promise((ok, no) => { waiting.set(id, { ok, no, note, init: !msg.audio }); worker.postMessage({ id, ...msg }); });
+}
 function loadAsr(model, onNote) {
     if (asr)
         return asr;
     asr = (async () => {
         onNote('Loading the speech model (once)…');
+        if (!workerFailed && typeof Worker !== 'undefined') {
+            try {
+                await talk({ model }, onNote);
+                return ((audio, opts) => talk({ model, audio, opts }));
+            }
+            catch {
+                workerFailed = true;
+                worker?.terminate();
+                worker = null;
+            }
+        }
         const lib = await import(/* @vite-ignore */ TX_LIB);
         lib.env.allowLocalModels = false;
         return lib.pipeline('automatic-speech-recognition', `onnx-community/whisper-${model}`, {
@@ -257,6 +315,23 @@ function loadAsr(model, onNote) {
     })();
     asr.catch(() => { asr = null; });
     return asr;
+}
+/** where to cut near `at` (in samples): the quietest half second within ±5 s – so no word is split */
+function quietCut(pcm, at) {
+    if (at >= pcm.length)
+        return pcm.length;
+    const win = 8000, from = Math.max(0, at - 5 * 16000), to = Math.min(pcm.length - win, at + 5 * 16000);
+    let best = at, low = Infinity;
+    for (let s = from; s < to; s += 1600) {
+        let e = 0;
+        for (let k = s; k < s + win; k += 4)
+            e += pcm[k] * pcm[k];
+        if (e < low) {
+            low = e;
+            best = s + win / 2;
+        }
+    }
+    return Math.round(best);
 }
 async function pcm16k(url) {
     const buf = await (await fetch(url)).arrayBuffer();
@@ -277,7 +352,8 @@ async function writeDown(block, host, again = false, choose) {
     const d = (block.data ??= {});
     if (again) {
         d.tx = [];
-        d.txNext = 0;
+        delete d.txNext;
+        delete d.txAt;
         d.txDone = false;
     }
     const job = { pct: 0, note: 'Getting ready…' };
@@ -292,18 +368,29 @@ async function writeDown(block, host, again = false, choose) {
         job.note = 'Transcribing';
         changed();
         const pcm = await pcm16k(await host.ctx.assetUrl(block.src ?? ''));
-        // pieces of 5 minutes (saved one by one – a stop half-way goes on from there); inside a piece the model
-        // walks in overlapping 30-second windows with time stamps, so nothing between windows gets lost
-        const SECS = 300, step = SECS * 16000, n = Math.ceil(pcm.length / step);
+        // pieces of about a minute, cut where it is quiet, each saved at once (a stop half-way goes on from there);
+        // inside a piece the model walks in overlapping 30-second windows with time stamps
+        const total = pcm.length;
+        let from = d.txAt != null ? Math.round(d.txAt * 16000) : d.txNext ? d.txNext * 300 * 16000 : 0;
         d.tx ??= [];
-        for (let i = d.txNext ?? 0; i < n; i++) {
-            const piece = pcm.subarray(i * step, Math.min(pcm.length, (i + 1) * step));
-            const r = await run(piece, { task: 'transcribe', language: lang === 'en' ? 'english' : 'german', chunk_length_s: 30, stride_length_s: 5, return_timestamps: true });
+        let rate = model === 'base' ? 0.15 : 0.4; // seconds of work per second of audio – measured as it goes
+        while (from < total) {
+            const to = quietCut(pcm, from + 60 * 16000), secs = (to - from) / 16000, t0 = Date.now(), base = from;
+            const tick = window.setInterval(() => { job.pct = Math.min(99, Math.round(((base + Math.min(0.95, (Date.now() - t0) / 1000 / (secs * rate)) * (to - base)) / total) * 100)); changed(); }, 500);
+            let r;
+            try {
+                r = await run(pcm.slice(from, to), { task: 'transcribe', language: lang === 'en' ? 'english' : 'german', chunk_length_s: 30, stride_length_s: 5, return_timestamps: true });
+            }
+            finally {
+                clearInterval(tick);
+            }
+            rate = rate * 0.4 + ((Date.now() - t0) / 1000 / Math.max(1, secs)) * 0.6;
             // paragraphs of about 30 seconds, each with the time it starts
             const parts = r.chunks?.length ? r.chunks : [{ timestamp: [0, null], text: r.text ?? '' }];
+            const start = from / 16000;
             let para = null;
             for (const c of parts) {
-                const at = i * SECS + (c.timestamp?.[0] ?? 0), text = (c.text ?? '').trim();
+                const at = start + (c.timestamp?.[0] ?? 0), text = (c.text ?? '').trim();
                 if (!text)
                     continue;
                 if (!para || at - para.t >= 30) {
@@ -316,13 +403,16 @@ async function writeDown(block, host, again = false, choose) {
             }
             if (para)
                 d.tx.push(para);
-            d.txNext = i + 1;
-            job.pct = Math.round(((i + 1) / n) * 100);
+            from = to;
+            d.txAt = from / 16000;
+            delete d.txNext;
+            job.pct = Math.round((from / total) * 100);
             host.save();
             changed();
         }
         d.txDone = true;
         delete d.txNext;
+        delete d.txAt;
         host.save();
     }
     catch (e) {
