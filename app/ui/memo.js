@@ -290,24 +290,30 @@ async function writeDown(block, host, again = false, choose) {
         job.note = 'Transcribing';
         changed();
         const pcm = await pcm16k(await host.ctx.assetUrl(block.src ?? ''));
-        const step = 30 * 16000, n = Math.ceil(pcm.length / step);
+        // pieces of 5 minutes (saved one by one – a stop half-way goes on from there); inside a piece the model
+        // walks in overlapping 30-second windows with time stamps, so nothing between windows gets lost
+        const SECS = 300, step = SECS * 16000, n = Math.ceil(pcm.length / step);
         d.tx ??= [];
-        let per = model === 'base' ? 4000 : 9000; // ms a piece takes – measured as it goes
         for (let i = d.txNext ?? 0; i < n; i++) {
-            const t0 = Date.now();
-            const tick = window.setInterval(() => { job.pct = Math.round(((i + Math.min(0.95, (Date.now() - t0) / per)) / n) * 100); changed(); }, 400);
             const piece = pcm.subarray(i * step, Math.min(pcm.length, (i + 1) * step));
-            let r;
-            try {
-                r = await run(piece, { task: 'transcribe', language: lang === 'en' ? 'english' : 'german' });
+            const r = await run(piece, { task: 'transcribe', language: lang === 'en' ? 'english' : 'german', chunk_length_s: 30, stride_length_s: 5, return_timestamps: true });
+            // paragraphs of about 30 seconds, each with the time it starts
+            const parts = r.chunks?.length ? r.chunks : [{ timestamp: [0, null], text: r.text ?? '' }];
+            let para = null;
+            for (const c of parts) {
+                const at = i * SECS + (c.timestamp?.[0] ?? 0), text = (c.text ?? '').trim();
+                if (!text)
+                    continue;
+                if (!para || at - para.t >= 30) {
+                    if (para)
+                        d.tx.push(para);
+                    para = { t: Math.round(at), text };
+                }
+                else
+                    para.text += ` ${text}`;
             }
-            finally {
-                clearInterval(tick);
-            }
-            per = per * 0.5 + (Date.now() - t0) * 0.5;
-            const text = (r.text ?? '').trim();
-            if (text)
-                d.tx.push({ t: i * 30, text });
+            if (para)
+                d.tx.push(para);
             d.txNext = i + 1;
             job.pct = Math.round(((i + 1) / n) * 100);
             host.save();
