@@ -2376,7 +2376,10 @@ export class Editor {
             this.el.querySelector(`.block[data-id="${CSS.escape(id)}"]`)?.classList.add('selected');
     }
     blockSelection() {
-        this.el.tabIndex = -1;
+        // focusable for the keys on selected blocks – not on touch screens: there a tap anywhere in a long page made
+        // Safari focus the whole page's block list and scroll to its top (the page jumped up on the iPhone)
+        if (!matchMedia('(hover: none)').matches)
+            this.el.tabIndex = -1;
         // a text selection dragged from one block into another selects the blocks (as in Notion)
         let start = null;
         this.el.addEventListener('mousedown', (e) => {

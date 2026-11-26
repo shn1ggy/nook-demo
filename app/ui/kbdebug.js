@@ -64,13 +64,29 @@ document.addEventListener('scroll', (e) => {
     if (!box)
         return;
     const t = e.target;
-    if (!(t instanceof HTMLElement) || !t.matches('.main > .scroll'))
+    if (!(t instanceof HTMLElement) || !t.matches('.scroll'))
         return;
     if (lastTop >= 0 && Math.abs(t.scrollTop - lastTop) > 120 && !touching)
         kbLog(`JUMP ${n(lastTop)}→${n(t.scrollTop)} h${n(t.scrollHeight)} act:${document.activeElement?.className?.toString().slice(0, 20) ?? '-'}`);
     lastTop = t.scrollTop;
 }, true);
+/** who moves the page: scrollIntoView, focus and scrollTop on the page – logged with the element (diagnostics only) */
+let patched = false;
+function patchMovers() {
+    if (patched)
+        return;
+    patched = true;
+    const name = (e) => `${e.tagName.toLowerCase()}.${String(e.className).split(' ').slice(0, 2).join('.')}`.slice(0, 32);
+    const sIV = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (...a) { kbLog(`scrollIntoView ${name(this)}`); return sIV.apply(this, a); };
+    const foc = HTMLElement.prototype.focus;
+    HTMLElement.prototype.focus = function (o) { kbLog(`focus() ${name(this)}${o?.preventScroll ? ' (no scroll)' : ''}`); return foc.call(this, o); };
+    const d = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+    Object.defineProperty(Element.prototype, 'scrollTop', { configurable: true, get: d.get, set(v) { if (this.matches?.('.scroll'))
+            kbLog(`scrollTop=${Math.round(v)}`); d.set.call(this, v); } });
+}
 export function startKbDebug() {
+    patchMovers();
     if (box)
         return;
     box = document.createElement('div');
@@ -81,7 +97,9 @@ export function startKbDebug() {
     const on = (target, ev, label) => target?.addEventListener(ev, (e) => kbLog(label(e)), true);
     on(window.visualViewport ?? undefined, 'resize', () => `vv resize h${n(window.visualViewport.height)} top${n(window.visualViewport.offsetTop)}`);
     on(window.visualViewport ?? undefined, 'scroll', () => `vv scroll top${n(window.visualViewport.offsetTop)}`);
-    on(window, 'scroll', () => `window scroll Y${n(scrollY)}`);
+    // the window itself only (every scroll of the page went through here and filled the log)
+    window.addEventListener('scroll', (e) => { if (e.target === document)
+        kbLog(`window scroll Y${n(scrollY)}`); }, true);
     on(document, 'focusin', (e) => `focusin ${e.target.tagName?.toLowerCase()}.${String(e.target.className).split(' ')[0]}`);
     on(document, 'focusout', () => 'focusout');
     on(document, 'touchend', () => 'touchend');
