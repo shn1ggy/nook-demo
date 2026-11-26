@@ -40,7 +40,8 @@ export async function startRecording(block, host) {
     const mr = new MediaRecorder(stream, { ...(mime ? { mimeType: mime } : {}), audioBitsPerSecond: 48000 });
     const ac = new AudioContext();
     const an = ac.createAnalyser();
-    an.fftSize = 512;
+    an.fftSize = 256;
+    an.smoothingTimeConstant = 0.15;
     ac.createMediaStreamSource(stream).connect(an);
     rec = { mr, stream, chunks: [], t0: Date.now(), acc: 0, paused: false, block, host, an, ac, mime: mr.mimeType || mime };
     mr.ondataavailable = (e) => { if (e.data.size)
@@ -96,22 +97,27 @@ export function stopRecording() {
     };
     r.mr.stop();
 }
-function level() {
+/** the bars follow the voice directly: each one a band of the speech range, every frame */
+function bands(n) {
     if (!rec || rec.paused)
-        return 0;
-    const a = new Uint8Array(rec.an.fftSize);
-    rec.an.getByteTimeDomainData(a);
-    let s = 0;
-    for (const v of a) {
-        const x = (v - 128) / 128;
-        s += x * x;
+        return Array(n).fill(0);
+    const f = new Uint8Array(rec.an.frequencyBinCount);
+    rec.an.getByteFrequencyData(f);
+    // ~100 Hz – 4 kHz at 48 kHz: bins 1…22 of 128
+    const lo = 1, hi = 22, out = [];
+    for (let i = 0; i < n; i++) {
+        const a = Math.floor(lo + ((hi - lo) * i) / n), b = Math.max(a + 1, Math.floor(lo + ((hi - lo) * (i + 1)) / n));
+        let m = 0;
+        for (let k = a; k < b; k++)
+            m = Math.max(m, f[k]);
+        out.push(Math.min(1, Math.max(0, (m - 60) / 150)));
     }
-    return Math.min(1, Math.sqrt(s / a.length) * 4);
+    return out;
 }
 function levelBars(n = 5) {
     const el = h('span', { class: 'memo-lvl' }, ...Array.from({ length: n }, () => h('i')));
     const tick = () => { if (!el.isConnected && el.dataset.on)
-        return; el.dataset.on = '1'; const l = level(); [...el.children].forEach((c, i) => { c.style.height = `${Math.max(3, Math.round((0.35 + 0.65 * Math.abs(Math.sin(Date.now() / 140 + i * 1.7))) * l * 20))}px`; }); requestAnimationFrame(tick); };
+        return; el.dataset.on = '1'; const v = bands(n); [...el.children].forEach((c, i) => { c.style.height = `${Math.max(3, Math.round(3 + v[i] * 19))}px`; }); requestAnimationFrame(tick); };
     requestAnimationFrame(tick);
     return el;
 }
@@ -128,6 +134,7 @@ function showRecBars() {
 // ---------- playing ----------
 const audio = document.createElement('audio');
 audio.preload = 'metadata';
+window.nookMemoAudio = audio; // for tests
 let playing = null;
 export const playingBlock = () => playing?.block ?? null;
 audio.addEventListener('play', () => { pauseMusic(); changed(); });
@@ -200,6 +207,11 @@ function loadAsr(model, onNote) {
         onNote('Loading the speech model (once)…');
         const lib = await import(/* @vite-ignore */ TX_LIB);
         lib.env.allowLocalModels = false;
+        // the model runs in a worker – the page stays responsive and the progress moves
+        try {
+            lib.env.backends.onnx.wasm.proxy = true;
+        }
+        catch { /* older build */ }
         return lib.pipeline('automatic-speech-recognition', `onnx-community/whisper-${model}`, {
             dtype: 'q8', device: 'wasm',
             progress_callback: (p) => { if (p.status === 'progress' && p.progress != null)
@@ -245,9 +257,19 @@ async function writeDown(block, host, again = false, choose) {
         const pcm = await pcm16k(await host.ctx.assetUrl(block.src ?? ''));
         const step = 30 * 16000, n = Math.ceil(pcm.length / step);
         d.tx ??= [];
+        let per = model === 'base' ? 4000 : 9000; // ms a piece takes – measured as it goes
         for (let i = d.txNext ?? 0; i < n; i++) {
+            const t0 = Date.now();
+            const tick = window.setInterval(() => { job.pct = Math.round(((i + Math.min(0.95, (Date.now() - t0) / per)) / n) * 100); changed(); }, 400);
             const piece = pcm.subarray(i * step, Math.min(pcm.length, (i + 1) * step));
-            const r = await run(piece, { task: 'transcribe', language: lang === 'en' ? 'english' : 'german' });
+            let r;
+            try {
+                r = await run(piece, { task: 'transcribe', language: lang === 'en' ? 'english' : 'german' });
+            }
+            finally {
+                clearInterval(tick);
+            }
+            per = per * 0.5 + (Date.now() - t0) * 0.5;
             const text = (r.text ?? '').trim();
             if (text)
                 d.tx.push({ t: i * 30, text });
@@ -370,7 +392,7 @@ export function memoBlock(b, host, readonly = false) {
             return;
         } paint(); });
         paint();
-        box.append(h('div', { class: 'memo-row' }, pb, h('span', { class: 'memo-t' }, h('b', null, memoName(b)), h('small', null, sub)), more), seek);
+        box.append(h('div', { class: 'memo-row memo-main' }, pb, h('span', { class: 'memo-t' }, h('b', null, memoName(b)), h('small', null, sub)), seek, more));
         // the text
         const job = jobs.get(b.id);
         if (job)

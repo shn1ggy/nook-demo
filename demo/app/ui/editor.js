@@ -2565,7 +2565,7 @@ export class Editor {
      * selection). A plain click there still does what it did before.
      */
     marquee() {
-        const NOT_HERE = '.props, .txt, input, textarea, select, button, a, [contenteditable="true"], .handle, .dbview, .stable-wrap, iframe, img, video, audio, .page-head, .pop, .overlay .dialog-head, .nbutton, .pagelink, .callout-icon, .toggle-arrow, .col-resize, .b-divider, .cal-wrap';
+        const NOT_HERE = '.props, .txt, input, textarea, select, button, a, [contenteditable="true"], .handle, .dbview, .stable-wrap, iframe, img, video, audio, .page-head, .pop, .overlay .dialog-head, .nbutton, .pagelink, .callout-icon, .toggle-arrow, .col-resize, .b-divider, .cal-wrap, .memo';
         const onDown = (e) => {
             if (!this.el.isConnected) {
                 document.removeEventListener('mousedown', onDown, true);

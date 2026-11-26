@@ -5576,3 +5576,14 @@ html.phone .vbar.is-compact > .vtoolbar.compact { flex-wrap: wrap; }
 .ppill .memo-pname, .memo-pname { display: flex; white-space: nowrap; align-items: center; gap: 6px; border: 0; background: none; color: var(--fg-strong); font: inherit; font-size: 13px; cursor: pointer; padding: 0; max-width: 170px; overflow: hidden; }
 .ppill .memo-pstop, .memo-pstop { width: 24px; height: 24px; border: 0; border-radius: 12px; background: var(--fg-strong); display: grid; place-items: center; padding: 0; cursor: pointer; }
 .memo-pstop i { width: 9px; height: 9px; border-radius: 2px; }
+/* memo: on narrow blocks the seek bar gets its own line; on wide ones all in one row */
+.memo { container-type: inline-size; }
+.memo-main { flex-wrap: wrap; }
+.memo-main .memo-more { order: 2; }
+.memo-main .memo-seekrow { order: 3; flex: 1 0 100%; }
+@container (min-width: 560px) {
+  .memo-main { flex-wrap: nowrap; gap: 14px; }
+  .memo-main .memo-t { flex: 0 1 230px; }
+  .memo-main .memo-seekrow { order: 0; flex: 1 1 auto; padding: 0; }
+  .memo-main .memo-more { order: 0; }
+}
