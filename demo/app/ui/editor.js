@@ -1,4 +1,5 @@
 import { pdfCard } from './pdf.js';
+import { isMemo, memoBlock, newMemo } from './memo.js';
 import { prettyKey } from './commands.js';
 import { confirmReminder } from './confirm.js';
 import { mountWidget, newWidgetBlock } from '../widgets/runtime.js';
@@ -568,7 +569,10 @@ export class Editor {
                 this.media(b, wrap, 'pdf');
                 break;
             case 'audio':
-                this.media(b, wrap, 'audio');
+                if (isMemo(b))
+                    wrap.appendChild(memoBlock(b, this.memoHost(b), this.readonly));
+                else
+                    this.media(b, wrap, 'audio');
                 break;
             case 'video':
                 this.media(b, wrap, 'video');
@@ -813,6 +817,17 @@ export class Editor {
             void go(src);
         else if (src)
             this.ctx.assetUrl(src).then(go).catch(() => holder.appendChild(h('div', { class: 'muted small' }, `File missing: ${src}`)));
+    }
+    memoHost(b) {
+        const owner = this.ownerPage;
+        return {
+            ctx: this.ctx, file: this.fileOf?.() ?? this.commentPath ?? '', pageId: owner && this.ctx.ws.pages.has(owner) ? owner : undefined,
+            save: () => this.save(),
+            remove: () => { const loc = this.index.get(b.id); if (!loc)
+                return; loc.arr.splice(loc.arr.indexOf(b), 1); this.changed(); },
+            insertAfter: (blocks) => { const loc = this.index.get(b.id); if (!loc)
+                return; loc.arr.splice(loc.arr.indexOf(b) + 1, 0, ...blocks); this.changed(); },
+        };
     }
     buttonHost(b) {
         return {
@@ -1977,6 +1992,7 @@ export class Editor {
                     this.changed({ id: first.id, at: 'start' });
                 } },
             { section: 'Media & links' },
+            { label: 'Voice memo', icon: menuIcon('mic'), hint: 'Record', run: () => { clear(); Object.assign(b, newMemo(b.id)); b.text = undefined; const n = this.insertAfter(b); this.changed({ id: n.id, at: 'start' }); } },
             { label: 'Image', icon: menuIcon('image'), run: () => { clear(); prompt(el, 'Image URL or path (assets/…)', '', (v) => { Object.assign(b, { type: 'image', src: v, text: '' }); this.changed(); }); } },
             { label: 'PDF', icon: menuIcon('file-text'), run: () => { clear(); prompt(el, 'PDF path (assets/…) or URL', '', (v) => { Object.assign(b, { type: 'pdf', src: v, text: '' }); this.changed(); }); } },
             { label: 'Upload file…', icon: menuIcon('paperclip'), run: () => {

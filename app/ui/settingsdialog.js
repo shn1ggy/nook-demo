@@ -1,4 +1,5 @@
 import { deviceStorage, clearAssets, assetLimitMB, setAssetLimitMB, DropboxStorage } from '../storage/dropbox.js';
+import { TX_ENABLED } from './memo.js';
 import { FILE_KINDS } from '../filedb.js';
 import { kbDebugOn, setKbDebug } from './kbdebug.js';
 import { phonePref, setPhonePref } from './app.js';
@@ -725,6 +726,27 @@ export function openSettings(app, start) {
         { id: 'appearance', group: 'Look', label: 'Appearance', icon: 'palette', subtitle: 'Theme, text and layout.', summary: () => ({ light: 'Light', dark: 'Dark', system: 'Auto' }[s.theme ?? 'dark'] ?? ''), items: appearance },
         { id: 'dates', group: 'Look', label: 'Dates & Numbers', icon: 'calendar', subtitle: 'How dates, times and numbers are written.', items: dates },
         { id: 'colors', group: 'Look', label: 'Colors', icon: 'circle-dot', subtitle: 'The colors of options, text, highlights and callouts.', items: colors },
+        { id: 'memos', group: 'Content', label: 'Voice memos', icon: 'mic', subtitle: 'Recorded in a page, written down on this device – free, the audio stays here.', items: () => [
+                { heading: 'Where things go with no page open' },
+                { title: 'Voice memos', desc: 'From ＋ → Voice memo', control: pickerControl({ value: s.memoInbox ?? '', items: () => [{ value: '', label: 'Inbox' }, ...pageItems(ws)], change: (v) => { if (v)
+                            s.memoInbox = v;
+                        else
+                            delete s.memoInbox; void ws.saveSettings(); }, label: 'Voice memos go to' }), keywords: 'voice memo inbox record page' },
+                { title: 'Photos & videos', desc: 'From ＋ → Photo or video', control: pickerControl({ value: s.mediaInbox ?? '', items: () => [{ value: '', label: 'Inbox' }, ...pageItems(ws)], change: (v) => { if (v)
+                            s.mediaInbox = v;
+                        else
+                            delete s.mediaInbox; void ws.saveSettings(); }, label: 'Photos and videos go to' }), keywords: 'photo video camera inbox page' },
+                ...(TX_ENABLED ? [{ heading: 'Writing it down' },
+                    { title: 'Languages', desc: 'What is spoken in your memos', control: selectControl([['auto', 'German · English'], ['de', 'German'], ['en', 'English']], s.memoLang ?? 'auto', (v) => { if (v === 'auto')
+                            delete s.memoLang;
+                        else
+                            s.memoLang = v; void ws.saveSettings(); }, 'Languages'), keywords: 'transcribe transcript language german english' },
+                    { title: 'Speech model', desc: 'Downloaded once per device, then it works offline', control: selectControl([['small', 'Small · about 250 MB'], ['base', 'Base · about 80 MB, less exact']], s.memoModel ?? 'small', (v) => { if (v === 'small')
+                            delete s.memoModel;
+                        else
+                            s.memoModel = 'base'; void ws.saveSettings(); }, 'Speech model'), keywords: 'transcribe whisper model speech offline' },] : []),
+                { title: 'Recording', value: 'M4A · mono · 48 kbps – about 21 MB per hour', keywords: 'format bitrate quality m4a aac' },
+            ] },
         { id: 'widgets', group: 'Content', label: 'Widgets', icon: 'puzzle', summary: () => { const n = customWidgets().length; return n ? String(n) : ''; }, subtitle: 'Small blocks like timers and notes, added with “/”.', items: () => {
                 const own = customWidgets();
                 const pick = () => {

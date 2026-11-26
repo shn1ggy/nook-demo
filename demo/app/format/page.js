@@ -34,6 +34,15 @@ function blockFromAttrs(type, a) {
             b.data = {};
         }
     }
+    if (type === 'audio' && a.kind) {
+        b.kind = a.kind;
+        try {
+            b.data = a.data ? JSON.parse(a.data) : {};
+        }
+        catch {
+            b.data = {};
+        }
+    }
     if (type === 'widget') {
         b.kind = a.kind || 'note';
         try {
@@ -328,7 +337,8 @@ function write(blocks, out, indent) {
             case 'audio':
             case 'video':
             case 'file':
-                out.push(`<${b.type}${attrStr(b, ['src'])}${text ? ` title="${esc(text)}"` : ''}/>`);
+                // a voice memo: its kind and its own data (length, the text written down)
+                out.push(`<${b.type}${attrStr(b, ['src'])}${text ? ` title="${esc(text)}"` : ''}${b.type === 'audio' && b.kind ? ` kind="${esc(b.kind)}"${b.data && Object.keys(b.data).length ? ` data="${esc(JSON.stringify(b.data))}"` : ''}` : ''}/>`);
                 break;
             case 'button':
                 out.push(`<button id="${b.id}"${attrStr(b, ['action', 'target', 'icon', 'color', 'size', 'confirm'])}${b.perRow ? ` perrow="${b.perRow}"` : ''}${b.colorStyle ? ` colorstyle="${b.colorStyle}"` : ''}${b.steps?.length ? ` steps="${esc(JSON.stringify(b.steps))}"` : ''}>${esc(text)}</button>`);

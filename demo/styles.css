@@ -5520,3 +5520,54 @@ html.phone .vbar.is-compact > .vtoolbar.compact { flex-wrap: wrap; }
 .ntip-k { color: var(--fg-faint); font-size: 12px; white-space: nowrap; margin-left: auto; }
 :root[data-theme="light"] .ntip { box-shadow: 0 0 0 .5px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.06), 0 16px 48px rgba(0,0,0,.16); }
 @media (prefers-reduced-motion: reduce) { .ntip { transition: none; } }
+/* ---- voice memos ---- */
+.memo { border-radius: 12px; background: color-mix(in srgb, var(--fg) 5%, transparent); padding: 10px 12px 12px; margin: 4px 0; }
+.memo-row { display: flex; align-items: center; gap: 10px; }
+.memo-pb { width: 34px; height: 34px; border-radius: 17px; border: 0; padding: 0; background: var(--fg-strong); color: var(--bg); display: grid; place-items: center; flex: none; cursor: pointer; }
+.memo-pb svg { fill: currentColor; stroke: none; }
+.memo-pb.rec { background: #e5534b; color: #fff; cursor: default; }
+.memo-pb.rec svg { fill: none; stroke: currentColor; }
+.memo-t { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.memo-t b { font-weight: 500; color: var(--fg-strong); display: flex; align-items: center; gap: 7px; overflow: hidden; white-space: nowrap; -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); font-variant-numeric: tabular-nums; }
+.memo-t small { color: var(--fg-muted); font-size: 12.5px; }
+.memo-more { width: 30px; height: 30px; border: 0; border-radius: 7px; background: none; color: var(--fg-muted); display: grid; place-items: center; cursor: pointer; flex: none; }
+.memo-more:hover { background: var(--bg-hover); color: var(--fg-strong); }
+.memo-btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border: 0; border-radius: 7px; background: color-mix(in srgb, var(--fg) 9%, transparent); color: var(--fg-strong); font: inherit; font-size: 13px; cursor: pointer; flex: none; }
+.memo-btn:hover { background: color-mix(in srgb, var(--fg) 14%, transparent); }
+.memo-btn.red { background: #e5534b; color: #fff; font-weight: 600; }
+.memo-btn.strong { background: var(--fg-strong); color: var(--bg); font-weight: 600; }
+.memo-btn svg { fill: none; }
+.memo-seek { height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--fg) 14%, transparent); margin: 10px 0 0; cursor: pointer; position: relative; }
+.memo-seek::before { content: ""; position: absolute; inset: -8px 0; }
+.memo-seek i { display: block; height: 100%; width: 0; border-radius: 2px; background: var(--fg-strong); }
+.memo-tx { margin-top: 10px; }
+.memo-tx.folded { max-height: 150px; overflow: hidden; -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
+.memo-tx + .memo-btn, .memo-wd { margin-top: 10px; }
+.memo-para { display: flex; gap: 10px; margin-top: 6px; line-height: 1.5; user-select: text; }
+.memo-para span { color: var(--fg); }
+.memo-ts { flex: none; width: 44px; padding: 2px 0 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: 12.5px; font-variant-numeric: tabular-nums; text-align: left; cursor: pointer; }
+.memo-wd { display: flex; align-items: center; gap: 10px; }
+.memo-hint { color: var(--fg-muted); font-size: 12.5px; }
+.memo-prog { display: flex; align-items: center; gap: 10px; margin-top: 10px; color: var(--fg-muted); font-size: 12.5px; }
+.memo-pbar { flex: 1; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--fg) 14%, transparent); overflow: hidden; }
+.memo-pbar i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+.memo-dot { width: 9px; height: 9px; border-radius: 50%; background: #e5534b; flex: none; animation: memo-blink 1.2s ease-in-out infinite; }
+@keyframes memo-blink { 50% { opacity: .35; } }
+.memo-lvl { display: flex; align-items: center; gap: 2px; height: 22px; flex: none; }
+.memo-lvl i { width: 3px; height: 3px; border-radius: 2px; background: #e5534b; }
+/* the phone's bottom bar while recording or playing a memo */
+.memo-bar { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; height: 100%; }
+.memo-bt { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.memo-bt b { display: flex; align-items: center; gap: 7px; color: var(--fg-strong); font-size: 14.5px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.memo-bt small { color: var(--fg-muted); font-size: 12px; white-space: nowrap; overflow: hidden; }
+.memo-bb { width: 40px; height: 40px; flex: none; border: 0; border-radius: 20px; background: none; color: var(--fg-strong); display: grid; place-items: center; padding: 0; -webkit-tap-highlight-color: transparent; }
+.memo-bb.dim { background: color-mix(in srgb, var(--fg) 9%, transparent); color: var(--fg); }
+.memo-stop { width: 42px; height: 42px; flex: none; border: 0; border-radius: 21px; background: var(--fg-strong); display: grid; place-items: center; padding: 0; }
+.memo-stop i, .memo-pstop i { display: block; width: 13px; height: 13px; border-radius: 3px; background: var(--bg); }
+.memo-ico { width: 40px; height: 40px; border-radius: 10px; flex: none; display: grid; place-items: center; background: color-mix(in srgb, var(--fg) 8%, transparent); color: var(--fg-muted); }
+/* desktop: the pill in the top bar */
+.memo-pill { display: flex; align-items: center; gap: 7px; padding-left: 8px; font-size: 13px; color: var(--fg-strong); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.memo-pw { color: var(--fg-muted); }
+.ppill .memo-pname, .memo-pname { display: flex; white-space: nowrap; align-items: center; gap: 6px; border: 0; background: none; color: var(--fg-strong); font: inherit; font-size: 13px; cursor: pointer; padding: 0; max-width: 170px; overflow: hidden; }
+.ppill .memo-pstop, .memo-pstop { width: 24px; height: 24px; border: 0; border-radius: 12px; background: var(--fg-strong); display: grid; place-items: center; padding: 0; cursor: pointer; }
+.memo-pstop i { width: 9px; height: 9px; border-radius: 2px; }

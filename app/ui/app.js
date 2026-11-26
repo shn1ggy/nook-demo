@@ -1417,11 +1417,64 @@ export class App {
         else {
             entries.push({ section: 'No quick buttons yet – hold a button, then “Add to quick buttons”' });
         }
+        // add to the page you are on – or, with no page open, to the Inbox (Settings → Voice memos)
+        const here = !this.libraryOn && this.route?.kind === 'page' ? this.ws.pages.get(this.route.id) : undefined;
+        entries.push('sep', { section: `Add to ${here?.title || 'Inbox'}` }, { label: 'Voice memo', icon: menuIcon('mic'), run: () => void this.addMemo(here) }, { label: 'Photo or video', icon: menuIcon('image'), run: () => this.addMedia(here) });
         entries.push('sep', { label: 'New page', icon: menuIcon('file-plus'), run: () => { this.libraryOn = false; this.newPage(); } });
         menu(at, entries);
         // phone: the bottom bar stays on top of this sheet – its last row (New page) must end above the bar
         const pops = document.querySelectorAll('.pop');
         pops[pops.length - 1]?.classList.add('quick-sheet');
+    }
+    /** where ＋ puts a voice memo or photos with no page open: the page chosen in settings, else "Inbox" (made when needed) */
+    async inbox(kind) {
+        const s = this.ws.settings, id = s[kind];
+        const p = (id && this.ws.pages.get(id)) || [...this.ws.pages.values()].find((x) => !x.parent && x.title === 'Inbox');
+        return p ?? this.ws.createPage('Inbox');
+    }
+    async addMemo(here) {
+        const p = here ?? await this.inbox('memoInbox');
+        const { newMemo, startRecording } = await import('./memo.js');
+        const b = newMemo(ulid());
+        p.blocks.push(b);
+        await this.ws.savePage(p);
+        this.libraryOn = false;
+        if (!(this.route?.kind === 'page' && this.route.id === p.id))
+            this.openPage(p.id);
+        else
+            this.render();
+        await startRecording(b, { ctx: this, file: p.file, pageId: p.id, save: () => void this.ws.savePage(p) });
+        setTimeout(() => document.querySelector(`[data-id="${b.id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300);
+    }
+    addMedia(here) {
+        const input = h('input', { type: 'file', accept: 'image/*,video/*', multiple: true, style: { display: 'none' } });
+        input.addEventListener('change', async () => {
+            const files = [...(input.files ?? [])];
+            input.remove();
+            if (!files.length)
+                return;
+            const p = here ?? await this.inbox('mediaInbox');
+            for (const f of files) {
+                const path = this.ws.newFilePath(p.file, f.name || 'photo.jpg');
+                try {
+                    await this.ws.writeFile(path, new Uint8Array(await f.arrayBuffer()));
+                }
+                catch (e) {
+                    toast(`Could not save ${f.name}: ${e.message}`);
+                    continue;
+                }
+                p.blocks.push({ id: ulid(), type: f.type.startsWith('video/') || /\.(mov|mp4|m4v|webm)$/i.test(f.name) ? 'video' : 'image', src: path, text: f.name });
+            }
+            await this.ws.savePage(p);
+            this.libraryOn = false;
+            if (!(this.route?.kind === 'page' && this.route.id === p.id))
+                this.openPage(p.id);
+            else
+                this.render();
+            toast(`Added to ${p.title}`);
+        });
+        document.body.appendChild(input);
+        input.click();
     }
     /** the pages and databases you opened last (phone: Pages → Recent, and "Open on: Last page") */
     recentKey() { return `nook:recent:${this.ws.meta.name}`; }

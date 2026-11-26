@@ -126,6 +126,14 @@ export function stepSong(dir, auto = false) {
     return true;
 }
 export function playAt(k) { void load(k); }
+/** a voice memo takes over: the song pauses where it is (it does not go on by itself afterwards) */
+export function pauseMusic() { if (!audio.paused)
+    audio.pause(); }
+export const musicPlaying = () => !audio.paused;
+/** something else in the bars (a recording, a memo that plays) – null gives them back to the music */
+let barOverride = null, pillOverride = null;
+export function setBarOverride(el) { barOverride = el; emit('state'); }
+export function setPillOverride(el) { pillOverride = el; emit('state'); }
 export function togglePlay() { if (audio.paused)
     void audio.play();
 else
@@ -431,12 +439,21 @@ export function playerPill() {
     const t = h('button', { class: 'ppill-t', title: 'Open the player', onclick: openFullPlayer });
     const pp = h('button', { class: 'ppill-pp', 'aria-label': 'Play or pause', onclick: togglePlay });
     const el = h('div', { class: 'ppill' }, h('button', { class: 'ppill-c', 'aria-label': 'Open the player', onclick: openFullPlayer }, pi('music', 14)), t, pp, h('button', { class: 'ppill-b', 'aria-label': 'Next', title: 'Next', onclick: () => stepSong(1) }, pi('next', 15)), h('button', { class: 'ppill-b', 'aria-label': 'Stop', title: 'Stop', onclick: stopPlayer }, pi('x', 14)));
+    const kids = [...el.childNodes];
     const paint = () => {
         if (!el.isConnected && el.dataset.drawn) {
             off();
             return;
         }
         el.dataset.drawn = '1';
+        if (pillOverride) {
+            el.hidden = false;
+            if (el.firstChild !== pillOverride)
+                el.replaceChildren(pillOverride);
+            return;
+        }
+        if (el.firstChild !== kids[0])
+            el.replaceChildren(...kids);
         const it = nowPlaying();
         el.hidden = !it;
         if (!it)
@@ -461,11 +478,15 @@ export function mountPhoneBar(nav, onPlus) {
     const t = h('span', { class: 'tbp-t' }), sub = h('small', { class: 'tbp-s' });
     const pp = h('button', { class: 'tbp-b tbp-pp', 'aria-label': 'Play or pause', onclick: (e) => { e.stopPropagation(); togglePlay(); } });
     const face = h('div', { class: 'tab-pill tb-face tb-player' }, h('button', { class: 'tbp-b tbp-back', 'aria-label': 'Back to the tabs', onclick: (e) => { e.stopPropagation(); flip(false); } }, pi('up', 18)), h('span', { class: 'tbp-c' }, pi('music', 18)), h('span', { class: 'tbp-tx' }, t, sub), pp, h('button', { class: 'tbp-b', 'aria-label': 'Next', onclick: (e) => { e.stopPropagation(); stepSong(1); } }, pi('next', 22)));
-    face.addEventListener('click', () => openFullPlayer());
+    face.addEventListener('click', () => { if (!barOverride)
+        openFullPlayer(); });
+    const faceKids = [...face.childNodes];
     // hold: open, back to the tabs, stop
     let timer = 0;
-    face.addEventListener('touchstart', () => { timer = window.setTimeout(() => { timer = 0; const it = nowPlaying(); menu(face, [{ section: it ? titleOf(it.path) : 'Player' }, { label: 'Open player', icon: menuIcon('maximize'), run: openFullPlayer }, { label: 'Back to tabs', icon: menuIcon('arrow-up'), run: () => flip(false) }, 'sep', { label: 'Stop', icon: menuIcon('square'), danger: true, run: stopPlayer }]); }, 480); }, { passive: true });
-    face.addEventListener('touchend', (e) => { if (timer)
+    face.addEventListener('touchstart', () => { if (barOverride)
+        return; timer = window.setTimeout(() => { timer = 0; const it = nowPlaying(); menu(face, [{ section: it ? titleOf(it.path) : 'Player' }, { label: 'Open player', icon: menuIcon('maximize'), run: openFullPlayer }, { label: 'Back to tabs', icon: menuIcon('arrow-up'), run: () => flip(false) }, 'sep', { label: 'Stop', icon: menuIcon('square'), danger: true, run: stopPlayer }]); }, 480); }, { passive: true });
+    face.addEventListener('touchend', (e) => { if (barOverride)
+        return; if (timer)
         clearTimeout(timer);
     else
         e.preventDefault(); });
@@ -478,7 +499,7 @@ export function mountPhoneBar(nav, onPlus) {
         flip(!flipped); });
     stage.append(pill, face);
     const plus = fab.innerHTML;
-    fab.addEventListener('click', (e) => { if (nowPlaying() && !flipped) {
+    fab.addEventListener('click', (e) => { if (nowPlaying() && !flipped && !barOverride) {
         e.stopImmediatePropagation();
         e.preventDefault();
         flip(true);
@@ -492,6 +513,17 @@ export function mountPhoneBar(nav, onPlus) {
             return;
         }
         nav.dataset.drawn = '1';
+        if (barOverride) {
+            if (face.firstChild !== barOverride)
+                face.replaceChildren(barOverride);
+            nav.classList.add('tb-music');
+            stage.classList.add('flipped');
+            fab.innerHTML = plus;
+            fab.classList.remove('tb-eq-on');
+            return;
+        }
+        if (face.firstChild !== faceKids[0])
+            face.replaceChildren(...faceKids);
         const it = nowPlaying();
         if (!it)
             flipped = false;
