@@ -182,8 +182,9 @@ function showMemoBars() {
     setPillOverride(h('span', { class: 'memo-pill' }, h('button', { class: 'memo-pname', title: 'Back to the memo', onclick: goBack }, iconSvg('mic', 13), memoName(p.block)), pt, ppb(13, 'ppill-pp'), h('button', { class: 'ppill-b', 'aria-label': 'Close', title: 'Close', onclick: stopMemo }, pi('x', 13))));
 }
 // ---------- writing it down (on this device, free: Whisper in the browser) ----------
-/** writing memos down needs the page's security rules to allow the speech library and its WebAssembly – off until they do */
-export const TX_ENABLED = false;
+/** writing memos down needs the page's security rules (web/index.html) to allow the speech library from cdn.jsdelivr.net
+ *  and WebAssembly ('wasm-unsafe-eval'); it turns itself on once they do */
+export const TX_ENABLED = (() => { const c = document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute('content') ?? ''; return /script-src[^;]*cdn\.jsdelivr\.net/.test(c) && /wasm-unsafe-eval/.test(c); })();
 const TX_LIB = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2';
 let asr = null;
 const jobs = new Map();
