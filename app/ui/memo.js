@@ -451,7 +451,11 @@ function askLang(at, b, host, again) {
 }
 // ---------- the block ----------
 export function memoBlock(b, host, readonly = false) {
-    const box = h('div', { class: 'memo' });
+    // contenteditable="false": taps in the memo stay in the memo – the editor neither puts a caret nearby
+    // nor scrolls to one (that made the page jump on every tap on the phone)
+    const box = h('div', { class: 'memo', contenteditable: 'false' });
+    for (const ev of ['mousedown', 'touchstart', 'touchend', 'click'])
+        box.addEventListener(ev, (e) => e.stopPropagation());
     let open = false;
     const draw = () => {
         if (!box.isConnected && box.dataset.drawn) {
