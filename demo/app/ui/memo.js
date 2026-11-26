@@ -82,12 +82,14 @@ export function stopRecording() {
         const blob = new Blob(r.chunks, { type: r.mime.split(';')[0] || 'audio/mp4' });
         endRec();
         const d = new Date(), p = (n) => String(n).padStart(2, '0');
-        const name = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}-${p(d.getMinutes())} Memo.${ext}`;
+        // name and file: full date and time (a file name can't hold ":", so the file has "-" there)
+        const stamp = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+        const name = `Memo ${stamp.replace(/:/g, '-')}.${ext}`;
         try {
             const path = r.host.ctx.ws.newFilePath(r.host.file, name);
             await r.host.ctx.ws.writeFile(path, ext === 'webm' ? withWebmDuration(new Uint8Array(await blob.arrayBuffer()), dur * 1000) : new Uint8Array(await blob.arrayBuffer()));
             r.block.src = path;
-            r.block.text = `Memo ${p(d.getDate())}.${p(d.getMonth() + 1)}. ${p(d.getHours())}:${p(d.getMinutes())}`;
+            r.block.text = `Memo ${stamp}`;
             r.block.data = { ...(r.block.data ?? {}), dur: Math.round(dur), size: blob.size };
             r.host.save();
             changed();
