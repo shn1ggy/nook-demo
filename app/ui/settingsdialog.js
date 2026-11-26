@@ -101,7 +101,7 @@ export function openSettings(app, start) {
             { heading: 'This workspace' },
             { title: 'Saved in', desc: runs[1], value: runs[0] },
             { title: 'Files', desc: 'Pages are Markdown, settings JSON – readable in any text editor', value: `Format ${APP.formatVersion}` },
-            ...(document.documentElement.classList.contains('phone') ? [{ heading: 'This screen' }, { title: 'Sizes', desc: screenFacts(), keywords: 'screen display size' }, { title: 'Keyboard diagnostics', desc: 'A readout at the top of the screen with what iOS reports while you type – for finding the keyboard bug. Nothing leaves this device.', control: switchControl(kbDebugOn(), (on) => setKbDebug(on), 'Keyboard diagnostics'), keywords: 'keyboard debug diagnostics test' }] : []),
+            ...(document.documentElement.classList.contains('phone') ? [{ heading: 'This screen' }, { title: 'Sizes', desc: screenFacts(), keywords: 'screen display size' }, { title: 'Diagnostics', desc: 'A readout at the top of the screen with what iOS reports (keyboard, page jumps) – for finding bugs. Nothing leaves this device.', control: switchControl(kbDebugOn(), (on) => setKbDebug(on), 'Keyboard diagnostics'), keywords: 'keyboard debug diagnostics test' }] : []),
             { heading: 'Credits' },
             { title: 'Geist and Geist Mono', desc: 'Fonts by Vercel', value: 'OFL 1.1', keywords: 'font license' },
             { title: 'Icons', desc: 'In the style of Lucide', value: 'ISC', keywords: 'icons license lucide' },

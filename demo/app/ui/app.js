@@ -1,4 +1,5 @@
 import { attachSources } from '../sync/sources.js';
+import { kbLog } from './kbdebug.js';
 import { newDayDatabase } from '../views/days.js';
 import '../widgets/builtins.js';
 import { loadCustomWidgets } from '../widgets/runtime.js';
@@ -458,6 +459,7 @@ export class App {
         this.sideSig = sig;
     }
     render() {
+        kbLog('render (whole page)');
         this.sideSig = this.sideSignature();
         this.syncUrl();
         const oldScroll = this.root.querySelector('.scroll');

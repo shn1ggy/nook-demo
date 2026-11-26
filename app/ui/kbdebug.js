@@ -56,6 +56,20 @@ function frame() {
             `focus: ${a ? (a.tagName.toLowerCase() + '.' + String(a.className).split(' ')[0]) : '-'}  caret ${caret || '-'}\n` +
             `sheet: ${sr ? `${n(sr.top)}–${n(sr.bottom)} h${n(sr.height)}` : '-'}  scroller: ${sc ? `${sc.className.split(' ')[0]} top${n(sc.scrollTop)} h${n(sc.clientHeight)}/${n(sc.scrollHeight)} pb${getComputedStyle(sc).paddingBottom}` : '-'}`;
 }
+/** jumps of the page's scroll position (not from a finger): logged with where they went */
+let lastTop = -1, touching = false;
+document.addEventListener('touchstart', () => { touching = true; }, true);
+document.addEventListener('touchend', () => { setTimeout(() => { touching = false; }, 600); }, true);
+document.addEventListener('scroll', (e) => {
+    if (!box)
+        return;
+    const t = e.target;
+    if (!(t instanceof HTMLElement) || !t.matches('.main > .scroll'))
+        return;
+    if (lastTop >= 0 && Math.abs(t.scrollTop - lastTop) > 120 && !touching)
+        kbLog(`JUMP ${n(lastTop)}→${n(t.scrollTop)} h${n(t.scrollHeight)} act:${document.activeElement?.className?.toString().slice(0, 20) ?? '-'}`);
+    lastTop = t.scrollTop;
+}, true);
 export function startKbDebug() {
     if (box)
         return;

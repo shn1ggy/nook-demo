@@ -1,6 +1,7 @@
 // Voice memos: record in a page (an audio block of kind "memo"), play it back, write it down on this device.
 // One sound at a time: recording or playing a memo pauses the music, and the music pauses a memo.
 // The phone's bottom bar (and the desktop's top bar pill) show the recording or the memo that plays.
+import { kbLog } from './kbdebug.js';
 import { h } from '../util.js';
 import { iconSvg } from './icons.js';
 import { ICONS, svgIcon } from '../util.js';
@@ -13,7 +14,7 @@ const fmt = (s) => { s = Math.max(0, Math.round(s)); const hh = Math.floor(s / 3
 const mb = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace('.', ',')} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
 /** the memo's name: its file's name, as in Dropbox (without the type) */
 const memoName = (b) => (b.src ? decodeURIComponent(b.src.split('/').pop() ?? '').replace(/\.[^.]+$/, '') : '') || b.text || 'Voice memo';
-const changed = () => document.dispatchEvent(new CustomEvent('nook-memo'));
+const changed = () => { kbLog('memo redraw'); document.dispatchEvent(new CustomEvent('nook-memo')); };
 let rec = null;
 export const recordingBlock = () => rec?.block ?? null;
 const elapsed = () => (rec ? rec.acc + (rec.paused ? 0 : Date.now() - rec.t0) : 0);
