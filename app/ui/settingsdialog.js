@@ -799,7 +799,7 @@ export function openSettings(app, start) {
         { id: 'files', group: 'Workspace', inWorkspace: true, label: 'Files', icon: 'folder', subtitle: 'Images and files in the workspace.', items: files },
         // phone: what used to sit under Pages → Workspace lives here now
         ...(document.documentElement.classList.contains('phone') ? [
-            { id: 'switchws', group: 'More', inWorkspace: true, label: 'Switch workspace', icon: 'layers', summary: () => ws.meta.name, items: () => [], run: () => { const b = document.querySelector('.pset-row:last-child') ?? document.body; app.shell.workspaceMenu(b); } },
+            { id: 'switchws', group: 'More', inWorkspace: true, label: 'Switch Workspace', icon: 'layers', summary: () => ws.meta.name, items: () => [], run: () => { const b = document.querySelector('.pset-row:last-child') ?? document.body; app.shell.workspaceMenu(b); } },
         ] : []),
         { id: 'about', group: '', inWorkspace: true, label: `About ${APP.name}`, icon: 'info', subtitle: 'Pages, databases and calendars as plain files in a folder you own.', items: about },
     ];
