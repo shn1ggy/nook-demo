@@ -6,6 +6,7 @@ import { iconSvg } from './icons.js';
 import { menu, menuIcon, toast } from './pop.js';
 import { pi } from './viewer.js';
 import { onPlayer, pauseMusic, musicPlaying, setBarOverride, setPillOverride } from './player.js';
+import { withWebmDuration } from '../webm.js';
 const phone = () => document.documentElement.classList.contains('phone');
 const fmt = (s) => { s = Math.max(0, Math.round(s)); const hh = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return hh ? `${hh}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}` : `${m}:${String(x).padStart(2, '0')}`; };
 const mb = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace('.', ',')} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
@@ -84,7 +85,7 @@ export function stopRecording() {
         const name = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}-${p(d.getMinutes())} Memo.${ext}`;
         try {
             const path = r.host.ctx.ws.newFilePath(r.host.file, name);
-            await r.host.ctx.ws.writeFile(path, new Uint8Array(await blob.arrayBuffer()));
+            await r.host.ctx.ws.writeFile(path, ext === 'webm' ? withWebmDuration(new Uint8Array(await blob.arrayBuffer()), dur * 1000) : new Uint8Array(await blob.arrayBuffer()));
             r.block.src = path;
             r.block.text = `Memo ${p(d.getDate())}.${p(d.getMonth() + 1)}. ${p(d.getHours())}:${p(d.getMinutes())}`;
             r.block.data = { ...(r.block.data ?? {}), dur: Math.round(dur), size: blob.size };
@@ -136,25 +137,15 @@ const audio = document.createElement('audio');
 audio.preload = 'metadata';
 window.nookMemoAudio = audio; // for tests
 let playing = null;
-let memoUrl = '', memoOwned = false;
-function audioType(path) {
+let memoUrl = '';
+function audioType(path, bytes) {
+    // what the file is, by its first bytes (else by its name)
+    if (bytes && bytes[0] === 0x1a && bytes[1] === 0x45)
+        return 'audio/webm';
+    if (bytes && bytes[0] === 0x4f && bytes[1] === 0x67 && bytes[2] === 0x67)
+        return 'audio/ogg';
     const e = path.toLowerCase().split('.').pop() ?? '';
     return { m4a: 'audio/mp4', mp4: 'audio/mp4', aac: 'audio/aac', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/ogg', webm: 'audio/webm', flac: 'audio/flac', caf: 'audio/x-caf' }[e] ?? 'audio/mp4';
-}
-/** recorded files often don't say how long they are (Chrome): until they do, jumping in them does nothing –
- *  asking for a far-away time makes the browser read the file through once, then it knows */
-async function seekable() {
-    if (audio.readyState < 1)
-        await new Promise((r) => { audio.addEventListener('loadedmetadata', () => r(), { once: true }); audio.addEventListener('error', () => r(), { once: true }); });
-    if (Number.isFinite(audio.duration))
-        return;
-    await new Promise((r) => {
-        const done = () => { audio.removeEventListener('durationchange', done); clearTimeout(t); r(); };
-        const t = setTimeout(done, 3000);
-        audio.addEventListener('durationchange', done);
-        audio.currentTime = 1e7;
-    });
-    audio.currentTime = 0;
 }
 export const playingBlock = () => playing?.block ?? null;
 audio.addEventListener('play', () => { pauseMusic(); changed(); });
@@ -163,41 +154,55 @@ audio.addEventListener('ended', () => { audio.currentTime = 0; changed(); });
 audio.addEventListener('timeupdate', () => document.dispatchEvent(new CustomEvent('nook-memo-time')));
 onPlayer(() => { if (musicPlaying() && !audio.paused)
     audio.pause(); });
+/** the memo being fetched (one at a time – a second click while it loads changes nothing) */
+let loading = null;
+export const loadingBlock = () => loading;
+const metadata = () => audio.readyState >= 1 ? Promise.resolve() : new Promise((r) => { audio.addEventListener('loadedmetadata', () => r(), { once: true }); audio.addEventListener('error', () => r(), { once: true }); });
 async function playMemo(block, host, at) {
     if (rec) {
         toast('Stop the recording first');
         return;
     }
     if (playing?.block !== block) {
-        // the whole file in memory (memos are small): jumping then works everywhere – some places don't serve parts of a file
-        let url, owned = false;
+        if (loading)
+            return;
+        loading = block;
+        changed();
         try {
-            url = await host.ctx.assetUrl(block.src ?? '');
+            // the whole file, with its type, and – for WebM recordings – its length written in: jumping then works
+            let url;
+            try {
+                url = await host.ctx.assetUrl(block.src ?? '');
+            }
+            catch {
+                toast('The memo’s audio file is missing');
+                return;
+            }
+            let bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
+            const d = (block.data ?? {});
+            if (d.dur)
+                bytes = withWebmDuration(bytes, d.dur * 1000);
+            const blobUrl = URL.createObjectURL(new Blob([bytes], { type: audioType(block.src ?? '', bytes) }));
+            if (memoUrl)
+                URL.revokeObjectURL(memoUrl);
+            memoUrl = blobUrl;
+            audio.pause();
+            audio.src = blobUrl;
+            playing = { block, host };
+            await metadata();
+            showMemoBars();
         }
-        catch {
-            toast('The memo’s audio file is missing');
+        catch (e) {
+            toast(`Could not play the memo: ${e.message}`);
             return;
         }
-        // …with its proper type: Safari only plays and jumps in a file whose type it is told (else "not suitable")
-        try {
-            const r = await fetch(url);
-            if (r.ok) {
-                url = URL.createObjectURL(new Blob([await r.arrayBuffer()], { type: audioType(block.src ?? '') }));
-                owned = true;
-            }
+        finally {
+            loading = null;
+            changed();
         }
-        catch { /* play it as it is */ }
-        if (memoOwned && memoUrl !== url)
-            URL.revokeObjectURL(memoUrl);
-        memoUrl = url;
-        memoOwned = owned;
-        audio.src = url;
-        await seekable();
-        playing = { block, host };
-        showMemoBars();
     }
     if (at != null) {
-        await seekable();
+        await metadata();
         audio.currentTime = at;
     }
     await audio.play().catch(() => { });
@@ -378,9 +383,9 @@ export function memoBlock(b, host, readonly = false) {
             return;
         }
         // saved
-        const mine = playing?.block === b, on = mine && !audio.paused;
-        const pb = h('button', { class: 'memo-pb', 'aria-label': on ? 'Pause' : 'Play', onclick: () => (mine ? toggleMemo() : void playMemo(b, host)) }, pi(on ? 'pause' : 'play', 15));
-        const sub = [d.dur ? fmt(d.dur) : '', d.txDone && d.tx?.length ? (d.lang ?? '') : d.size ? mb(d.size) : ''].filter(Boolean).join(' · ');
+        const mine = playing?.block === b, on = mine && !audio.paused, wait = loading === b;
+        const pb = h('button', { class: 'memo-pb' + (wait ? ' wait' : ''), 'aria-label': wait ? 'Loading' : on ? 'Pause' : 'Play', onclick: () => (wait ? undefined : mine ? toggleMemo() : void playMemo(b, host)) }, wait ? h('span', { class: 'memo-spin' }) : pi(on ? 'pause' : 'play', 15));
+        const sub = wait ? 'Loading…' : [d.dur ? fmt(d.dur) : '', d.txDone && d.tx?.length ? (d.lang ?? '') : d.size ? mb(d.size) : ''].filter(Boolean).join(' · ');
         const more = h('button', { class: 'memo-more', 'aria-label': 'More' }, pi('more', 18));
         more.addEventListener('click', () => {
             const text = (d.tx ?? []).map((x) => x.text).join('\n\n');

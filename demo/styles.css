@@ -5598,3 +5598,6 @@ html.phone .vbar.is-compact > .vtoolbar.compact { flex-wrap: wrap; }
 .memo-st { font-size: 11.5px; color: var(--fg-faint); }
 .memo-t small { color: var(--fg-faint); }
 .memo-tx + .memo-btn { margin-top: 8px; }
+.memo-pb.wait { background: color-mix(in srgb, var(--fg) 12%, transparent); cursor: default; }
+.memo-spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--fg) 30%, transparent); border-top-color: var(--fg-strong); animation: memo-spin .8s linear infinite; }
+@keyframes memo-spin { to { transform: rotate(360deg); } }
