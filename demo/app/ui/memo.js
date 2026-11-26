@@ -481,6 +481,7 @@ export function memoBlock(b, host, readonly = false) {
     box.addEventListener('mousedown', (e) => { if (!e.target.closest('input, textarea'))
         e.preventDefault(); });
     let open = false;
+    let small = null;
     const draw = () => {
         if (!box.isConnected && box.dataset.drawn) {
             document.removeEventListener('nook-memo', draw);
@@ -489,10 +490,18 @@ export function memoBlock(b, host, readonly = false) {
         const d = (b.data ?? {});
         // only when something about this memo changed – the others on the page stay exactly as they are
         const job0 = jobs.get(b.id);
-        const sig = JSON.stringify([rec?.block === b, rec?.paused, b.src, playing?.block === b, playing?.block === b && !audio.paused, loading === b, job0?.pct, job0?.note, d.tx?.length, d.txDone, d.dur, d.lang, open]);
-        if (box.dataset.sig === sig)
+        const sig = JSON.stringify([rec?.block === b, rec?.paused, b.src, playing?.block === b, job0?.pct, job0?.note, d.tx?.length, d.txDone, d.dur, d.lang, open]);
+        const state = JSON.stringify([playing?.block === b && !audio.paused, loading === b]);
+        // play ⇄ pause, loading: only the button and its line change – nothing else on the page moves
+        if (box.dataset.sig === sig) {
+            if (box.dataset.state !== state) {
+                box.dataset.state = state;
+                small?.();
+            }
             return;
+        }
         box.dataset.sig = sig;
+        box.dataset.state = state;
         box.dataset.drawn = '1';
         // its height held while the new content goes in (Safari must never see a shorter page for a moment)
         const hgt = box.offsetHeight;
@@ -533,9 +542,21 @@ export function memoBlock(b, host, readonly = false) {
             return;
         }
         // saved
-        const mine = playing?.block === b, on = mine && !audio.paused, wait = loading === b;
-        const pb = h('button', { class: 'memo-pb' + (wait ? ' wait' : ''), 'aria-label': wait ? 'Loading' : on ? 'Pause' : 'Play', onclick: () => (wait ? undefined : mine ? toggleMemo() : void playMemo(b, host)) }, wait ? h('span', { class: 'memo-spin' }) : pi(on ? 'pause' : 'play', 15));
-        const sub = wait ? 'Loading…' : [d.dur ? fmt(d.dur) : '', d.txDone && d.tx?.length ? (d.lang ?? '') : d.size ? mb(d.size) : ''].filter(Boolean).join(' · ');
+        const mine = playing?.block === b;
+        const pb = h('button', { class: 'memo-pb', onclick: () => { if (loading === b)
+                return; if (playing?.block === b)
+                toggleMemo();
+            else
+                void playMemo(b, host); } });
+        const subEl = h('small');
+        small = () => {
+            const isOn = playing?.block === b && !audio.paused, isWait = loading === b;
+            pb.classList.toggle('wait', isWait);
+            pb.setAttribute('aria-label', isWait ? 'Loading' : isOn ? 'Pause' : 'Play');
+            pb.replaceChildren(isWait ? h('span', { class: 'memo-spin' }) : pi(isOn ? 'pause' : 'play', 15));
+            subEl.textContent = isWait ? 'Loading…' : [d.dur ? fmt(d.dur) : '', d.txDone && d.tx?.length ? (d.lang ?? '') : d.size ? mb(d.size) : ''].filter(Boolean).join(' · ');
+        };
+        small();
         // the same ⋯ as on widgets
         const more = h('button', { class: 'icon-btn memo-more', 'aria-label': 'More', title: 'More' }, svgIcon(ICONS.more, 16, { fill: true }));
         more.addEventListener('click', () => {
@@ -583,7 +604,7 @@ export function memoBlock(b, host, readonly = false) {
             return;
         } paint(); });
         paint();
-        box.append(h('div', { class: 'memo-row memo-main' }, pb, h('span', { class: 'memo-t' }, h('b', null, memoName(b)), h('small', null, sub)), seek, more));
+        box.append(h('div', { class: 'memo-row memo-main' }, pb, h('span', { class: 'memo-t' }, h('b', null, memoName(b)), subEl), seek, more));
         // the text
         const job = jobs.get(b.id);
         if (job)
