@@ -5617,3 +5617,7 @@ html.phone .vbar.is-compact > .vtoolbar.compact { flex-wrap: wrap; }
 .memo-para { align-items: flex-start; }
 .memo-ts { line-height: 1.6; padding-top: 0; font-size: 12px; height: auto; align-self: flex-start; margin-top: 1px; }
 .memo-ts { line-height: 23.2px; margin-top: 0; }
+/* memo: the same card as widgets (surface, outline, corners) and the same ⋯ */
+.memo { background: var(--surface); border-radius: 14px; outline: var(--ring-1, 1px) solid var(--border); outline-offset: calc(-1 * var(--ring-1, 1px)); padding: 14px 16px; }
+.memo-more { width: 26px; height: 26px; color: var(--fg-muted); }
+.memo-more svg { fill: currentColor; }

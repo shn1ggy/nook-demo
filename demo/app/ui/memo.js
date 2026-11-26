@@ -3,6 +3,7 @@
 // The phone's bottom bar (and the desktop's top bar pill) show the recording or the memo that plays.
 import { h } from '../util.js';
 import { iconSvg } from './icons.js';
+import { ICONS, svgIcon } from '../util.js';
 import { menu, menuIcon, toast } from './pop.js';
 import { pi } from './viewer.js';
 import { onPlayer, pauseMusic, musicPlaying, setBarOverride, setPillOverride } from './player.js';
@@ -479,7 +480,8 @@ export function memoBlock(b, host, readonly = false) {
         const mine = playing?.block === b, on = mine && !audio.paused, wait = loading === b;
         const pb = h('button', { class: 'memo-pb' + (wait ? ' wait' : ''), 'aria-label': wait ? 'Loading' : on ? 'Pause' : 'Play', onclick: () => (wait ? undefined : mine ? toggleMemo() : void playMemo(b, host)) }, wait ? h('span', { class: 'memo-spin' }) : pi(on ? 'pause' : 'play', 15));
         const sub = wait ? 'Loading…' : [d.dur ? fmt(d.dur) : '', d.txDone && d.tx?.length ? (d.lang ?? '') : d.size ? mb(d.size) : ''].filter(Boolean).join(' · ');
-        const more = h('button', { class: 'memo-more', 'aria-label': 'More' }, pi('more', 18));
+        // the same ⋯ as on widgets
+        const more = h('button', { class: 'icon-btn memo-more', 'aria-label': 'More', title: 'More' }, svgIcon(ICONS.more, 16, { fill: true }));
         more.addEventListener('click', () => {
             const text = (d.tx ?? []).map((x) => x.text).join('\n\n');
             menu(more, [
