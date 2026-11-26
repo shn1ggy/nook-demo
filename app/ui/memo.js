@@ -11,8 +11,8 @@ import { withWebmDuration } from '../webm.js';
 const phone = () => document.documentElement.classList.contains('phone');
 const fmt = (s) => { s = Math.max(0, Math.round(s)); const hh = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return hh ? `${hh}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}` : `${m}:${String(x).padStart(2, '0')}`; };
 const mb = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace('.', ',')} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
-/** the memo's name: its file's name, as in Dropbox (with its type) */
-const memoName = (b) => (b.src ? decodeURIComponent(b.src.split('/').pop() ?? '') : '') || b.text || 'Voice memo';
+/** the memo's name: its file's name, as in Dropbox (without the type) */
+const memoName = (b) => (b.src ? decodeURIComponent(b.src.split('/').pop() ?? '').replace(/\.[^.]+$/, '') : '') || b.text || 'Voice memo';
 const changed = () => document.dispatchEvent(new CustomEvent('nook-memo'));
 let rec = null;
 export const recordingBlock = () => rec?.block ?? null;
