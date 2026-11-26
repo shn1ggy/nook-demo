@@ -736,7 +736,7 @@ export function openSettings(app, start) {
                             s.mediaInbox = v;
                         else
                             delete s.mediaInbox; void ws.saveSettings(); }, label: 'Photos and videos go to' }), keywords: 'photo video camera inbox page' },
-                ...(TX_ENABLED ? [{ heading: 'Writing it down' },
+                ...(TX_ENABLED ? [{ heading: 'Transcription' },
                     { title: 'Languages', desc: 'What is spoken in your memos – the text comes out in that language', control: selectControl([['auto', 'Ask each time'], ['de', 'German'], ['en', 'English']], s.memoLang ?? 'auto', (v) => { if (v === 'auto')
                             delete s.memoLang;
                         else

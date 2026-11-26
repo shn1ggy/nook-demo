@@ -247,11 +247,6 @@ function loadAsr(model, onNote) {
         onNote('Loading the speech model (once)…');
         const lib = await import(/* @vite-ignore */ TX_LIB);
         lib.env.allowLocalModels = false;
-        // the model runs in a worker – the page stays responsive and the progress moves
-        try {
-            lib.env.backends.onnx.wasm.proxy = true;
-        }
-        catch { /* older build */ }
         return lib.pipeline('automatic-speech-recognition', `onnx-community/whisper-${model}`, {
             dtype: 'q8', device: 'wasm',
             progress_callback: (p) => { if (p.status === 'progress' && p.progress != null)
@@ -292,7 +287,7 @@ async function writeDown(block, host, again = false, choose) {
         const lang = choose ?? (d.lang === 'English' ? 'en' : d.lang === 'German' ? 'de' : txSettings(host.ctx).lang === 'en' ? 'en' : 'de');
         d.lang = lang === 'en' ? 'English' : 'German';
         const run = await loadAsr(model, (s) => { job.note = s; changed(); });
-        job.note = 'Writing it down';
+        job.note = 'Transcribing';
         changed();
         const pcm = await pcm16k(await host.ctx.assetUrl(block.src ?? ''));
         const step = 30 * 16000, n = Math.ceil(pcm.length / step);
@@ -323,7 +318,7 @@ async function writeDown(block, host, again = false, choose) {
         host.save();
     }
     catch (e) {
-        toast(`Could not write it down: ${e.message}`);
+        toast(`Could not transcribe: ${e.message}`);
     }
     finally {
         jobs.delete(block.id);
@@ -393,7 +388,7 @@ export function memoBlock(b, host, readonly = false) {
                 ...(text ? [
                     { label: 'Copy text', icon: menuIcon('clipboard'), run: () => { void navigator.clipboard.writeText(text).then(() => toast('Copied')); } },
                     ...(host.insertAfter && !readonly ? [{ label: 'Turn into page text', icon: menuIcon('align-left'), run: () => host.insertAfter((d.tx ?? []).map((x) => ({ id: crypto.randomUUID().replace(/-/g, '').slice(0, 20), type: 'paragraph', text: x.text }))) }] : []),
-                    ...(!readonly ? [{ label: 'Write it down again in German', icon: menuIcon('refresh'), run: () => void writeDown(b, host, true, 'de') }, { label: 'Write it down again in English', icon: menuIcon('refresh'), run: () => void writeDown(b, host, true, 'en') }] : []),
+                    ...(!readonly ? [{ label: 'Transcribe again in German', icon: menuIcon('refresh'), run: () => void writeDown(b, host, true, 'de') }, { label: 'Transcribe again in English', icon: menuIcon('refresh'), run: () => void writeDown(b, host, true, 'en') }] : []),
                 ] : []),
                 { label: 'Download audio', icon: menuIcon('download'), run: async () => { const a = h('a', { href: await host.ctx.assetUrl(b.src ?? ''), download: (b.src ?? '').split('/').pop() ?? 'memo.m4a' }); document.body.appendChild(a); a.click(); a.remove(); } },
                 ...(host.remove && !readonly ? ['sep', { label: 'Delete', icon: menuIcon('trash'), danger: true, run: () => { if (playing?.block === b)
@@ -436,7 +431,7 @@ export function memoBlock(b, host, readonly = false) {
         // the text
         const job = jobs.get(b.id);
         if (job)
-            box.append(h('div', { class: 'memo-prog' }, h('span', null, job.note), h('span', { class: 'memo-pbar' }, h('i', { style: { width: `${job.pct}%` } })), h('span', null, `${job.pct} %`)));
+            box.append(h('div', { class: 'memo-prog' }, h('span', null, job.note), h('span', { class: 'memo-pbar busy' }, h('i', { style: { width: `${job.pct}%` } })), h('span', null, `${job.pct} %`)));
         if (d.tx?.length) {
             const paras = d.tx.map((x) => h('div', { class: 'memo-para' }, h('button', { class: 'memo-ts', title: 'Play from here', onclick: () => void playMemo(b, host, x.t) }, fmt(x.t)), h('span', null, x.text)));
             const long = paras.length > 3 || d.tx.reduce((n, x) => n + x.text.length, 0) > 600;
@@ -446,7 +441,7 @@ export function memoBlock(b, host, readonly = false) {
         }
         if (TX_ENABLED && !job && !d.txDone && !readonly) {
             const partly = !!d.tx?.length;
-            box.append(h('div', { class: 'memo-wd' }, h('button', { class: 'memo-btn', onclick: (e) => askLang(e.currentTarget, b, host, false) }, iconSvg('pen', 14), partly ? 'Go on writing it down' : 'Write it down'), phone() && (d.dur ?? 0) > 120 ? h('span', { class: 'memo-hint' }, 'quicker on a computer') : null));
+            box.append(h('div', { class: 'memo-wd' }, h('button', { class: 'memo-btn', onclick: (e) => askLang(e.currentTarget, b, host, false) }, iconSvg('pen', 14), partly ? 'Continue transcribing' : 'Transcribe'), phone() && (d.dur ?? 0) > 120 ? h('span', { class: 'memo-hint' }, 'quicker on a computer') : null));
         }
     };
     document.addEventListener('nook-memo', draw);

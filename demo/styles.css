@@ -5601,3 +5601,8 @@ html.phone .vbar.is-compact > .vtoolbar.compact { flex-wrap: wrap; }
 .memo-pb.wait { background: color-mix(in srgb, var(--fg) 12%, transparent); cursor: default; }
 .memo-spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--fg) 30%, transparent); border-top-color: var(--fg-strong); animation: memo-spin .8s linear infinite; }
 @keyframes memo-spin { to { transform: rotate(360deg); } }
+/* transcribing: a light moving over the bar – it keeps going while the model is busy */
+.memo-pbar { position: relative; }
+.memo-pbar.busy::after { content: ""; position: absolute; inset: 0; width: 40%; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 70%, transparent), transparent); animation: memo-busy 1.4s ease-in-out infinite; will-change: transform; }
+@keyframes memo-busy { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@media (prefers-reduced-motion: reduce) { .memo-pbar.busy::after { animation: none; } }
