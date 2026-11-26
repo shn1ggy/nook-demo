@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <!-- only Nook's own scripts run here: text, files and embeds from a workspace can never bring code along -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http: asset: http://asset.localhost; media-src 'self' data: blob: https: http: asset: http://asset.localhost; font-src 'self' data:; connect-src 'self' blob: data: https: http://localhost:* http://127.0.0.1:* ipc: http://ipc.localhost; frame-src https: blob:; object-src 'self' blob: https:; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' blob: https://cdn.jsdelivr.net 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http: asset: http://asset.localhost; media-src 'self' data: blob: https: http: asset: http://asset.localhost; font-src 'self' data:; connect-src 'self' blob: data: https: http://localhost:* http://127.0.0.1:* ipc: http://ipc.localhost; frame-src https: blob:; object-src 'self' blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; manifest-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Nook Demo</title>
