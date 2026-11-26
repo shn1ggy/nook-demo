@@ -741,10 +741,10 @@ export function openSettings(app, start) {
                             delete s.memoLang;
                         else
                             s.memoLang = v; void ws.saveSettings(); }, 'Languages'), keywords: 'transcribe transcript language german english' },
-                    { title: 'Speech model', desc: 'Downloaded once per device, then it works offline', control: selectControl([['small', 'Small · about 250 MB'], ['base', 'Base · about 80 MB, less exact']], s.memoModel ?? 'small', (v) => { if (v === 'small')
+                    { title: 'Speech model', desc: 'Downloaded once per device, then it works offline', control: selectControl([['auto', 'Small on computers, Base on phones'], ['small', 'Small · about 250 MB'], ['base', 'Base · about 80 MB, less exact']], s.memoModel ?? 'auto', (v) => { if (v === 'auto')
                             delete s.memoModel;
                         else
-                            s.memoModel = 'base'; void ws.saveSettings(); }, 'Speech model'), keywords: 'transcribe whisper model speech offline' },] : []),
+                            s.memoModel = v; void ws.saveSettings(); }, 'Speech model'), keywords: 'transcribe whisper model speech offline' },] : []),
                 { title: 'Recording', value: 'M4A · mono · 48 kbps – about 21 MB per hour', keywords: 'format bitrate quality m4a aac' },
             ] },
         { id: 'widgets', group: 'Content', label: 'Widgets', icon: 'puzzle', summary: () => { const n = customWidgets().length; return n ? String(n) : ''; }, subtitle: 'Small blocks like timers and notes, added with “/”.', items: () => {

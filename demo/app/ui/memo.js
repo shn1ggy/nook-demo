@@ -243,7 +243,9 @@ export const TX_ENABLED = (() => { const c = document.querySelector('meta[http-e
 const TX_LIB = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2';
 let asr = null;
 const jobs = new Map();
-export const txSettings = (ctx) => ({ model: ctx.ws.settings.memoModel === 'base' ? 'base' : 'small', lang: ctx.ws.settings.memoLang ?? 'auto' });
+/** the model: as chosen – else Small on computers and Base on phones (the bigger one needs more memory than a phone
+ *  gives a web page; it then reloads the page half-way) */
+export const txSettings = (ctx) => ({ model: ctx.ws.settings.memoModel ?? (phone() ? 'base' : 'small'), lang: ctx.ws.settings.memoLang ?? 'auto' });
 /** the model runs in a worker of its own: the page stays responsive (no "this page slows down the browser")
  *  and the progress can move. Where a worker can't run it, it runs in the page as before. */
 const WORKER = `import { pipeline, env } from '${TX_LIB}';
