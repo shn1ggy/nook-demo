@@ -136,7 +136,11 @@ const audio = document.createElement('audio');
 audio.preload = 'metadata';
 window.nookMemoAudio = audio; // for tests
 let playing = null;
-let memoUrl = '';
+let memoUrl = '', memoOwned = false;
+function audioType(path) {
+    const e = path.toLowerCase().split('.').pop() ?? '';
+    return { m4a: 'audio/mp4', mp4: 'audio/mp4', aac: 'audio/aac', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/ogg', webm: 'audio/webm', flac: 'audio/flac', caf: 'audio/x-caf' }[e] ?? 'audio/mp4';
+}
 /** recorded files often don't say how long they are (Chrome): until they do, jumping in them does nothing –
  *  asking for a far-away time makes the browser read the file through once, then it knows */
 async function seekable() {
@@ -166,7 +170,7 @@ async function playMemo(block, host, at) {
     }
     if (playing?.block !== block) {
         // the whole file in memory (memos are small): jumping then works everywhere – some places don't serve parts of a file
-        let url;
+        let url, owned = false;
         try {
             url = await host.ctx.assetUrl(block.src ?? '');
         }
@@ -174,17 +178,19 @@ async function playMemo(block, host, at) {
             toast('The memo’s audio file is missing');
             return;
         }
+        // …with its proper type: Safari only plays and jumps in a file whose type it is told (else "not suitable")
         try {
-            if (!url.startsWith('blob:')) {
-                const r = await fetch(url);
-                if (r.ok)
-                    url = URL.createObjectURL(await r.blob());
+            const r = await fetch(url);
+            if (r.ok) {
+                url = URL.createObjectURL(new Blob([await r.arrayBuffer()], { type: audioType(block.src ?? '') }));
+                owned = true;
             }
         }
         catch { /* play it as it is */ }
-        if (memoUrl.startsWith('blob:') && memoUrl !== url)
+        if (memoOwned && memoUrl !== url)
             URL.revokeObjectURL(memoUrl);
         memoUrl = url;
+        memoOwned = owned;
         audio.src = url;
         await seekable();
         playing = { block, host };
