@@ -152,8 +152,12 @@ async function playMemo(block, host, at) {
         playing = { block, host };
         showMemoBars();
     }
-    if (at != null)
+    if (at != null) {
+        // a file just set: its length is not known yet – jump once it is
+        if (audio.readyState < 1)
+            await new Promise((r) => audio.addEventListener('loadedmetadata', () => r(), { once: true }));
         audio.currentTime = at;
+    }
     await audio.play().catch(() => { });
 }
 function toggleMemo() { if (audio.paused)
@@ -218,7 +222,7 @@ async function pcm16k(url) {
     return (await off.startRendering()).getChannelData(0);
 }
 /** in pieces of 30 s, each saved at once – a memo stopped half-way goes on from there */
-async function writeDown(block, host, again = false) {
+async function writeDown(block, host, again = false, choose) {
     if (jobs.has(block.id))
         return;
     const d = (block.data ??= {});
@@ -231,7 +235,10 @@ async function writeDown(block, host, again = false) {
     jobs.set(block.id, job);
     changed();
     try {
-        const { model, lang } = txSettings(host.ctx);
+        const { model } = txSettings(host.ctx);
+        // always say which language: left to itself, the model tends to answer in English (it translates)
+        const lang = choose ?? (d.lang === 'English' ? 'en' : d.lang === 'German' ? 'de' : txSettings(host.ctx).lang === 'en' ? 'en' : 'de');
+        d.lang = lang === 'en' ? 'English' : 'German';
         const run = await loadAsr(model, (s) => { job.note = s; changed(); });
         job.note = 'Writing it down';
         changed();
@@ -240,7 +247,7 @@ async function writeDown(block, host, again = false) {
         d.tx ??= [];
         for (let i = d.txNext ?? 0; i < n; i++) {
             const piece = pcm.subarray(i * step, Math.min(pcm.length, (i + 1) * step));
-            const r = await run(piece, { task: 'transcribe', ...(lang === 'de' ? { language: 'german' } : lang === 'en' ? { language: 'english' } : {}) });
+            const r = await run(piece, { task: 'transcribe', language: lang === 'en' ? 'english' : 'german' });
             const text = (r.text ?? '').trim();
             if (text)
                 d.tx.push({ t: i * 30, text });
@@ -260,6 +267,15 @@ async function writeDown(block, host, again = false) {
         jobs.delete(block.id);
         changed();
     }
+}
+/** "Write it down": German or English – asked when the settings leave it open (and the memo has none yet) */
+function askLang(at, b, host, again) {
+    const d = (b.data ?? {}), set = txSettings(host.ctx).lang;
+    if (d.lang || set !== 'auto') {
+        void writeDown(b, host, again);
+        return;
+    }
+    menu(at, [{ section: 'Spoken in' }, { label: 'German', run: () => void writeDown(b, host, again, 'de') }, { label: 'English', run: () => void writeDown(b, host, again, 'en') }]);
 }
 // ---------- the block ----------
 export function memoBlock(b, host, readonly = false) {
@@ -315,16 +331,40 @@ export function memoBlock(b, host, readonly = false) {
                 ...(text ? [
                     { label: 'Copy text', icon: menuIcon('clipboard'), run: () => { void navigator.clipboard.writeText(text).then(() => toast('Copied')); } },
                     ...(host.insertAfter && !readonly ? [{ label: 'Turn into page text', icon: menuIcon('align-left'), run: () => host.insertAfter((d.tx ?? []).map((x) => ({ id: crypto.randomUUID().replace(/-/g, '').slice(0, 20), type: 'paragraph', text: x.text }))) }] : []),
-                    ...(!readonly ? [{ label: 'Write it down again', icon: menuIcon('refresh'), run: () => void writeDown(b, host, true) }] : []),
+                    ...(!readonly ? [{ label: 'Write it down again in German', icon: menuIcon('refresh'), run: () => void writeDown(b, host, true, 'de') }, { label: 'Write it down again in English', icon: menuIcon('refresh'), run: () => void writeDown(b, host, true, 'en') }] : []),
                 ] : []),
                 { label: 'Download audio', icon: menuIcon('download'), run: async () => { const a = h('a', { href: await host.ctx.assetUrl(b.src ?? ''), download: (b.src ?? '').split('/').pop() ?? 'memo.m4a' }); document.body.appendChild(a); a.click(); a.remove(); } },
                 ...(host.remove && !readonly ? ['sep', { label: 'Delete', icon: menuIcon('trash'), danger: true, run: () => { if (playing?.block === b)
                             stopMemo(); host.remove(); } }] : []),
             ]);
         });
-        const seek = h('div', { class: 'memo-seek' }, h('i'));
-        const paint = () => { const dd = (mine && audio.duration) || d.dur || 0; seek.firstChild.style.width = `${mine && dd ? (audio.currentTime / dd) * 100 : 0}%`; };
-        seek.addEventListener('click', (e) => { const r = seek.getBoundingClientRect(), x = (e.clientX - r.left) / r.width; void playMemo(b, host, x * (audio.duration || d.dur || 0)); });
+        // the seek bar: current time · track with its knob (drag or tap) · length
+        const fill = h('i'), knob = h('b'), cur = h('span', { class: 'memo-st' }), total = h('span', { class: 'memo-st' });
+        const track = h('div', { class: 'memo-track' }, fill, knob);
+        const seek = h('div', { class: 'memo-seekrow' }, cur, track, total);
+        const len = () => (mine && Number.isFinite(audio.duration) && audio.duration) || d.dur || 0;
+        let drag = null;
+        const show = (f) => { const pc = `${Math.max(0, Math.min(1, f)) * 100}%`; fill.style.width = pc; knob.style.left = pc; cur.textContent = fmt(f * len()); };
+        const paint = () => { total.textContent = fmt(len()); if (drag == null)
+            show(mine && len() ? audio.currentTime / len() : 0); };
+        const at = (e) => { const r = track.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); };
+        seek.addEventListener('pointerdown', (e) => { if (e.button)
+            return; e.preventDefault(); seek.setPointerCapture(e.pointerId); drag = at(e); seek.classList.add('drag'); show(drag); });
+        seek.addEventListener('pointermove', (e) => { if (drag == null)
+            return; drag = at(e); show(drag); });
+        const end = () => {
+            if (drag == null)
+                return;
+            const f = drag;
+            drag = null;
+            seek.classList.remove('drag');
+            if (mine)
+                audio.currentTime = f * len();
+            else
+                void playMemo(b, host, f * len());
+        };
+        seek.addEventListener('pointerup', end);
+        seek.addEventListener('pointercancel', () => { drag = null; seek.classList.remove('drag'); paint(); });
         document.addEventListener('nook-memo-time', function t() { if (!seek.isConnected) {
             document.removeEventListener('nook-memo-time', t);
             return;
@@ -344,7 +384,7 @@ export function memoBlock(b, host, readonly = false) {
         }
         if (TX_ENABLED && !job && !d.txDone && !readonly) {
             const partly = !!d.tx?.length;
-            box.append(h('div', { class: 'memo-wd' }, h('button', { class: 'memo-btn', onclick: () => void writeDown(b, host) }, iconSvg('pen', 14), partly ? 'Go on writing it down' : 'Write it down'), phone() && (d.dur ?? 0) > 120 ? h('span', { class: 'memo-hint' }, 'quicker on a computer') : null));
+            box.append(h('div', { class: 'memo-wd' }, h('button', { class: 'memo-btn', onclick: (e) => askLang(e.currentTarget, b, host, false) }, iconSvg('pen', 14), partly ? 'Go on writing it down' : 'Write it down'), phone() && (d.dur ?? 0) > 120 ? h('span', { class: 'memo-hint' }, 'quicker on a computer') : null));
         }
     };
     document.addEventListener('nook-memo', draw);
