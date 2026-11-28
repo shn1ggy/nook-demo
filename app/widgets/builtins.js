@@ -774,12 +774,19 @@ registerWidget({
 // ── Page preview (a block: pages on the left, the chosen one on the right) ──
 /** the preview whose list had the keyboard (focus comes back after a redraw) */
 let pvFocus = null;
+/** a double click on an item opens it (the first click already redrew the list, so it is counted here) */
+let pvLastClick = { id: '', at: 0 };
 let mountPreview = null;
 /** the editor registers how to draw a page read-only (avoids a circular import) */
 export function setPreviewRenderer(fn) { mountPreview = fn; }
 registerWidget({
     id: 'preview', name: 'Preview', icon: 'columns', description: 'Pages and PDFs on the left, the chosen one on the right', block: true, bare: true,
-    defaults: () => ({ pages: [], active: 0, split: 220, fix: 'left' }),
+    defaults: () => ({ pages: [], active: 0, split: 220, fix: 'left', height: 'auto', heightPx: 520, edit: false }),
+    settings: [
+        { key: 'height', label: 'Height', type: 'select', options: [['auto', 'As tall as the list'], ['50', 'Half the window'], ['70', '70 % of the window'], ['90', '90 % of the window'], ['px', 'In pixels']] },
+        { key: 'heightPx', label: 'Pixels', type: 'number', show: (d) => d.height === 'px' },
+        { key: 'edit', label: 'Edit pages in the preview', type: 'toggle' },
+    ],
     render(c) {
         const app = c._app;
         // the list holds pages (their id) and PDFs (their path in the workspace, always with a "/")
@@ -821,12 +828,38 @@ registerWidget({
             }
         };
         const cur = Math.min(Math.max(0, c.data.active ?? 0), Math.max(0, ids.length - 1));
+        /** "+ Page": a page of the workspace – or a new one, a subpage of the page holding this preview */
+        const pickOrCreate = (at, pick) => c._pickPage(at, pick, async (title) => {
+            let owner;
+            const walk = (bs, pid) => { for (const b of bs) {
+                if (b.type === 'widget' && b.data === c.data)
+                    owner = pid;
+                if (b.children)
+                    walk(b.children, pid);
+            } };
+            for (const pg of app.ws.pages.values())
+                walk(pg.blocks, pg.id);
+            const pg = await app.ws.createPage(title || 'Untitled', owner);
+            app.refreshSidebar?.();
+            return pg.id;
+        });
         const left = c.h('div', { class: 'pv-list' });
+        const clearLine = () => left.querySelectorAll('.pv-before,.pv-after').forEach((x) => x.classList.remove('pv-before', 'pv-after'));
         const select = (i) => { c.set({ active: i }); pvFocus = c.data; c.redraw(); };
         ids.forEach((id, i) => {
             const file = isFile(id);
             const p = file ? { id, title: fileName(id), icon: 'i:file-text' } : c.page(id);
-            const el = c.h('button', { class: 'pagelink pv-item' + (i === cur ? ' on' : ''), tabindex: i === cur ? '0' : '-1', onclick: () => select(i) }, c.h('span', { class: 'pv-ico' }, p.icon && !p.icon.startsWith('i:') ? p.icon : c.icon(p.icon?.startsWith('i:') ? p.icon.slice(2).split(':')[0] : 'file', 16)), c.h('span', { class: 'pl-title' }, p.title));
+            // a click shows it on the right; a double click opens it (the page in full, a PDF in a new tab)
+            const open = () => (file ? openFile(id) : c.openPage(id));
+            const click = () => {
+                const now = Date.now(), twice = pvLastClick.id === id && now - pvLastClick.at < 450;
+                pvLastClick = { id: twice ? '' : id, at: now };
+                if (twice)
+                    open();
+                else if (i !== cur)
+                    select(i);
+            };
+            const el = c.h('button', { class: 'pagelink pv-item' + (i === cur ? ' on' : ''), tabindex: i === cur ? '0' : '-1', onclick: click }, c.h('span', { class: 'pv-ico' }, p.icon && !p.icon.startsWith('i:') ? p.icon : c.icon(p.icon?.startsWith('i:') ? p.icon.slice(2).split(':')[0] : 'file', 16)), c.h('span', { class: 'pl-title' }, p.title));
             // ↑ ↓ (Home / End) walk through the list
             el.addEventListener('keydown', (e) => {
                 const to = e.key === 'ArrowDown' ? i + 1 : e.key === 'ArrowUp' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? ids.length - 1 : -1;
@@ -841,16 +874,7 @@ registerWidget({
                 // drag to reorder (or out, like any page)
                 el.draggable = true;
                 el.addEventListener('dragstart', (e) => { e.stopPropagation(); e.dataTransfer.setData('text/x-nook-page', id); e.dataTransfer.setData('text/x-nook-pv', id); e.dataTransfer.effectAllowed = 'move'; requestAnimationFrame(() => el.classList.add('dragging')); });
-                el.addEventListener('dragend', () => { el.classList.remove('dragging'); left.querySelectorAll('.pv-before,.pv-after').forEach((x) => x.classList.remove('pv-before', 'pv-after')); });
-                el.addEventListener('dragover', (e) => {
-                    if (!e.dataTransfer?.types.includes('text/x-nook-page') && !e.dataTransfer?.types.includes('text/x-nook-block'))
-                        return;
-                    const r = el.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2;
-                    left.querySelectorAll('.pv-before,.pv-after').forEach((x) => x !== el && x.classList.remove('pv-before', 'pv-after'));
-                    el.classList.toggle('pv-after', after);
-                    el.classList.toggle('pv-before', !after);
-                });
-                el.addEventListener('dragleave', () => el.classList.remove('pv-before', 'pv-after'));
+                el.addEventListener('dragend', () => { el.classList.remove('dragging'); clearLine(); });
                 el.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -877,10 +901,25 @@ registerWidget({
         if (!c.readonly) {
             const T = 'text/x-nook-page', B = 'text/x-nook-block';
             const ok = (e) => !!e.dataTransfer && (e.dataTransfer.types.includes(T) || e.dataTransfer.types.includes(B) || e.dataTransfer.types.includes('Files'));
-            left.addEventListener('dragover', (e) => { if (!ok(e))
-                return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move'; left.classList.add('pv-drop'); }, true);
-            left.addEventListener('dragleave', (e) => { if (!left.contains(e.relatedTarget))
-                left.classList.remove('pv-drop'); });
+            left.addEventListener('dragover', (e) => {
+                if (!ok(e))
+                    return;
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = 'move';
+                left.classList.add('pv-drop');
+                // the line where it will go: before or after the item under the pointer (as everywhere in Nook)
+                clearLine();
+                const over = e.target.closest('.pv-item');
+                if (over && !e.dataTransfer.types.includes('Files')) {
+                    const r = over.getBoundingClientRect();
+                    over.classList.add(e.clientY > r.top + r.height / 2 ? 'pv-after' : 'pv-before');
+                }
+            }, true);
+            left.addEventListener('dragleave', (e) => { if (!left.contains(e.relatedTarget)) {
+                left.classList.remove('pv-drop');
+                clearLine();
+            } });
             left.addEventListener('drop', async (e) => {
                 if (!ok(e))
                     return;
@@ -912,7 +951,7 @@ registerWidget({
                     return;
                 // where in the list: before / after the item under the pointer
                 const over = e.target.closest('.pv-item');
-                left.querySelectorAll('.pv-before,.pv-after').forEach((x) => x.classList.remove('pv-before', 'pv-after'));
+                clearLine();
                 let at = ids.length;
                 if (over) {
                     const k = [...left.querySelectorAll('.pv-item')].indexOf(over);
@@ -959,7 +998,7 @@ registerWidget({
                 document.body.appendChild(input);
                 input.click();
             };
-            const pickPage = (at) => c._pickPage(at, (id) => { if (!ids.includes(id)) {
+            const pickPage = (at) => pickOrCreate(at, (id) => { if (!ids.includes(id)) {
                 c.set({ pages: [...ids, id], active: ids.length });
                 c.redraw();
             } });
@@ -979,7 +1018,7 @@ registerWidget({
                 document.body.appendChild(input);
                 input.click();
             };
-            return c.h('div', { class: 'pvm' }, c.h('div', { class: 'pvm-head' }, c.icon('columns', 14), 'Preview'), rows.length ? rows : c.h('div', { class: 'pvm-empty' }, 'No pages or PDFs yet'), c.readonly ? null : c.h('div', { class: 'pvm-adds' }, c.h('button', { class: 'set-btn', onclick: (e) => c._pickPage(e.currentTarget, (id) => { if (!ids.includes(id)) {
+            return c.h('div', { class: 'pvm' }, c.h('div', { class: 'pvm-head' }, c.icon('columns', 14), 'Preview'), rows.length ? rows : c.h('div', { class: 'pvm-empty' }, 'No pages or PDFs yet'), c.readonly ? null : c.h('div', { class: 'pvm-adds' }, c.h('button', { class: 'set-btn', onclick: (e) => pickOrCreate(e.currentTarget, (id) => { if (!ids.includes(id)) {
                     c.set({ pages: [...ids, id], active: ids.length });
                     c.redraw();
                 } }) }, c.icon('plus-bold', 12), 'Page'), c.h('button', { class: 'set-btn', onclick: pickPdfM }, c.icon('plus-bold', 12), 'PDF')));
@@ -1009,7 +1048,7 @@ registerWidget({
             const body = c.h('div', { class: 'pv-body' });
             right.append(body);
             if (mountPreview)
-                mountPreview(body, p.blocks, app);
+                mountPreview(body, p, app, !c.readonly && !!c.data.edit);
         }
         else
             right.append(c.h('div', { class: 'pv-empty' }, 'Add pages or PDFs on the left to preview them here.'));
@@ -1038,16 +1077,33 @@ registerWidget({
             sep.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                // as for columns: each side flexible or fixed at its width now (one side at a time can be fixed)
                 const r = grid.getBoundingClientRect(), lw = Math.round(left.getBoundingClientRect().width), rw = Math.round(right.getBoundingClientRect().width);
+                const flexible = () => { c.set({ fix: 'none', split: Math.round((lw / r.width) * 1000) }); c.redraw(); };
+                const side = (label, icon, key, px) => ({
+                    label, icon: c.icon(icon, 16),
+                    seg: { options: [['flex', 'Flexible'], ['fixed', `${fix === key ? w : px} px`]], value: fix === key ? 'fixed' : 'flex',
+                        pick: (v) => { if (v === 'fixed') {
+                            c.set({ fix: key, split: px });
+                            c.redraw();
+                        }
+                        else if (fix === key)
+                            flexible(); } },
+                });
                 c._menu(e, [
                     { section: 'Width' },
-                    { label: 'Fixed left side', hint: `${lw} px${fix === 'left' ? '  ✓' : ''}`, run: () => { c.set({ fix: 'left', split: lw }); c.redraw(); } },
-                    { label: 'Fixed right side', hint: `${rw} px${fix === 'right' ? '  ✓' : ''}`, run: () => { c.set({ fix: 'right', split: rw }); c.redraw(); } },
-                    { label: 'Both flexible', hint: fix === 'none' ? '✓' : undefined, run: () => { c.set({ fix: 'none', split: Math.round((lw / r.width) * 1000) }); c.redraw(); } },
-                ]);
+                    side('List', 'align-left', 'left', lw),
+                    side('Preview', 'align-right', 'right', rw),
+                    ...(fix !== 'none' ? [{ label: 'Make both flexible', icon: c.icon('columns', 16), run: flexible }] : []),
+                ], { title: 'Preview' });
             });
         }
         grid.append(left, sep, right);
+        const hgt = String(c.data.height ?? 'auto');
+        if (hgt !== 'auto') {
+            grid.style.height = hgt === 'px' ? `${Math.max(200, Number(c.data.heightPx) || 520)}px` : `${Number(hgt)}vh`;
+            grid.classList.add('fixed-h');
+        }
         if (!c.phone)
             apply(fix === 'none' ? (Number(c.data.split) > 100 && Number(c.data.split) < 900 ? Number(c.data.split) : 250) : w);
         return grid;

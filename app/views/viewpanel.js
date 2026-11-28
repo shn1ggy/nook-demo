@@ -457,10 +457,31 @@ export function openViewSettings(env, anchor, selectTab, start) {
                         rows.push({ el: h('div', { class: 'prop-row hidden-prop' }, h('span', { class: 'prop-grip' }), typeIcon(p.type, p.icon), h('span', { class: 'prop-row-name' }, p.name), h('button', { class: 'icon-btn', 'aria-label': `Show ${p.name}`, title: 'Show', onclick: () => setShown([...shown, p.name]) }, svgIcon(ICONS.eyeOff, 16))) });
                     }
                 }
+                // the same properties (shown, hidden and their order) as another view of this database – any type
+                const others = db.views.filter((v) => v !== view);
+                if (others.length && !q)
+                    rows.push('sep', { label: 'Copy from another view', icon: menuIcon('copy'), go: () => copyPropsPage(others) });
                 return rows;
             },
         };
     };
+    /** "Copy from another view": its visible properties and their order; between tables also the column widths */
+    const copyPropsPage = (others) => ({
+        title: 'Copy from',
+        rows: () => others.map((o) => {
+            const n = (o.type === 'table' ? db.tableProperties(o) : o.props ?? props().map((p) => p.name)).filter((x) => db.prop(x)).length;
+            return {
+                label: o.name, icon: o.icon ? renderIcon(o.icon, 16) : menuIcon(VIEW_TYPES.find((t) => t.type === o.type)?.icon ?? 'table'), hint: `${n} shown`,
+                pick: () => {
+                    view.props = [...(o.props ?? props().map((p) => p.name))];
+                    if (o.type === 'table' && view.type === 'table' && o.widths)
+                        view.widths = { ...o.widths };
+                    save();
+                    toast(`Properties copied from ${o.name}`);
+                }, back: true,
+            };
+        }),
+    });
     /** drag rows of a rule list by their grip to reorder (sorts, filters) */
     const dragRows = (list, nav) => {
         let from = -1;
@@ -1100,10 +1121,14 @@ export function openViewSettings(env, anchor, selectTab, start) {
                     dbRows.push({ el: box }, 'sep');
                 }
                 if (!db.schema.files && props().some((p) => p.type === 'date'))
-                    dbRows.push({ label: 'Repeating entries', icon: menuIcon('repeat'), toggle: db.schema.repeat !== false, onToggle: () => { if (db.schema.repeat === false)
-                            delete db.schema.repeat;
-                        else
-                            db.schema.repeat = false; env.ctx.ws.boundary(); env.ctx.ws.saveSchema(db).then(() => env.ctx.ws.emit()); } });
+                    dbRows.push({ label: 'Repeating entries', icon: menuIcon('repeat'), toggle: db.schema.repeat !== false, onToggle: () => {
+                            if (db.schema.repeat === false)
+                                delete db.schema.repeat;
+                            else
+                                db.schema.repeat = false;
+                            env.ctx.ws.boundary();
+                            env.ctx.ws.saveSchema(db).then(() => env.ctx.ws.emit());
+                        } });
                 // sub-items (as in Notion): entries nest under other entries; shown as a tree in tables
                 if (!db.schema.files)
                     dbRows.push({ label: 'Sub-items', icon: menuIcon('list'), toggle: !!db.schema.subItems, onToggle: async () => {
@@ -1174,10 +1199,13 @@ export function openViewSettings(env, anchor, selectTab, start) {
                                     delete view.simpleSearch;
                                 else
                                     view.simpleSearch = true; save(); } },
-                            { label: 'Settings icon', toggle: view.simpleSettings !== false, disabled: !view.simplified, onToggle: () => { if (view.simpleSettings === false)
-                                    delete view.simpleSettings;
-                                else
-                                    view.simpleSettings = false; save(); } },
+                            { label: 'Settings icon', toggle: view.simpleSettings !== false, disabled: !view.simplified, onToggle: () => {
+                                    if (view.simpleSettings === false)
+                                        delete view.simpleSettings;
+                                    else
+                                        view.simpleSettings = false;
+                                    save();
+                                } },
                         ] }) });
             rows.push('sep', { label: 'Rename view', icon: menuIcon('pencil'), run: () => prompt(anchor, 'View name', view.name, (name) => { if (name.trim()) {
                     view.name = name.trim();

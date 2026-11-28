@@ -1419,9 +1419,9 @@ export class App {
         else {
             entries.push({ section: 'No quick buttons yet – hold a button, then “Add to quick buttons”' });
         }
-        // add to the page you are on – or, with no page open, to the Inbox (Settings → Voice memos)
+        // add to the page you are on – or, with no page open, to the pages chosen in Settings → Media & Memos
+        // (one heading when both go to the same page)
         const here = !this.libraryOn && this.route?.kind === 'page' ? this.ws.pages.get(this.route.id) : undefined;
-        // with no page open: the pages chosen in Settings → Media & Memos (one heading when both go to the same page)
         const target = (k) => { const id = this.ws.settings[k]; return (id && this.ws.pages.get(id)?.title) || 'Inbox'; };
         const memoTo = here?.title || target('memoInbox'), mediaTo = here?.title || target('mediaInbox');
         entries.push('sep', ...(memoTo === mediaTo ? [{ section: `Add to ${memoTo}` }] : []), { label: 'Voice memo', icon: menuIcon('mic'), hint: memoTo === mediaTo ? undefined : memoTo, run: () => void this.addMemo(here) }, { label: 'Photo or video', icon: menuIcon('image'), hint: memoTo === mediaTo ? undefined : mediaTo, run: () => this.addMedia(here) });
@@ -1434,7 +1434,7 @@ export class App {
     /** where ＋ puts a voice memo or photos with no page open: the page chosen in settings, else "Inbox" (made when needed) */
     async inbox(kind) {
         const s = this.ws.settings, id = s[kind];
-        const p = (id && this.ws.pages.get(id)) || [...this.ws.pages.values()].find((x) => !x.parent && x.title === 'Inbox');
+        const p = (id ? this.ws.pages.get(id) : undefined) || [...this.ws.pages.values()].find((x) => !x.parent && x.title === 'Inbox');
         return p ?? this.ws.createPage('Inbox');
     }
     async addMemo(here) {
@@ -2053,8 +2053,10 @@ export class App {
             let timer = 0, sx = 0, sy = 0;
             const stop = () => { clearTimeout(timer); timer = 0; b.classList.remove('pressing'); };
             b.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; stop(); b.classList.add('pressing'); timer = window.setTimeout(() => { timer = 0; this.bellTap = Date.now(); b.classList.remove('pressing'); b.classList.remove('fired'); void b.offsetWidth; b.classList.add('fired'); setTimeout(() => b.classList.remove('fired'), 600); navigator.vibrate?.(10); closeSheets(); closePop(); this.notes.ownForm(); }, 450); });
-            b.addEventListener('pointermove', (e) => { if (Math.hypot(e.clientX - sx, e.clientY - sy) > 10)
-                stop(); });
+            b.addEventListener('pointermove', (e) => {
+                if (Math.hypot(e.clientX - sx, e.clientY - sy) > 10)
+                    stop();
+            });
             b.addEventListener('pointerup', stop);
             b.addEventListener('pointercancel', stop);
             b.addEventListener('pointerleave', stop);

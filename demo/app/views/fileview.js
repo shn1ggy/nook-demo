@@ -25,11 +25,15 @@ export function fileCrumb(ctx, db) {
     const cur = folderOf(db);
     const parts = cur ? cur.split('/') : [];
     const up = parts.length ? parts.slice(0, -1).join('/') : null;
-    const el = h('div', { class: 'fdb-crumb' }, h('button', { class: 'icon-btn fdb-up', 'aria-label': 'Up one folder', title: 'Up one folder', disabled: up == null, onclick: () => { if (up != null)
-            go(ctx, db, up); } }, iconSvg('arrow-up', 14)));
+    const el = h('div', { class: 'fdb-crumb' }, h('button', { class: 'icon-btn fdb-up', 'aria-label': 'Up one folder', title: 'Up one folder', disabled: up == null, onclick: () => {
+            if (up != null)
+                go(ctx, db, up);
+        } }, iconSvg('arrow-up', 14)));
     const add = (label, rel, last) => {
-        const b = h('button', { class: 'fdb-crumb-b' + (last ? ' cur' : ''), onclick: () => { if (!last)
-                go(ctx, db, rel); } }, rel === '' ? iconSvg('folder', 14) : null, label);
+        const b = h('button', { class: 'fdb-crumb-b' + (last ? ' cur' : ''), onclick: () => {
+                if (!last)
+                    go(ctx, db, rel);
+            } }, rel === '' ? iconSvg('folder', 14) : null, label);
         if (!last)
             dropTarget(ctx, db, b, rel);
         el.append(b);
@@ -40,13 +44,19 @@ export function fileCrumb(ctx, db) {
 }
 export function pickUpload(ctx, db) {
     const input = h('input', { type: 'file', multiple: true, style: { display: 'none' } });
-    input.addEventListener('change', () => { const fs = [...(input.files ?? [])]; input.remove(); if (fs.length)
-        void upload(ctx, db, fs); });
+    input.addEventListener('change', () => {
+        const fs = [...(input.files ?? [])];
+        input.remove();
+        if (fs.length)
+            void upload(ctx, db, fs);
+    });
     document.body.append(input);
     input.click();
 }
 async function upload(ctx, db, files, folder) {
-    const t = files.length > 1 ? toast(`Adding ${files.length} files…`, 60000) : null;
+    // the next message replaces this one
+    if (files.length > 1)
+        toast(`Adding ${files.length} files…`, 60000);
     try {
         const n = await uploadFiles(ctx.ws, db, files, folder);
         ctx.ws.emit();
@@ -55,9 +65,6 @@ async function upload(ctx, db, files, folder) {
     }
     catch (e) {
         toast(`Could not add the files: ${e.message}`);
-    }
-    finally {
-        t?.close?.();
     }
 }
 export function askNewFolder(ctx, db, at) {
@@ -85,9 +92,15 @@ const hasRows = (e) => !!e.dataTransfer?.types.includes('text/x-nook-rows');
 /** a folder (row, card, path part) that takes files dropped from the computer, and entries dragged onto it (moved there) */
 export function dropTarget(ctx, db, el, rel) {
     const on = { capture: true };
-    el.addEventListener('dragover', (e) => { if (!hasFiles(e) && !hasRows(e))
-        return; e.preventDefault(); e.stopImmediatePropagation(); if (e.dataTransfer)
-        e.dataTransfer.dropEffect = 'move'; el.classList.add('fdb-drop-into'); }, on);
+    el.addEventListener('dragover', (e) => {
+        if (!hasFiles(e) && !hasRows(e))
+            return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (e.dataTransfer)
+            e.dataTransfer.dropEffect = 'move';
+        el.classList.add('fdb-drop-into');
+    }, on);
     el.addEventListener('dragleave', () => el.classList.remove('fdb-drop-into'), on);
     el.addEventListener('drop', async (e) => {
         el.classList.remove('fdb-drop-into');
@@ -140,10 +153,17 @@ export async function moveTo(ctx, db, rels, folder) {
 /** the whole view takes files dropped from the computer: into the folder it shows */
 export function viewDrop(ctx, db, root) {
     // capture: the page around the view must not take the files as well (they'd land in the page's folder)
-    root.addEventListener('dragover', (e) => { if (!hasFiles(e))
-        return; e.preventDefault(); e.stopPropagation(); root.classList.add('fdb-drop'); });
-    root.addEventListener('dragleave', (e) => { if (!root.contains(e.relatedTarget))
-        root.classList.remove('fdb-drop'); });
+    root.addEventListener('dragover', (e) => {
+        if (!hasFiles(e))
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+        root.classList.add('fdb-drop');
+    });
+    root.addEventListener('dragleave', (e) => {
+        if (!root.contains(e.relatedTarget))
+            root.classList.remove('fdb-drop');
+    });
     root.addEventListener('drop', (e) => {
         root.classList.remove('fdb-drop');
         if (!hasFiles(e))
@@ -158,7 +178,7 @@ export function viewDrop(ctx, db, root) {
 /** opening an entry: a folder opens in the view, pictures, videos, PDFs and sounds in the viewer; null = the info window */
 export function openFileEntry(ctx, db, row) {
     if (row.isDir) {
-        go(ctx, db, row.rel);
+        go(ctx, db, row.rel ?? '');
         return true;
     }
     if (!row.file || !mediaType(row.file))
@@ -169,7 +189,7 @@ export function openFileEntry(ctx, db, row) {
     const shown = listed ? nestRows(db, listed.filter((r) => db.rows.includes(r)), (id, ghost) => subOpen(`${db.key}:${id}`, ghost)).filter((x) => !x.ghost && !x.add).map((x) => x.row) : [];
     const pool = shown.includes(row) ? shown : listed ? [row] : db.rows.filter((r) => parentOf(r) === parentOf(row)).sort((a, b) => (a.rel ?? '').localeCompare(b.rel ?? ''));
     const here = pool.filter((r) => !r.isDir && r.file && mediaType(r.file));
-    openViewer(ctx, here.map((r) => ({ path: r.file, open: () => ctx.openRow(db, r, { info: true }), entryName: baseOf(r.rel), place: [db.schema.name, ...(parentOf(r) ? parentOf(r).split('/') : [])].join(' › ') })), Math.max(0, here.indexOf(row)));
+    openViewer(ctx, here.map((r) => ({ path: r.file, open: () => ctx.openRow(db, r, { info: true }), entryName: baseOf(r.rel ?? ''), place: [db.schema.name, ...(parentOf(r) ? parentOf(r).split('/') : [])].join(' › ') })), Math.max(0, here.indexOf(row)));
     return true;
 }
 /** in an entry's window: what to do with the file */
@@ -215,8 +235,11 @@ export function fileRowMenu(ctx, db, row, many, at, after) {
         else
             renameByPrompt(ctx, db, row, at);
     };
-    const share = async () => { const v = await import('../ui/viewer.js'); for (const r of list.filter((x) => !x.isDir))
-        await v.shareMedia(ctx, r.file); };
+    const share = async () => {
+        const v = await import('../ui/viewer.js');
+        for (const r of list.filter((x) => !x.isDir))
+            await v.shareMedia(ctx, r.file);
+    };
     menu(at, [
         { section: one ? baseOf(row.rel ?? '') : `${list.length} items` },
         ...(one ? [
@@ -227,8 +250,10 @@ export function fileRowMenu(ctx, db, row, many, at, after) {
         { label: 'Move to folder…', icon: menuIcon('folder'), run: () => moveToFolderMenu(ctx, db, list, at) },
         ...(list.some((r) => !r.isDir) ? [phone()
                 ? { label: 'Share or save', icon: menuIcon('upload'), run: () => void share() }
-                : { label: one ? 'Download' : 'Download all', icon: menuIcon('download'), run: () => void import('../ui/viewer.js').then(async (m) => { for (const r of list.filter((x) => !x.isDir))
-                        await m.downloadMedia(ctx, r.file); }) }] : []),
+                : { label: one ? 'Download' : 'Download all', icon: menuIcon('download'), run: () => void import('../ui/viewer.js').then(async (m) => {
+                        for (const r of list.filter((x) => !x.isDir))
+                            await m.downloadMedia(ctx, r.file);
+                    }) }] : []),
         ...(one && !phone() && ctx.ws.storage.reveal ? [{ label: remote ? 'Show in Dropbox' : 'Show in folder', icon: menuIcon('folder'), run: () => void ctx.ws.storage.reveal(row.file).catch((e) => toast(e.message)) }] : []),
         ...(one && document.documentElement.classList.contains('touch') ? [{ label: 'Select', icon: menuIcon('check-square'), run: () => void import('./rowselect.js').then((m) => m.startSelectMode(row.id)) }] : []),
         'sep',
@@ -262,8 +287,12 @@ export function addMenu(ctx, db, at) {
         const input = h('input', { type: 'file', multiple: !o.capture, accept: o.accept, style: { display: 'none' } });
         if (o.capture)
             input.setAttribute('capture', 'environment');
-        input.addEventListener('change', () => { const fs = [...(input.files ?? [])]; input.remove(); if (fs.length)
-            void upload(ctx, db, fs); });
+        input.addEventListener('change', () => {
+            const fs = [...(input.files ?? [])];
+            input.remove();
+            if (fs.length)
+                void upload(ctx, db, fs);
+        });
         document.body.append(input);
         input.click();
     };
@@ -296,8 +325,10 @@ export function renderFilePhone(env, rows) {
         // hold: the menu (as a right-click)
         let t, sx = 0, sy = 0;
         el.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; t = setTimeout(() => { el.classList.add('held'); el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })); setTimeout(() => el.classList.remove('held'), 300); }, 480); }, { passive: true });
-        el.addEventListener('touchmove', (e) => { if (Math.hypot(e.touches[0].clientX - sx, e.touches[0].clientY - sy) > 8)
-            clearTimeout(t); }, { passive: true });
+        el.addEventListener('touchmove', (e) => {
+            if (Math.hypot(e.touches[0].clientX - sx, e.touches[0].clientY - sy) > 8)
+                clearTimeout(t);
+        }, { passive: true });
         el.addEventListener('touchend', () => clearTimeout(t));
         if (r.isDir)
             dropTarget(ctx, db, el, r.rel);

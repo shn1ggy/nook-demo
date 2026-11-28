@@ -98,8 +98,10 @@ export function startKbDebug() {
     on(window.visualViewport ?? undefined, 'resize', () => `vv resize h${n(window.visualViewport.height)} top${n(window.visualViewport.offsetTop)}`);
     on(window.visualViewport ?? undefined, 'scroll', () => `vv scroll top${n(window.visualViewport.offsetTop)}`);
     // the window itself only (every scroll of the page went through here and filled the log)
-    window.addEventListener('scroll', (e) => { if (e.target === document)
-        kbLog(`window scroll Y${n(scrollY)}`); }, true);
+    window.addEventListener('scroll', (e) => {
+        if (e.target === document)
+            kbLog(`window scroll Y${n(scrollY)}`);
+    }, true);
     on(document, 'focusin', (e) => `focusin ${e.target.tagName?.toLowerCase()}.${String(e.target.className).split(' ')[0]}`);
     on(document, 'focusout', () => 'focusout');
     on(document, 'touchend', () => 'touchend');

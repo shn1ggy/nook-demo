@@ -1,7 +1,7 @@
 import { BLOCK_BG, COLORS, stepsOf, asDate, h, svgIcon, ICONS, getTimeFormat, isPhone } from '../util.js';
 import { iconSvg, renderIcon } from '../ui/icons.js';
 import { pickIcon } from '../ui/iconpicker.js';
-import { settingIcon, menu, panel, prompt, toast } from '../ui/pop.js';
+import { settingIcon, menu, menuIcon, panel, prompt, toast } from '../ui/pop.js';
 import { dateEditor } from '../views/cells.js';
 import { openPicker, pageItems } from '../ui/pickers.js';
 import { registerWidget, unregisterCustom, widgetDef } from './api.js';
@@ -90,8 +90,8 @@ export function mountWidget(b, app, save, readonly = false) {
     // for the built-in page preview only (not part of the public API)
     Object.assign(ctx, {
         _app: app,
-        _menu: (e, entries) => menu({ x: e.clientX, y: e.clientY }, entries),
-        _pickPage: (at, pick) => openPicker(at, pageItems(app.ws), pick),
+        _menu: (e, entries, opts) => menu({ x: e.clientX, y: e.clientY }, entries, opts),
+        _pickPage: (at, pick, create) => openPicker(at, pageItems(app.ws), pick, undefined, create ? [{ label: 'New page', icon: menuIcon('file-plus'), create: (q) => void create(q.trim()).then(pick), run: () => void create('').then(pick) }] : []),
     });
     /** the common style settings and the background (block colour) on the card */
     const restyle = () => {

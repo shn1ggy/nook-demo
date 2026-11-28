@@ -498,11 +498,14 @@ export function menu(anchor, entries, opts = {}) {
                 setTimeout(again, 250);
                 const keep = () => { if (inp.isConnected && !inp.value)
                     setTimeout(again, 0); };
-                document.addEventListener('focusin', function f(e) { if (!inp.isConnected) {
-                    document.removeEventListener('focusin', f);
-                    return;
-                } if (e.target !== inp && e.target.isContentEditable)
-                    keep(); });
+                document.addEventListener('focusin', function f(e) {
+                    if (!inp.isConnected) {
+                        document.removeEventListener('focusin', f);
+                        return;
+                    }
+                    if (e.target !== inp && e.target.isContentEditable)
+                        keep();
+                });
             }
         }
         else if (!inp)

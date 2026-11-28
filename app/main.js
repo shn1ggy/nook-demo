@@ -1708,8 +1708,10 @@ async function openDemo(url) {
         const f = e.target;
         if (!f.matches?.('.pset-search-in') || e.relatedTarget || Date.now() - touched < 600)
             return;
-        requestAnimationFrame(() => { if (f.isConnected && !document.activeElement?.matches?.('input, textarea, [contenteditable="true"]'))
-            f.focus({ preventScroll: true }); });
+        requestAnimationFrame(() => {
+            if (f.isConnected && !document.activeElement?.matches?.('input, textarea, [contenteditable="true"]'))
+                f.focus({ preventScroll: true });
+        });
     }, true);
 }
 // phone, new reminder sheet: it stays where it is when the keyboard comes up, and only moves up as far

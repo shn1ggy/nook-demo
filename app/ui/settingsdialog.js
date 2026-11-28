@@ -403,16 +403,24 @@ export function openSettings(app, start) {
                     const r = h('input', { type: 'range', class: 'set-range', min: 80, max: 150, step: 5, value: String(s.zoom ?? 100), 'aria-label': 'Text size' });
                     const val = h('span', { class: 'set-range-val' }, `${s.zoom ?? 100} %`);
                     r.addEventListener('input', () => { val.textContent = `${r.value} %`; });
-                    r.addEventListener('change', () => { const n = Number(r.value); if (n === 100)
-                        delete s.zoom;
-                    else
-                        s.zoom = n; apply(); });
+                    r.addEventListener('change', () => {
+                        const n = Number(r.value);
+                        if (n === 100)
+                            delete s.zoom;
+                        else
+                            s.zoom = n;
+                        apply();
+                    });
                     return h('div', { class: 'set-range-row' }, h('span', { class: 'set-range-a small' }, 'A'), r, h('span', { class: 'set-range-a' }, 'A'), val);
                 })(), keywords: 'zoom size scale bigger smaller ui' } :
-                { title: 'Size', desc: 'Everything in Nook', control: selectControl([80, 90, 100, 110, 125, 140, 150].map((n) => [String(n), `${n} %`]), String(s.zoom ?? 100), (v) => { const n = Number(v); if (n === 100)
-                        delete s.zoom;
-                    else
-                        s.zoom = n; apply(); }, 'Size'), keywords: 'zoom size scale bigger smaller ui' },
+                { title: 'Size', desc: 'Everything in Nook', control: selectControl([80, 90, 100, 110, 125, 140, 150].map((n) => [String(n), `${n} %`]), String(s.zoom ?? 100), (v) => {
+                        const n = Number(v);
+                        if (n === 100)
+                            delete s.zoom;
+                        else
+                            s.zoom = n;
+                        apply();
+                    }, 'Size'), keywords: 'zoom size scale bigger smaller ui' },
             { heading: 'Layout' },
             { title: 'Density', desc: 'Rows, blocks and sidebar', control: segmented([['dense', 'Compact'], ['compact', 'Comfortable']], s.density, (v) => { s.density = v; apply(); }, 'Density'), keywords: 'compact spacing density' },
             { title: 'Page width', desc: 'Pages can choose their own in their ⋯ menu', keywords: 'page width full wide narrow default pixels', control: widthControl(workspaceWidth(s), (value) => { s.defaultPageWidth = value; delete s.pageWidth; void apply(); }) },
@@ -534,9 +542,14 @@ export function openSettings(app, start) {
             const cur = s.fileColors?.[k.key] ?? k.color;
             const ico = h('span', { class: 'fk-set-ico', style: { color: cur } }, iconSvg(k.icon, 17));
             items.push({ title: k.label, desc: 'In databases whose entries are files', icon: ico, keywords: 'file icon colour folder audio video image document',
-                control: colorButton({ value: cur, original: k.color, label: k.label, onInput: (c) => { (s.fileColors ??= {})[k.key] = c; ico.style.color = c; app.applySettings(); }, onDone: () => { if (s.fileColors && s.fileColors[k.key]?.toLowerCase() === k.color.toLowerCase())
-                        delete s.fileColors[k.key]; if (s.fileColors && !Object.keys(s.fileColors).length)
-                        delete s.fileColors; ws.saveSettings(); redraw(); } }) });
+                control: colorButton({ value: cur, original: k.color, label: k.label, onInput: (c) => { (s.fileColors ??= {})[k.key] = c; ico.style.color = c; app.applySettings(); }, onDone: () => {
+                        if (s.fileColors && s.fileColors[k.key]?.toLowerCase() === k.color.toLowerCase())
+                            delete s.fileColors[k.key];
+                        if (s.fileColors && !Object.keys(s.fileColors).length)
+                            delete s.fileColors;
+                        ws.saveSettings();
+                        redraw();
+                    } }) });
         }
         // resets: always the last group of a tab, every button called “Reset”
         items.push({ heading: 'Reset' }, { title: 'All colors', desc: 'Saturation, brightness, shades and contrast back to normal', control: h('button', { class: 'set-btn', disabled: !s.colorSat && !s.colorLight && !s.contrast && !s.colorShade, onclick: () => { delete s.colorSat; delete s.colorLight; delete s.contrast; delete s.colorShade; ws.saveSettings(); app.applySettings(); app.render(); redraw(); } }, 'Reset') }, { title: 'File icons', desc: 'Back to the original colors', control: h('button', { class: 'set-btn', disabled: !s.fileColors, onclick: () => { delete s.fileColors; ws.saveSettings(); app.applySettings(); redraw(); } }, 'Reset'), keywords: 'file icons reset' }, { title: 'Built-in colors', desc: 'Back to the original colors; yours stay', control: h('button', { class: 'set-btn', disabled: !cfg.overrides || !Object.keys(cfg.overrides).length, onclick: () => { delete cfg.overrides; save(); redraw(); } }, 'Reset') });
@@ -710,10 +723,14 @@ export function openSettings(app, start) {
                 { title: 'Missed while away', desc: 'Reminders that came due while Nook was closed are shown from the last …', control: selectControl([['2', '2 hours'], ['24', '24 hours'], ['72', '3 days'], ['168', '1 week']], String(s.remindMissed ?? 24), (v) => { s.remindMissed = Number(v) === 24 ? undefined : Number(v); void ws.saveSettings(); }, 'Missed'), keywords: 'reminder missed away closed' },
                 { title: 'Ping when a reminder goes off', desc: 'A small soft sound', control: switchControl(s.notifySound !== false, (on) => { s.notifySound = on ? undefined : false; void ws.saveSettings(); }, 'Ping'), keywords: 'sound ping reminder notification audio' },
                 { heading: 'Quiet hours' },
-                { title: 'Quiet hours', desc: 'No pop-ups and no ping – reminders are still listed', control: switchControl(!!s.quiet, (on) => { if (on)
-                        s.quiet = { from: '22:00', to: '07:00' };
-                    else
-                        delete s.quiet; void ws.saveSettings(); redrawNotes(); }, 'Quiet hours'), keywords: 'quiet hours night do not disturb silent' },
+                { title: 'Quiet hours', desc: 'No pop-ups and no ping – reminders are still listed', control: switchControl(!!s.quiet, (on) => {
+                        if (on)
+                            s.quiet = { from: '22:00', to: '07:00' };
+                        else
+                            delete s.quiet;
+                        void ws.saveSettings();
+                        redrawNotes();
+                    }, 'Quiet hours'), keywords: 'quiet hours night do not disturb silent' },
                 ...(s.quiet ? [
                     { title: 'From', control: timeInput(s.quiet.from, (v) => { s.quiet.from = v; void ws.saveSettings(); }), keywords: 'quiet hours' },
                     { title: 'Until', control: timeInput(s.quiet.to, (v) => { s.quiet.to = v; void ws.saveSettings(); }), keywords: 'quiet hours' },
@@ -728,23 +745,29 @@ export function openSettings(app, start) {
         { id: 'colors', group: 'Look', label: 'Colors', icon: 'circle-dot', subtitle: 'The colors of options, text, highlights and callouts.', items: colors },
         { id: 'memos', group: 'Content', label: 'Media & Memos', icon: 'mic', subtitle: 'Where photos, videos and voice memos go, and how memos are transcribed – on this device, free.', items: () => [
                 { heading: 'Where things go with no page open' },
-                { title: 'Voice memos', desc: 'From ＋ → Voice memo', control: pickerControl({ value: s.memoInbox ?? '', items: () => [{ value: '', label: 'Inbox' }, ...pageItems(ws)], change: (v) => { if (v)
-                            s.memoInbox = v;
-                        else
-                            delete s.memoInbox; void ws.saveSettings(); }, label: 'Voice memos go to' }), keywords: 'voice memo inbox record page' },
-                { title: 'Photos & videos', desc: 'From ＋ → Photo or video', control: pickerControl({ value: s.mediaInbox ?? '', items: () => [{ value: '', label: 'Inbox' }, ...pageItems(ws)], change: (v) => { if (v)
-                            s.mediaInbox = v;
-                        else
-                            delete s.mediaInbox; void ws.saveSettings(); }, label: 'Photos and videos go to' }), keywords: 'photo video camera inbox page' },
+                { title: 'Voice memos', desc: 'From ＋ → Voice memo', control: pickerControl({ value: s.memoInbox ?? '', items: () => [{ value: '', label: 'Inbox' }, ...pageItems(ws)], change: (v) => {
+                            if (v)
+                                s.memoInbox = v;
+                            else
+                                delete s.memoInbox;
+                            void ws.saveSettings();
+                        }, label: 'Voice memos go to' }), keywords: 'voice memo inbox record page' },
+                { title: 'Photos & videos', desc: 'From ＋ → Photo or video', control: pickerControl({ value: s.mediaInbox ?? '', items: () => [{ value: '', label: 'Inbox' }, ...pageItems(ws)], change: (v) => {
+                            if (v)
+                                s.mediaInbox = v;
+                            else
+                                delete s.mediaInbox;
+                            void ws.saveSettings();
+                        }, label: 'Photos and videos go to' }), keywords: 'photo video camera inbox page' },
                 ...(TX_ENABLED ? [{ heading: 'Transcription' },
-                    { title: 'Languages', desc: 'What is spoken in your memos – the text comes out in that language', control: selectControl([['auto', 'Ask each time'], ['de', 'German'], ['en', 'English']], s.memoLang ?? 'auto', (v) => { if (v === 'auto')
-                            delete s.memoLang;
-                        else
-                            s.memoLang = v; void ws.saveSettings(); }, 'Languages'), keywords: 'transcribe transcript language german english' },
-                    { title: 'Speech model', desc: 'Downloaded once per device, then it works offline', control: selectControl([['auto', 'Small on computers, Base on phones'], ['small', 'Small · about 250 MB'], ['base', 'Base · about 80 MB, less exact']], s.memoModel ?? 'auto', (v) => { if (v === 'auto')
-                            delete s.memoModel;
-                        else
-                            s.memoModel = v; void ws.saveSettings(); }, 'Speech model'), keywords: 'transcribe whisper model speech offline' },] : []),
+                    { title: 'Languages', desc: 'What is spoken in your memos – the text comes out in that language', control: selectControl([['auto', 'Ask each time'], ['de', 'German'], ['en', 'English']], s.memoLang ?? 'auto', (v) => {
+                            if (v === 'auto')
+                                delete s.memoLang;
+                            else
+                                s.memoLang = v;
+                            void ws.saveSettings();
+                        }, 'Languages'), keywords: 'transcribe transcript language german english' },
+                ] : []),
                 { title: 'Recording', value: 'M4A · mono · 48 kbps – about 21 MB per hour', keywords: 'format bitrate quality m4a aac' },
             ] },
         { id: 'widgets', group: 'Content', label: 'Widgets', icon: 'puzzle', summary: () => { const n = customWidgets().length; return n ? String(n) : ''; }, subtitle: 'Small blocks like timers and notes, added with “/”.', items: () => {

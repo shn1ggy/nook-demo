@@ -518,8 +518,12 @@ export function dateEl(v, format, weekday) {
     if (!v)
         return el;
     const t = (x) => { const s = document.createElement('span'); s.className = 'date-t'; s.textContent = x; return s; };
-    const part = (iso) => { const [d, tm] = iso.split('T'); el.append(fmtDate({ start: d }, format, weekday)); if (tm)
-        el.append(' ', t(fmtTime(tm.slice(0, 5)))); };
+    const part = (iso) => {
+        const [d, tm] = iso.split('T');
+        el.append(fmtDate({ start: d }, format, weekday));
+        if (tm)
+            el.append(' ', t(fmtTime(tm.slice(0, 5))));
+    };
     const [d1, t1] = v.start.split('T'), [d2, t2] = (v.end ?? '').split('T');
     if (v.end && v.end !== v.start && d1 === d2 && t1 && t2) {
         el.append(fmtDate({ start: d1 }, format, weekday), ' ', t(`${fmtTime(t1.slice(0, 5))} – ${fmtTime(t2.slice(0, 5))}`));

@@ -22,6 +22,7 @@ import { renderViewBlock, newView } from '../views/view.js';
 import { VIEW_TYPES } from '../views/viewpanel.js';
 import { dbItems, linkItems, pickEntries } from './pickers.js';
 import { serializePage } from '../format/page.js';
+import { mediaMenu, openViewer } from './viewer.js';
 import { tintStyle, tintMenuEntries, buttonEl, buttonSettings, runButton, stepsOf, captureCfg, captureStart, captureSettings, runCapture } from './buttons.js';
 const TEXT_TYPES = new Set(['paragraph', 'heading', 'todo', 'bullet', 'numbered', 'quote', 'toggle', 'code']);
 const LIST_TYPES = new Set(['bullet', 'numbered', 'todo']);
@@ -812,12 +813,64 @@ export class Editor {
             holder.appendChild(pdfCard(name, () => (/^(https?:|data:|blob:)/.test(src) ? Promise.resolve(src) : this.ctx.assetUrl(src))));
             return;
         }
+        if ((kind === 'img' || kind === 'video') && src && !/^(https?:|data:|blob:)/.test(src))
+            this.mediaOpen(b, holder, kind);
         const go = (url) => (kind === 'pdf' ? asPdf(url).then(show) : show(url));
         if (/^(https?:|data:|blob:)/.test(src))
             void go(src);
         else if (src)
             this.ctx.assetUrl(src).then(go).catch(() => holder.appendChild(h('div', { class: 'muted small' }, `File missing: ${src}`)));
     }
+    /** pictures and videos of the page open in the media viewer (phone: a tap on a picture; desktop: a double click),
+     *  all of the page's in a row; holding (or a right-click) gives their menu, with "Remove from page" */
+    mediaOpen(b, holder, kind) {
+        const list = () => {
+            const blocks = [];
+            const walk = (bs) => { for (const x of bs) {
+                if ((x.type === 'image' || x.type === 'video') && x.src && !/^(https?:|data:|blob:)/.test(x.src))
+                    blocks.push(x);
+                if (x.children)
+                    walk(x.children);
+            } };
+            walk(this.blocks);
+            return { blocks, items: blocks.map((x) => ({ path: x.src, remove: this.readonly ? undefined : () => this.removeBlock(x) })) };
+        };
+        const open = () => { const { blocks, items } = list(); openViewer(this.ctx, items, Math.max(0, blocks.indexOf(b))); };
+        const phone = () => document.documentElement.classList.contains('phone');
+        if (kind === 'img') {
+            holder.addEventListener('click', (e) => { if (phone()) {
+                e.preventDefault();
+                open();
+            } });
+            holder.addEventListener('dblclick', (e) => { if (!phone()) {
+                e.preventDefault();
+                open();
+            } });
+        }
+        const menuAt = (x, y) => { const { blocks, items } = list(); mediaMenu(this.ctx, items, Math.max(0, blocks.indexOf(b)), { x, y }); };
+        holder.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); menuAt(e.clientX, e.clientY); });
+        // the phone: holding a picture or video gives its menu (iOS has no right-click)
+        let t, x0 = 0, y0 = 0, held = false;
+        holder.addEventListener('touchstart', (e) => {
+            held = false;
+            x0 = e.touches[0].clientX;
+            y0 = e.touches[0].clientY;
+            t = setTimeout(() => { held = true; menuAt(x0, y0); }, 500);
+        }, { passive: true });
+        holder.addEventListener('touchmove', (e) => { if (Math.hypot(e.touches[0].clientX - x0, e.touches[0].clientY - y0) > 8)
+            clearTimeout(t); }, { passive: true });
+        holder.addEventListener('touchend', (e) => { clearTimeout(t); if (held)
+            e.preventDefault(); });
+    }
+    /** takes a block out of the page (its file stays in the workspace) */
+    removeBlock(b) {
+        const loc = this.index.get(b.id);
+        if (!loc)
+            return;
+        loc.arr.splice(loc.arr.indexOf(b), 1);
+        this.changed();
+    }
+    /** what a voice memo in this editor needs: where it is saved, and removing or adding blocks next to it */
     memoHost(b) {
         const owner = this.ownerPage;
         return {
@@ -889,6 +942,15 @@ export class Editor {
         });
         el.addEventListener('keydown', (e) => this.onKey(e, b, el, plain));
         el.addEventListener('paste', (e) => {
+            // a picture on the clipboard (a screenshot, a copied image): saved in the workspace and put in here,
+            // as if it had been added with "/" → Upload
+            const pics = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith('image/'));
+            if (pics.length && !plain) {
+                e.preventDefault();
+                const r = el.getBoundingClientRect();
+                void this.insertFiles(pics, { id: b.id, before: false, replace: !(b.text ?? '').trim() }, { x: r.left, y: r.bottom }, true);
+                return;
+            }
             const t = e.clipboardData?.getData('text/plain');
             if (t == null)
                 return;
@@ -3320,7 +3382,15 @@ function isDescendantPage(ws, id, ancestor) {
     return false;
 }
 // the page preview widget draws a page read-only with the editor
-setPreviewRenderer((host, blocks, app) => { const ed = new Editor(blocks, app, () => { }, true); host.append(ed.el); });
+// the preview block's right side: the page read-only, or (when switched on) editable – saved as the page itself
+setPreviewRenderer((host, page, app, editable) => {
+    const ed = new Editor(page.blocks, app, () => void app.ws.savePage(page), !editable, editable ? page.id : undefined);
+    if (editable) {
+        ed.commentPath = page.file;
+        ed.fileOf = () => page.file;
+    }
+    host.append(ed.el);
+});
 // An inline reminder (“🔔 Tue 09:00”) is one piece: Backspace / Delete next to it removes it whole,
 // typing inside it goes after it instead of changing its letters.
 const REM = 'a[href^="nook:remind:"]';

@@ -9,12 +9,21 @@ import { menu, menuIcon, toast } from './pop.js';
 import { pi } from './viewer.js';
 import { onPlayer, pauseMusic, musicPlaying, setBarOverride, setPillOverride } from './player.js';
 import { withWebmDuration } from '../webm.js';
+const dataOf = (b) => (b.data ?? {});
 const phone = () => document.documentElement.classList.contains('phone');
-const fmt = (s) => { s = Math.max(0, Math.round(s)); const hh = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return hh ? `${hh}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}` : `${m}:${String(x).padStart(2, '0')}`; };
+const fmt = (s) => {
+    s = Math.max(0, Math.round(s));
+    const hh = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
+    return hh ? `${hh}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}` : `${m}:${String(x).padStart(2, '0')}`;
+};
 const mb = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace('.', ',')} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
 /** the memo's name: its file's name, as in Dropbox (without the type) */
 const memoName = (b) => (b.src ? decodeURIComponent(b.src.split('/').pop() ?? '').replace(/\.[^.]+$/, '').replace(/^[0-9a-z]{6}-(?=.)/, '') : '') || b.text || 'Voice memo';
-const changed = () => { const sc = document.querySelector('.main > .scroll'); kbLog(`memo update top${Math.round(sc?.scrollTop ?? -1)} h${sc?.scrollHeight ?? -1}`); document.dispatchEvent(new CustomEvent('nook-memo')); };
+const changed = () => {
+    const sc = document.querySelector('.main > .scroll');
+    kbLog(`memo update top${Math.round(sc?.scrollTop ?? -1)} h${sc?.scrollHeight ?? -1}`);
+    document.dispatchEvent(new CustomEvent('nook-memo'));
+};
 let rec = null;
 export const recordingBlock = () => rec?.block ?? null;
 const elapsed = () => (rec ? rec.acc + (rec.paused ? 0 : Date.now() - rec.t0) : 0);
@@ -70,17 +79,34 @@ export function pauseRecording() {
     changed();
 }
 /** the bars must not hold focus when they go away – Safari would then scroll the page to the editor's caret */
-function dropBarFocus() { const a = document.activeElement; if (a?.closest('.memo-bar, .memo-pill'))
-    a.blur(); }
+function dropBarFocus() {
+    const a = document.activeElement;
+    if (a?.closest('.memo-bar, .memo-pill'))
+        a.blur();
+}
 document.addEventListener('mousedown', (e) => { if (e.target.closest?.('.memo-bar, .memo-pill'))
     e.preventDefault(); }, true);
-function endRec() { dropBarFocus(); if (!rec)
-    return; rec.stream.getTracks().forEach((t) => t.stop()); void rec.ac.close().catch(() => { }); rec = null; setBarOverride(null); setPillOverride(null); changed(); }
-export function cancelRecording() { if (!rec)
-    return; rec.mr.onstop = null; try {
-    rec.mr.stop();
+function endRec() {
+    dropBarFocus();
+    if (!rec)
+        return;
+    rec.stream.getTracks().forEach((t) => t.stop());
+    void rec.ac.close().catch(() => { });
+    rec = null;
+    setBarOverride(null);
+    setPillOverride(null);
+    changed();
 }
-catch { /* stopped */ } endRec(); }
+export function cancelRecording() {
+    if (!rec)
+        return;
+    rec.mr.onstop = null;
+    try {
+        rec.mr.stop();
+    }
+    catch { /* stopped */ }
+    endRec();
+}
 export function stopRecording() {
     if (!rec)
         return;
@@ -95,7 +121,8 @@ export function stopRecording() {
         const name = `Memo ${stamp.replace(/:/g, '-')}.${ext}`;
         try {
             const path = r.host.ctx.ws.newFilePath(r.host.file, name);
-            await r.host.ctx.ws.writeFile(path, ext === 'webm' ? withWebmDuration(new Uint8Array(await blob.arrayBuffer()), dur * 1000) : new Uint8Array(await blob.arrayBuffer()));
+            const bytes = new Uint8Array(await blob.arrayBuffer());
+            await r.host.ctx.ws.writeFile(path, ext === 'webm' ? withWebmDuration(bytes, dur * 1000) : bytes);
             r.block.src = path;
             r.block.text = `Memo ${stamp}`;
             r.block.data = { ...(r.block.data ?? {}), dur: Math.round(dur), size: blob.size };
@@ -127,19 +154,34 @@ function bands(n) {
 }
 function levelBars(n = 5) {
     const el = h('span', { class: 'memo-lvl' }, ...Array.from({ length: n }, () => h('i')));
-    const tick = () => { if (!el.isConnected && el.dataset.on)
-        return; el.dataset.on = '1'; const v = bands(n); [...el.children].forEach((c, i) => { c.style.height = `${Math.max(3, Math.round(3 + v[i] * 19))}px`; }); requestAnimationFrame(tick); };
+    const tick = () => {
+        if (!el.isConnected && el.dataset.on)
+            return;
+        el.dataset.on = '1';
+        const v = bands(n);
+        [...el.children].forEach((c, i) => { c.style.height = `${Math.max(3, Math.round(3 + v[i] * 19))}px`; });
+        requestAnimationFrame(tick);
+    };
     requestAnimationFrame(tick);
     return el;
 }
 /** the bars while recording: phone (instead of the tabs) and desktop (a pill in the top bar) */
 function showRecBars() {
-    const time = (cls) => { const t = h('span', { class: cls }); const run = () => { if (!rec)
-        return; t.textContent = fmt(elapsed() / 1000); setTimeout(run, 250); }; run(); return t; };
-    const pp = () => { const b = h('button', { class: 'memo-bb', 'aria-label': 'Pause', onclick: (e) => { e.stopPropagation(); pauseRecording(); } }, pi('pause', 20)); document.addEventListener('nook-memo', () => b.replaceChildren(pi(rec?.paused ? 'play' : 'pause', 20))); return b; };
+    const time = (cls) => {
+        const t = h('span', { class: cls });
+        const run = () => { if (!rec)
+            return; t.textContent = fmt(elapsed() / 1000); setTimeout(run, 250); };
+        run();
+        return t;
+    };
+    const pp = () => {
+        const b = h('button', { class: 'memo-bb', 'aria-label': 'Pause', onclick: (e) => { e.stopPropagation(); pauseRecording(); } }, pi('pause', 20));
+        document.addEventListener('nook-memo', () => b.replaceChildren(pi(rec?.paused ? 'play' : 'pause', 20)));
+        return b;
+    };
     const stop = () => h('button', { class: 'memo-stop', 'aria-label': 'Stop and save', onclick: (e) => { e.stopPropagation(); stopRecording(); } }, h('i'));
     const where = rec?.host.pageId ? rec.host.ctx.ws.pages.get(rec.host.pageId)?.title ?? '' : '';
-    setBarOverride(h('div', { class: 'memo-bar' }, h('button', { class: 'memo-bb dim', 'aria-label': 'Discard', onclick: (e) => { e.stopPropagation(); cancelRecording(); } }, pi('x', 16)), h('span', { class: 'memo-bt' }, h('b', null, h('span', { class: 'memo-dot' }), time('')), h('small', null, where ? `into ${where}` : 'Recording')), levelBars(), pp(), stop()));
+    setBarOverride(h('div', { class: 'memo-bar' }, h('button', { class: 'memo-bb dim', 'aria-label': 'Discard', onclick: (e) => { e.stopPropagation(); cancelRecording(); } }, pi('x', 16)), h('span', { class: 'memo-bt' }, h('b', null, h('span', { class: 'memo-dot' }), time('')), h('small', null, where ? `into ${where}` : 'Recording')), levelBars(), pp(), stop()), 'rec');
     setPillOverride(h('span', { class: 'memo-pill' }, h('span', { class: 'memo-dot' }), time('memo-pt'), where ? h('span', { class: 'memo-pw' }, where) : null, h('button', { class: 'ppill-pp', 'aria-label': 'Pause', onclick: () => pauseRecording() }, pi('pause', 13)), h('button', { class: 'memo-pstop', 'aria-label': 'Stop and save', title: 'Stop and save', onclick: () => stopRecording() }, h('i'))));
 }
 // ---------- playing ----------
@@ -148,14 +190,15 @@ audio.preload = 'metadata';
 window.nookMemoAudio = audio; // for tests
 let playing = null;
 let memoUrl = '';
+/** what the file is, by its first bytes (else by its name) */
 function audioType(path, bytes) {
-    // what the file is, by its first bytes (else by its name)
     if (bytes && bytes[0] === 0x1a && bytes[1] === 0x45)
         return 'audio/webm';
     if (bytes && bytes[0] === 0x4f && bytes[1] === 0x67 && bytes[2] === 0x67)
         return 'audio/ogg';
     const e = path.toLowerCase().split('.').pop() ?? '';
-    return { m4a: 'audio/mp4', mp4: 'audio/mp4', aac: 'audio/aac', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/ogg', webm: 'audio/webm', flac: 'audio/flac', caf: 'audio/x-caf' }[e] ?? 'audio/mp4';
+    const types = { m4a: 'audio/mp4', mp4: 'audio/mp4', aac: 'audio/aac', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/ogg', webm: 'audio/webm', flac: 'audio/flac', caf: 'audio/x-caf' };
+    return types[e] ?? 'audio/mp4';
 }
 export const playingBlock = () => playing?.block ?? null;
 audio.addEventListener('play', () => { pauseMusic(); changed(); });
@@ -167,7 +210,10 @@ onPlayer(() => { if (musicPlaying() && !audio.paused)
 /** the memo being fetched (one at a time – a second click while it loads changes nothing) */
 let loading = null;
 export const loadingBlock = () => loading;
-const metadata = () => audio.readyState >= 1 ? Promise.resolve() : new Promise((r) => { audio.addEventListener('loadedmetadata', () => r(), { once: true }); audio.addEventListener('error', () => r(), { once: true }); });
+const metadata = () => audio.readyState >= 1 ? Promise.resolve() : new Promise((r) => {
+    audio.addEventListener('loadedmetadata', () => r(), { once: true });
+    audio.addEventListener('error', () => r(), { once: true });
+});
 async function playMemo(block, host, at) {
     if (rec) {
         toast('Stop the recording first');
@@ -189,7 +235,7 @@ async function playMemo(block, host, at) {
                 return;
             }
             let bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
-            const d = (block.data ?? {});
+            const d = dataOf(block);
             if (d.dur)
                 bytes = withWebmDuration(bytes, d.dur * 1000);
             const blobUrl = URL.createObjectURL(new Blob([bytes], { type: audioType(block.src ?? '', bytes) }));
@@ -221,8 +267,16 @@ function toggleMemo() { if (audio.paused)
     void audio.play();
 else
     audio.pause(); }
-export function stopMemo() { if (!playing)
-    return; dropBarFocus(); audio.pause(); playing = null; setBarOverride(null); setPillOverride(null); changed(); }
+export function stopMemo() {
+    if (!playing)
+        return;
+    dropBarFocus();
+    audio.pause();
+    playing = null;
+    setBarOverride(null);
+    setPillOverride(null);
+    changed();
+}
 /** back to the memo: on its page already – just bring it into view (only if it isn't); else open the page first */
 function goBack() {
     const p = playing;
@@ -251,7 +305,13 @@ function showMemoBars() {
     const tick = () => { sub.textContent = `${where ? `${where} · ` : ''}${fmt(audio.currentTime)}`; pt.textContent = fmt(audio.currentTime); };
     document.addEventListener('nook-memo-time', tick);
     tick();
-    const ppb = (n, cls) => { const b = h('button', { class: cls, 'aria-label': 'Play or pause', onclick: (e) => { e.stopPropagation(); toggleMemo(); } }); const d = () => b.replaceChildren(pi(audio.paused ? 'play' : 'pause', n)); d(); document.addEventListener('nook-memo', d); return b; };
+    const ppb = (n, cls) => {
+        const b = h('button', { class: cls, 'aria-label': 'Play or pause', onclick: (e) => { e.stopPropagation(); toggleMemo(); } });
+        const d = () => b.replaceChildren(pi(audio.paused ? 'play' : 'pause', n));
+        d();
+        document.addEventListener('nook-memo', d);
+        return b;
+    };
     const bar = h('div', { class: 'memo-bar' }, h('span', { class: 'memo-ico', onclick: goBack }, iconSvg('mic', 18)), h('span', { class: 'memo-bt', onclick: goBack }, h('b', null, memoName(p.block)), sub), h('button', { class: 'memo-bb', 'aria-label': '15 seconds back', onclick: (e) => { e.stopPropagation(); audio.currentTime = Math.max(0, audio.currentTime - 15); } }, pi('back', 19)), ppb(20, 'memo-bb'), h('button', { class: 'memo-bb dim', 'aria-label': 'Close', onclick: (e) => { e.stopPropagation(); stopMemo(); } }, pi('x', 16)));
     setBarOverride(bar);
     setPillOverride(h('span', { class: 'memo-pill' }, h('button', { class: 'memo-pname', title: 'Back to the memo', onclick: goBack }, iconSvg('mic', 13), memoName(p.block)), pt, ppb(13, 'ppill-pp'), h('button', { class: 'ppill-b', 'aria-label': 'Close', title: 'Close', onclick: stopMemo }, pi('x', 13))));
@@ -259,13 +319,15 @@ function showMemoBars() {
 // ---------- writing it down (on this device, free: Whisper in the browser) ----------
 /** writing memos down needs the page's security rules (web/index.html) to allow the speech library from cdn.jsdelivr.net
  *  and WebAssembly ('wasm-unsafe-eval'); it turns itself on once they do */
-export const TX_ENABLED = (() => { const c = document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute('content') ?? ''; return /script-src[^;]*cdn\.jsdelivr\.net/.test(c) && /wasm-unsafe-eval/.test(c); })();
+export const TX_ENABLED = (() => {
+    const c = document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute('content') ?? '';
+    return /script-src[^;]*cdn\.jsdelivr\.net/.test(c) && /wasm-unsafe-eval/.test(c);
+})();
 const TX_LIB = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2';
 let asr = null;
 const jobs = new Map();
-/** the model: as chosen – else Small on computers and Base on phones (the bigger one needs more memory than a phone
- *  gives a web page; it then reloads the page half-way) */
-export const txSettings = (ctx) => ({ model: ctx.ws.settings.memoModel ?? (phone() ? 'base' : 'small'), lang: ctx.ws.settings.memoLang ?? 'auto' });
+/** always Whisper Base (Small gave worse results here and needs more memory than a phone gives a web page) */
+export const txSettings = (ctx) => ({ model: 'base', lang: ctx.ws.settings.memoLang ?? 'auto' });
 /** the model runs in a worker of its own: the page stays responsive (no "this page slows down the browser")
  *  and the progress can move. Where a worker can't run it, it runs in the page as before. */
 const WORKER = `import { pipeline, env } from '${TX_LIB}';
@@ -307,8 +369,14 @@ function talk(msg, note) {
                 w.ok(true);
             }
         };
-        worker.onerror = () => { workerFailed = true; for (const w of waiting.values())
-            w.no(new Error('worker')); waiting.clear(); worker?.terminate(); worker = null; };
+        worker.onerror = () => {
+            workerFailed = true;
+            for (const w of waiting.values())
+                w.no(new Error('worker'));
+            waiting.clear();
+            worker?.terminate();
+            worker = null;
+        };
     }
     const id = ++seq;
     return new Promise((ok, no) => { waiting.set(id, { ok, no, note, init: !msg.audio }); worker.postMessage({ id, ...msg }); });
@@ -369,7 +437,7 @@ async function pcm16k(url) {
     src.start();
     return (await off.startRendering()).getChannelData(0);
 }
-/** in pieces of 30 s, each saved at once – a memo stopped half-way goes on from there */
+/** in pieces, each saved at once – a memo stopped half-way goes on from there */
 async function writeDown(block, host, again = false, choose) {
     if (jobs.has(block.id))
         return;
@@ -396,14 +464,14 @@ async function writeDown(block, host, again = false, choose) {
         // inside a piece the model walks in overlapping 30-second windows with time stamps
         const total = pcm.length;
         let from = d.txAt != null ? Math.round(d.txAt * 16000) : d.txNext ? d.txNext * 300 * 16000 : 0;
-        d.tx ??= [];
+        const tx = (d.tx ??= []);
         // seconds of work per second of audio: measured, and remembered on this device for next time
         const RATE_KEY = `nook:tx-rate:${model}`;
         let rate = (() => { try {
-            return Number(localStorage.getItem(RATE_KEY)) || (model === 'base' ? 0.3 : 0.8);
+            return Number(localStorage.getItem(RATE_KEY)) || 0.3;
         }
         catch {
-            return 0.8;
+            return 0.3;
         } })();
         while (from < total) {
             const to = quietCut(pcm, from + 60 * 16000), secs = (to - from) / 16000, t0 = Date.now(), base = from;
@@ -432,14 +500,14 @@ async function writeDown(block, host, again = false, choose) {
                     continue;
                 if (!para || at - para.t >= 30) {
                     if (para)
-                        d.tx.push(para);
+                        tx.push(para);
                     para = { t: Math.round(at), text };
                 }
                 else
                     para.text += ` ${text}`;
             }
             if (para)
-                d.tx.push(para);
+                tx.push(para);
             from = to;
             d.txAt = from / 16000;
             delete d.txNext;
@@ -460,9 +528,9 @@ async function writeDown(block, host, again = false, choose) {
         changed();
     }
 }
-/** "Write it down": German or English – asked when the settings leave it open (and the memo has none yet) */
+/** "Transcribe": German or English – asked when the settings leave it open (and the memo has none yet) */
 function askLang(at, b, host, again) {
-    const d = (b.data ?? {}), set = txSettings(host.ctx).lang;
+    const d = dataOf(b), set = txSettings(host.ctx).lang;
     if (d.lang || set !== 'auto') {
         void writeDown(b, host, again);
         return;
@@ -523,12 +591,14 @@ export function memoBlock(b, host, readonly = false) {
                 host.save();
                 changed();
             });
-            box.append(h('div', { class: 'memo-row' }, h('span', { class: 'memo-pb rec' }, iconSvg('mic', 16)), h('span', { class: 'memo-t' }, h('b', null, 'Voice memo'), h('small', null, 'Nothing recorded yet')), ...(readonly ? [] : [h('button', { class: 'memo-btn', onclick: () => file.click() }, iconSvg('upload', 14), 'Add a file'),
-                h('button', { class: 'memo-btn red', onclick: () => void startRecording(b, host) }, 'Record')]), file));
+            box.append(h('div', { class: 'memo-row' }, h('span', { class: 'memo-pb rec' }, iconSvg('mic', 16)), h('span', { class: 'memo-t' }, h('b', null, 'Voice memo'), h('small', null, 'Nothing recorded yet')), ...(readonly ? [] : [
+                h('button', { class: 'memo-btn', onclick: () => file.click() }, iconSvg('upload', 14), 'Add a file'),
+                h('button', { class: 'memo-btn red', onclick: () => void startRecording(b, host) }, 'Record')
+            ]), file));
             return;
         }
         // recorded
-        const dd = () => (b.data ?? {});
+        const dd = () => dataOf(b);
         const mine = () => playing?.block === b;
         const pb = h('button', { class: 'memo-pb', onclick: () => { if (loading === b)
                 return; if (mine())
@@ -540,16 +610,20 @@ export function memoBlock(b, host, readonly = false) {
         const more = h('button', { class: 'icon-btn memo-more', 'aria-label': 'More', title: 'More' }, svgIcon(ICONS.more, 16, { fill: true }));
         more.addEventListener('click', () => {
             const d = dd(), text = (d.tx ?? []).map((x) => x.text).join('\n\n');
-            menu(more, [
+            const entries = [
                 ...(text ? [
                     { label: 'Copy text', icon: menuIcon('clipboard'), run: () => { void navigator.clipboard.writeText(text).then(() => toast('Copied')); } },
                     ...(host.insertAfter && !readonly ? [{ label: 'Turn into page text', icon: menuIcon('align-left'), run: () => host.insertAfter((d.tx ?? []).map((x) => ({ id: crypto.randomUUID().replace(/-/g, '').slice(0, 20), type: 'paragraph', text: x.text }))) }] : []),
-                    ...(!readonly ? [{ label: 'Transcribe again in German', icon: menuIcon('refresh'), run: () => void writeDown(b, host, true, 'de') }, { label: 'Transcribe again in English', icon: menuIcon('refresh'), run: () => void writeDown(b, host, true, 'en') }] : []),
+                    ...(!readonly ? [
+                        { label: 'Transcribe again in German', icon: menuIcon('refresh'), run: () => void writeDown(b, host, true, 'de') },
+                        { label: 'Transcribe again in English', icon: menuIcon('refresh'), run: () => void writeDown(b, host, true, 'en') }
+                    ] : []),
                 ] : []),
                 { label: 'Download audio', icon: menuIcon('download'), run: async () => { const a = h('a', { href: await host.ctx.assetUrl(b.src ?? ''), download: (b.src ?? '').split('/').pop() ?? 'memo.m4a' }); document.body.appendChild(a); a.click(); a.remove(); } },
                 ...(host.remove && !readonly ? ['sep', { label: 'Delete', icon: menuIcon('trash'), danger: true, run: () => { if (mine())
                             stopMemo(); host.remove(); } }] : []),
-            ]);
+            ];
+            menu(more, entries);
         });
         // the seek bar: current time · track with its knob (drag or tap) · length
         const fill = h('i'), knob = h('b'), cur = h('span', { class: 'memo-st' }), total = h('span', { class: 'memo-st' });
@@ -565,11 +639,17 @@ export function memoBlock(b, host, readonly = false) {
             return; e.preventDefault(); seek.setPointerCapture(e.pointerId); drag = at(e); seek.classList.add('drag'); show(drag); });
         seek.addEventListener('pointermove', (e) => { if (drag == null)
             return; drag = at(e); show(drag); });
-        seek.addEventListener('pointerup', () => { if (drag == null)
-            return; const f = drag; drag = null; seek.classList.remove('drag'); if (mine())
-            audio.currentTime = f * len();
-        else
-            void playMemo(b, host, f * len()); });
+        seek.addEventListener('pointerup', () => {
+            if (drag == null)
+                return;
+            const f = drag;
+            drag = null;
+            seek.classList.remove('drag');
+            if (mine())
+                audio.currentTime = f * len();
+            else
+                void playMemo(b, host, f * len());
+        });
         seek.addEventListener('pointercancel', () => { drag = null; seek.classList.remove('drag'); paint(); });
         document.addEventListener('nook-memo-time', function t() { if (!seek.isConnected) {
             document.removeEventListener('nook-memo-time', t);

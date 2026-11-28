@@ -303,10 +303,17 @@ export function renderTable(env, res) {
                     grip.dispatchEvent(new MouseEvent('click', { bubbles: true }));
                     fileClick.set(row.id, now);
                 });
-                td.addEventListener('dblclick', () => { clearTimeout(renameTimer); if (td.querySelector('.cell-edit'))
-                    return; ctx.openRow(db, row); });
-                td.addEventListener('nook-rename', (e) => { e.stopPropagation(); if (!td.querySelector('.cell-edit'))
-                    startEdit(td, row, p); });
+                td.addEventListener('dblclick', () => {
+                    clearTimeout(renameTimer);
+                    if (td.querySelector('.cell-edit'))
+                        return;
+                    ctx.openRow(db, row);
+                });
+                td.addEventListener('nook-rename', (e) => {
+                    e.stopPropagation();
+                    if (!td.querySelector('.cell-edit'))
+                        startEdit(td, row, p);
+                });
                 r.appendChild(td);
                 continue;
             }

@@ -9,10 +9,14 @@ export function mapCsv(db, file, t, go) {
     const norm = (s) => s.toLowerCase().replace(/[^a-z0-9äöüß]/g, '');
     const used = new Set();
     // a guess: same name; else a column of dates → the date property, the first text column → the title
-    const map = t.header.map((hd) => { const p = props.find((q) => norm(q.name) === norm(hd) && !used.has(q.name)); if (p) {
-        used.add(p.name);
-        return p.name;
-    } return null; });
+    const map = t.header.map((hd) => {
+        const p = props.find((q) => norm(q.name) === norm(hd) && !used.has(q.name));
+        if (p) {
+            used.add(p.name);
+            return p.name;
+        }
+        return null;
+    });
     t.header.forEach((hd, i) => {
         if (map[i] != null)
             return;
@@ -34,17 +38,24 @@ export function mapCsv(db, file, t, go) {
             const conv = p ? convertValue(p, raw) : null;
             const bad = !!p && !!raw && (conv === null || conv === '');
             const shown = !raw ? h('span', { class: 'csvm-empty' }, 'empty') : p && !bad ? renderValue(db, p, conv) : raw;
-            const btn = h('button', { class: 'csvm-pick' + (target == null ? ' skip' : ''), onclick: () => {
+            const btn = h('button', {
+                class: 'csvm-pick' + (target == null ? ' skip' : ''),
+                onclick: () => {
                     const r = btn.getBoundingClientRect();
                     const items = [
                         { label: 'Leave out', icon: menuIcon('x'), hint: target == null ? '✓' : undefined, run: () => { map[i] = null; draw(); } },
                         { label: `New property “${hd}”`, icon: menuIcon('plus'), hint: target === '' ? '✓' : undefined, run: () => { map[i] = ''; draw(); } },
                         { section: 'Properties' },
-                        ...props.map((q) => ({ label: q.name, icon: typeIcon(q.type, q.icon), hint: target === q.name ? '✓' : map.some((m, j) => j !== i && m === q.name) ? 'in use' : undefined, run: () => { map.forEach((m, j) => { if (m === q.name)
-                                map[j] = null; }); map[i] = q.name; draw(); } })),
+                        ...props.map((q) => ({
+                            label: q.name, icon: typeIcon(q.type, q.icon),
+                            hint: target === q.name ? '✓' : map.some((m, j) => j !== i && m === q.name) ? 'in use' : undefined,
+                            run: () => { map.forEach((m, j) => { if (m === q.name)
+                                map[j] = null; }); map[i] = q.name; draw(); },
+                        })),
                     ];
                     menu({ x: r.left, y: r.bottom }, items);
-                } }, target == null ? 'Leave out' : target === '' ? `New: ${hd}` : h('span', { class: 'csvm-t' }, typeIcon(p.type, p.icon), p.name), h('span', { class: 'csvm-chev' }, '⌄'));
+                },
+            }, target == null ? 'Leave out' : target === '' ? `New: ${hd}` : h('span', { class: 'csvm-t' }, typeIcon(p.type, p.icon), p.name), h('span', { class: 'csvm-chev' }, '⌄'));
             return h('div', { class: 'csvm-row' + (target == null ? ' off' : '') }, h('div', { class: 'csvm-col' }, h('b', null, hd), h('span', { class: 'csvm-ex' + (bad ? ' bad' : '') }, shown, bad ? h('span', { class: 'csvm-warn' }, ' – can’t be read as ' + p.type.replace('_', '-')) : null)), h('span', { class: 'csvm-arrow' }, '→'), btn);
         }));
         const n = map.filter((m) => m != null).length;

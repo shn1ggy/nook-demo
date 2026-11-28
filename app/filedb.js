@@ -285,11 +285,14 @@ async function saveMerged(ws, db) {
                 else
                     delete e.v;
             }
-            else if (!same(a?.[k], b[k])) {
-                if (b[k] === undefined)
-                    delete e[k];
+            else {
+                const key = k;
+                if (same(a?.[key], b[key]))
+                    continue;
+                if (b[key] === undefined)
+                    delete e[key];
                 else
-                    e[k] = b[k];
+                    e[key] = b[key];
             }
         }
     }

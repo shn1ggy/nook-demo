@@ -1319,12 +1319,14 @@ export class DropboxStorage {
     /** size and dates of every file below a folder: "created" is the file's own date (as on the computer it came from) */
     async fileInfo(dir) {
         const out = [];
-        const take = (es) => { for (const e of es)
-            if (e['.tag'] === 'file') {
-                const rel = this.rel(e.path_display ?? e.path_lower ?? '');
-                if (rel)
-                    out.push({ path: rel, size: e.size ?? 0, created: e.client_modified, modified: e.server_modified, hash: e.content_hash });
-            } };
+        const take = (es) => {
+            for (const e of es)
+                if (e['.tag'] === 'file') {
+                    const rel = this.rel(e.path_display ?? e.path_lower ?? '');
+                    if (rel)
+                        out.push({ path: rel, size: e.size ?? 0, created: e.client_modified, modified: e.server_modified, hash: e.content_hash });
+                }
+        };
         try {
             let r = await rpc('/2/files/list_folder', { path: this.abs(dir), recursive: true, limit: 2000 });
             take(r.entries);
@@ -1718,13 +1720,17 @@ export class DropboxStorage {
 // texts it sent. A "conflict" with a version this device made itself is no conflict – this device simply goes on.
 const OWN_KEY = 'nook:own-versions';
 let ownCache = null;
-function ownLoad() { if (ownCache)
-    return ownCache; try {
-    ownCache = JSON.parse(localStorage.getItem(OWN_KEY) ?? '{}');
+function ownLoad() {
+    if (ownCache)
+        return ownCache;
+    try {
+        ownCache = JSON.parse(localStorage.getItem(OWN_KEY) ?? '{}');
+    }
+    catch {
+        ownCache = {};
+    }
+    return ownCache;
 }
-catch {
-    ownCache = {};
-} return ownCache; }
 let ownTimer;
 function ownMark(path, v) {
     const o = ownLoad(), k = path.toLowerCase(), e = (o[k] ??= { t: 0 });
@@ -1750,9 +1756,13 @@ function ownHas(path, rev, hash) {
     const e = ownLoad()[path.toLowerCase()];
     return !!e && ((!!rev && !!e.r?.includes(rev)) || !!e.h?.includes(hash));
 }
-function hashText(t) { let h = 2166136261 >>> 0, g = 0x9e3779b9; for (let i = 0; i < t.length; i++) {
-    const c = t.charCodeAt(i);
-    h = Math.imul(h ^ c, 16777619) >>> 0;
-    g = Math.imul(g ^ c, 2246822519) >>> 0;
-} return `${t.length}:${h.toString(36)}${g.toString(36)}`; }
+function hashText(t) {
+    let h = 2166136261 >>> 0, g = 0x9e3779b9;
+    for (let i = 0; i < t.length; i++) {
+        const c = t.charCodeAt(i);
+        h = Math.imul(h ^ c, 16777619) >>> 0;
+        g = Math.imul(g ^ c, 2246822519) >>> 0;
+    }
+    return `${t.length}:${h.toString(36)}${g.toString(36)}`;
+}
 //# sourceMappingURL=dropbox.js.map

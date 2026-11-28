@@ -83,6 +83,7 @@ export function trendUnit(key, set) {
         st.unit = set;
     return st.unit;
 }
+/** `mode`, `combo`: the Day/Trends switches of the day log around it (desktop; phone: one switch for both) */
 export function renderTrends(env, mode, combo) {
     const { db, ctx } = env;
     const cfg = dayConfig(db);
@@ -275,8 +276,10 @@ function axedLine(pts, fixed, fmt, days) {
     const lo = fixed ? fixed[0] : Math.min(...xs), hi = fixed ? fixed[1] : Math.max(...xs);
     const svg = lineChart(pts, fixed);
     let last = -1;
-    pts.forEach((p, i) => { if (p != null)
-        last = i; });
+    pts.forEach((p, i) => {
+        if (p != null)
+            last = i;
+    });
     const W = 600, H = 120, sp = hi - lo || 1;
     let dotEl = null;
     if (last >= 0) {

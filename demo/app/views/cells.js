@@ -881,7 +881,7 @@ function focusField(input) { if (!document.documentElement.classList.contains('p
     input.focus(); }
 /** multi-select values in the order of the property's options (unknown ones last, as they were) */
 export function optOrder(def, vals) {
-    const ix = new Map((def.options ?? []).map((o, i) => [o.name, i]));
+    const ix = new Map((def?.options ?? []).map((o, i) => [o.name, i]));
     return vals.map((v, i) => [v, ix.get(v) ?? 1e6 + i]).sort((a, b) => a[1] - b[1]).map((x) => x[0]);
 }
 //# sourceMappingURL=cells.js.map

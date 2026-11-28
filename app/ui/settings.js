@@ -197,8 +197,10 @@ function phoneSettings(sections, start) {
         bar.replaceChildren(h('span'), h('span', { class: 'pset-title faded' }, 'Settings'), h('span'));
         const inner = h('div', { class: 'set-inner pset-home' }, h('h1', { class: 'pset-big' }, 'Settings'), searchBox);
         if (typing)
-            queueMicrotask(() => { if (document.activeElement !== search)
-                search.focus({ preventScroll: true }); });
+            queueMicrotask(() => {
+                if (document.activeElement !== search)
+                    search.focus({ preventScroll: true });
+            });
         if (query) {
             let any = false;
             for (const s of sections) {

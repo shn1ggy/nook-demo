@@ -577,10 +577,12 @@ export class Notifications {
                     draw();
                 }
             });
-            typed.addEventListener('keydown', (e) => { if (e.key === 'Enter') {
-                e.preventDefault();
-                typed.blur();
-            } });
+            typed.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    typed.blur();
+                }
+            });
             const otherRow = h('div', { class: 'ogb-other' }, typed, typedOut, h('button', { class: 'ogb-cal', 'aria-label': 'Pick in calendar', onclick: () => calendar() }, iconSvg('calendar', 18)));
             anchorEl = otherRow;
             // a time typed or picked in "Other…" redraws the tiles too

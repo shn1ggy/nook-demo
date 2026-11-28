@@ -3412,9 +3412,15 @@ html:not(.phone) .pv-pane { max-height: none; contain: size; overflow: auto; }
 /* page preview list: reorder by drag – a line where the page lands */
 .pv-item { position: relative; }
 .pv-item.dragging { opacity: .45; }
-.pv-item.pv-before::before, .pv-item.pv-after::after { content: ''; position: absolute; left: 6px; right: 6px; height: 2px; border-radius: 1px; background: var(--accent); pointer-events: none; }
-.pv-item.pv-before::before { top: -3px; }
-.pv-item.pv-after::after { bottom: -3px; }
+.pv-item { position: relative; }
+/* the drop line: the same as between blocks */
+.pv-item.pv-before::before, .pv-item.pv-after::after { content: ''; position: absolute; left: 0; right: 0; height: 3px; border-radius: 2px; background: var(--accent); opacity: .7; pointer-events: none; }
+.pv-item.pv-before::before { top: -3.5px; }
+.pv-item.pv-after::after { bottom: -3.5px; }
+/* a height of its own: the list and the preview scroll inside it */
+.pv.fixed-h { min-height: 200px; }
+.pv.fixed-h .pv-list { overflow: auto; }
+.pv.fixed-h .pv-pane { max-height: none; }
 .pv-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 /* breadcrumb: drop a page onto a page in the path */
 .crumb.crumb-drop { background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: none; outline: var(--ring-15, 1.5px) solid var(--accent); outline-offset: calc(-1 * var(--ring-15, 1.5px)); border-radius: 6px; }
@@ -5622,3 +5628,7 @@ html.phone .vbar.is-compact > .vtoolbar.compact { flex-wrap: wrap; }
 .memo-more { width: 26px; height: 26px; color: var(--fg-muted); }
 .memo-more svg { fill: currentColor; }
 .memo [hidden] { display: none !important; }
+/* the round button while the tabs show and a memo records: a pulsing red dot */
+.tb-rec { width: 14px; height: 14px; border-radius: 50%; background: #e5534b; animation: tbrec 1.4s ease-in-out infinite; }
+@keyframes tbrec { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .tb-rec { animation: none; } }

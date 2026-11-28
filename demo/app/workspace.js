@@ -2380,6 +2380,7 @@ export class Workspace {
     // in .workspace/history (one JSON file per page or entry).
     snapAt = new Map();
     /** keeps `content` as an earlier version of `path` (at most every 10 minutes) */
+    /** keeps this content as a version of the file (History) */
     async snapshot(path, content) {
         const now = Date.now();
         if (now - (this.snapAt.get(path) ?? 0) < 10 * 60_000)

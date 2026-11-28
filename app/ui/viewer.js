@@ -11,8 +11,12 @@ export const fileName = (p) => p.split('/').pop() ?? p;
 export const sizeLabel = (n) => n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
 const phone = () => document.documentElement.classList.contains('phone');
 const dur = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-export async function blobOf(ctx, p) { const r = await fetch(await ctx.assetUrl(p)); if (!r.ok)
-    throw new Error(`Could not load ${fileName(p)}`); return r.blob(); }
+export async function blobOf(ctx, p) {
+    const r = await fetch(await ctx.assetUrl(p));
+    if (!r.ok)
+        throw new Error(`Could not load ${fileName(p)}`);
+    return r.blob();
+}
 export async function downloadMedia(ctx, p) {
     try {
         const b = await blobOf(ctx, p);
@@ -51,6 +55,7 @@ export function mediaMenu(ctx, items, i, at) {
         { label: 'Download', icon: menuIcon('download'), run: () => void downloadMedia(ctx, it.path) },
         ...(ctx.ws.storage.reveal ? [{ label: revealLabel(ctx), icon: menuIcon('folder'), run: () => revealMedia(ctx, it.path) }] : []),
         ...(it.open ? ['sep', { label: it.entryName ? `Open entry · ${it.entryName}` : 'Open entry', icon: menuIcon('file-text'), run: it.open }] : []),
+        ...(it.remove ? ['sep', { label: 'Remove from page', icon: menuIcon('trash'), danger: true, run: it.remove }] : []),
     ]);
 }
 /** the viewer over the page */
@@ -174,7 +179,12 @@ export const P = {
     speed: '<path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 12l4-4"/>', play: '<path d="M7 4l13 8-13 8z" fill="currentColor" stroke="none"/>', pause: '<path d="M7 4h4v16H7zM13 4h4v16h-4z" fill="currentColor" stroke="none"/>',
     music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
 };
-export const pi = (k, n = 21) => { const t = document.createElement('template'); t.innerHTML = `<svg viewBox="0 0 24 24" width="${n}" height="${n}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P[k]}</svg>`; return t.content.firstChild; };
+/** one of the phone viewer's (and the player's) line icons */
+export const pi = (k, n = 21) => {
+    const t = document.createElement('template');
+    t.innerHTML = `<svg viewBox="0 0 24 24" width="${n}" height="${n}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P[k]}</svg>`;
+    return t.content.firstChild;
+};
 export async function shareMedia(ctx, p) {
     try {
         const b = await blobOf(ctx, p);
@@ -228,12 +238,18 @@ function phoneViewer(ctx, items, at) {
             { label: 'Open in Safari', icon: menuIcon('external'), run: () => mediaType(it.path) === 'pdf' ? openPdfFull(() => ctx.assetUrl(it.path)) : openMediaInTab(ctx, it.path) },
             ...(ctx.ws.storage.reveal ? [{ label: revealLabel(ctx), icon: menuIcon('folder'), run: () => revealMedia(ctx, it.path) }] : []),
             ...(it.open ? ['sep', { label: it.entryName ? `Open entry · ${it.entryName}` : 'Open entry', icon: menuIcon('file-text'), run: () => { close(); it.open(); } }] : []),
+            ...(it.remove ? ['sep', { label: 'Remove from page', icon: menuIcon('trash'), danger: true, run: () => { close(); it.remove(); } }] : []),
         ]);
     });
     // zoom state of the current photo
     let zoomEl = null, z = 1, tx = 0, ty = 0;
-    const applyZoom = (anim = false) => { if (!zoomEl)
-        return; zoomEl.style.transition = anim ? 'transform .22s ease' : 'none'; zoomEl.style.transform = `translate(${tx}px, ${ty}px) scale(${z})`; box.classList.toggle('zoomed', z > 1.01); };
+    const applyZoom = (anim = false) => {
+        if (!zoomEl)
+            return;
+        zoomEl.style.transition = anim ? 'transform .22s ease' : 'none';
+        zoomEl.style.transform = `translate(${tx}px, ${ty}px) scale(${z})`;
+        box.classList.toggle('zoomed', z > 1.01);
+    };
     const clampPan = () => {
         if (!zoomEl)
             return;
@@ -246,18 +262,24 @@ function phoneViewer(ctx, items, at) {
     const player = (m, audio) => {
         const play = h('button', { class: 'mvp-play', 'aria-label': 'Play' }, pi('play', 26));
         const paint = () => { play.textContent = ''; play.append(pi(m.paused ? 'play' : 'pause', 26)); };
-        play.addEventListener('click', () => { if (m.paused)
-            void m.play();
-        else
-            m.pause(); });
+        play.addEventListener('click', () => {
+            if (m.paused)
+                void m.play();
+            else
+                m.pause();
+        });
         m.addEventListener('play', paint);
         m.addEventListener('pause', paint);
         const fill = h('i'), track = h('div', { class: 'mvp-track' }, fill), cur = h('span'), left = h('span');
         const upd = () => { const d = m.duration || 0; fill.style.width = `${d ? (m.currentTime / d) * 100 : 0}%`; cur.textContent = time(m.currentTime); left.textContent = `−${time(Math.max(0, d - m.currentTime))}`; };
         m.addEventListener('timeupdate', upd);
         m.addEventListener('loadedmetadata', upd);
-        const seek = (e) => { const r = track.getBoundingClientRect(); if (m.duration)
-            m.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * m.duration; upd(); };
+        const seek = (e) => {
+            const r = track.getBoundingClientRect();
+            if (m.duration)
+                m.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * m.duration;
+            upd();
+        };
         track.addEventListener('pointerdown', (e) => { e.stopPropagation(); track.setPointerCapture(e.pointerId); seek(e); const mv = (ev) => seek(ev); track.addEventListener('pointermove', mv); track.addEventListener('pointerup', () => track.removeEventListener('pointermove', mv), { once: true }); });
         extra.append(h('div', { class: 'mvp-ctl' + (audio ? ' audio' : '') }, h('button', { class: 'mvp-skip', 'aria-label': 'Back 15 seconds', onclick: () => { m.currentTime = Math.max(0, m.currentTime - 15); } }, pi('back', 24)), play, h('button', { class: 'mvp-skip', 'aria-label': 'Forward 15 seconds', onclick: () => { m.currentTime = Math.min(m.duration || 0, m.currentTime + 15); } }, pi('fwd', 24))), h('div', { class: 'mvp-seek' }, track, h('div', { class: 'mvp-times' }, cur, left)));
         upd();
@@ -305,21 +327,28 @@ function phoneViewer(ctx, items, at) {
             }
             else if (t === 'video') {
                 const v = h('video', { class: 'mvp-img', src: u, autoplay: true, playsInline: true, preload: 'metadata' });
-                v.addEventListener('click', () => { if (v.paused)
-                    void v.play();
-                else
-                    v.pause(); });
+                v.addEventListener('click', () => {
+                    if (v.paused)
+                        void v.play();
+                    else
+                        v.pause();
+                });
                 stage.append(v);
                 player(v, false);
                 const snd = act('vol', 'Sound', () => { v.muted = !v.muted; snd.replaceChild(pi(v.muted ? 'mute' : 'vol'), snd.firstChild); });
                 const pip = document.pictureInPictureEnabled || 'webkitSetPresentationMode' in v
-                    ? act('pip', 'Picture', () => { const w = v; if (v.requestPictureInPicture)
-                        void v.requestPictureInPicture().catch(() => w.webkitSetPresentationMode?.('picture-in-picture'));
-                    else
-                        w.webkitSetPresentationMode?.('picture-in-picture'); }) : null;
+                    ? act('pip', 'Picture', () => {
+                        const w = v;
+                        if (v.requestPictureInPicture)
+                            void v.requestPictureInPicture().catch(() => w.webkitSetPresentationMode?.('picture-in-picture'));
+                        else
+                            w.webkitSetPresentationMode?.('picture-in-picture');
+                    }) : null;
                 bar.append(snd, ...(pip ? [pip] : []), share, save);
-                v.addEventListener('loadedmetadata', () => { if (items[i] === it)
-                    meta.textContent = [pos, 'Video', dur(v.duration)].filter(Boolean).join(' · '); });
+                v.addEventListener('loadedmetadata', () => {
+                    if (items[i] === it)
+                        meta.textContent = [pos, 'Video', dur(v.duration)].filter(Boolean).join(' · ');
+                });
                 cleanup = () => v.pause();
             }
             else if (t === 'audio') {
@@ -333,20 +362,28 @@ function phoneViewer(ctx, items, at) {
                 bar.append(share, save, ...(folder ? [folder] : []));
             }
             if (t !== 'audio' && t !== 'video')
-                void fetch(u).then((r) => r.ok ? r.blob() : null).then((b) => { if (!b || items[i] !== it)
-                    return; meta.textContent = `${meta.textContent ? meta.textContent + ' · ' : ''}${sizeLabel(b.size)}`; const fs = stage.querySelector('.mvp-fs'); if (fs)
-                    fs.textContent = `${fs.textContent} · ${sizeLabel(b.size)}`; }).catch(() => { });
+                void fetch(u).then((r) => r.ok ? r.blob() : null).then((b) => {
+                    if (!b || items[i] !== it)
+                        return;
+                    meta.textContent = `${meta.textContent ? meta.textContent + ' · ' : ''}${sizeLabel(b.size)}`;
+                    const fs = stage.querySelector('.mvp-fs');
+                    if (fs)
+                        fs.textContent = `${fs.textContent} · ${sizeLabel(b.size)}`;
+                }).catch(() => { });
         })();
     };
     /** the order songs play in: as in the folder, or shuffled (the one playing first) */
-    const makeOrder = () => { order = [...songs]; if (playMode.shuffle) {
-        const rest = order.filter((k) => k !== i);
-        for (let x = rest.length - 1; x > 0; x--) {
-            const y = Math.floor(Math.random() * (x + 1));
-            [rest[x], rest[y]] = [rest[y], rest[x]];
+    const makeOrder = () => {
+        order = [...songs];
+        if (playMode.shuffle) {
+            const rest = order.filter((k) => k !== i);
+            for (let x = rest.length - 1; x > 0; x--) {
+                const y = Math.floor(Math.random() * (x + 1));
+                [rest[x], rest[y]] = [rest[y], rest[x]];
+            }
+            order = [i, ...rest];
         }
-        order = [i, ...rest];
-    } };
+    };
     const nextSong = (dir, auto = false) => {
         if (!order.includes(i))
             makeOrder();
@@ -366,9 +403,11 @@ function phoneViewer(ctx, items, at) {
         show();
         return true;
     };
-    song.addEventListener('ended', () => { if (!nextSong(1, true)) {
-        song.currentTime = 0;
-    } });
+    song.addEventListener('ended', () => {
+        if (!nextSong(1, true)) {
+            song.currentTime = 0;
+        }
+    });
     const audioView = (it, u) => {
         const title = fileName(it.path).replace(/\.[^.]+$/, ''), ext = (fileName(it.path).split('.').pop() ?? '').toLowerCase();
         const place = it.place ?? '';
@@ -390,27 +429,38 @@ function phoneViewer(ctx, items, at) {
             cur.textContent = dur(song.currentTime || 0);
             left.textContent = `−${dur(Math.max(0, d - (song.currentTime || 0)))}`;
         };
-        const seek = (e) => { const r = track.getBoundingClientRect(); if (song.duration)
-            song.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * song.duration; paint(); };
+        const seek = (e) => {
+            const r = track.getBoundingClientRect();
+            if (song.duration)
+                song.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * song.duration;
+            paint();
+        };
         track.addEventListener('pointerdown', (e) => { e.stopPropagation(); track.setPointerCapture(e.pointerId); seek(e); const mv = (ev) => seek(ev); track.addEventListener('pointermove', mv); track.addEventListener('pointerup', () => track.removeEventListener('pointermove', mv), { once: true }); });
         track.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
         const play = h('button', { class: 'mvp-play', 'aria-label': 'Play or pause' });
         const paintPlay = () => play.replaceChildren(pi(song.paused ? 'play' : 'pause', 30));
-        play.addEventListener('click', () => { if (song.paused)
-            void song.play();
-        else
-            song.pause(); });
+        play.addEventListener('click', () => {
+            if (song.paused)
+                void song.play();
+            else
+                song.pause();
+        });
         const shuf = h('button', { class: 'mvp-mode' + (playMode.shuffle ? ' on' : ''), 'aria-label': 'Shuffle', onclick: () => { playMode.shuffle = !playMode.shuffle; saveMode(); makeOrder(); shuf.classList.toggle('on', playMode.shuffle); toast(playMode.shuffle ? 'Shuffle on' : 'Shuffle off', 1200); } }, pi('shuffle', 22));
         const rep = h('button', { class: 'mvp-mode' + (playMode.repeat !== 'off' ? ' on' : ''), 'aria-label': 'Repeat' });
         const paintRep = () => { rep.classList.toggle('on', playMode.repeat !== 'off'); rep.replaceChildren(pi(playMode.repeat === 'one' ? 'repeat1' : 'repeat', 22)); };
         rep.addEventListener('click', () => { playMode.repeat = playMode.repeat === 'off' ? 'all' : playMode.repeat === 'all' ? 'one' : 'off'; saveMode(); paintRep(); toast(playMode.repeat === 'off' ? 'Repeat off' : playMode.repeat === 'all' ? 'Repeat the folder' : 'Repeat this song', 1200); });
         paintRep();
-        const prev = h('button', { class: 'mvp-skip', 'aria-label': 'Previous', onclick: () => { if (song.currentTime > 3 || songs.length < 2) {
-                song.currentTime = 0;
-                return;
-            } nextSong(-1); } }, pi('prev', 30));
-        const next = h('button', { class: 'mvp-skip', 'aria-label': 'Next', onclick: () => { if (songs.length > 1)
-                nextSong(1); } }, pi('next', 30));
+        const prev = h('button', { class: 'mvp-skip', 'aria-label': 'Previous', onclick: () => {
+                if (song.currentTime > 3 || songs.length < 2) {
+                    song.currentTime = 0;
+                    return;
+                }
+                nextSong(-1);
+            } }, pi('prev', 30));
+        const next = h('button', { class: 'mvp-skip', 'aria-label': 'Next', onclick: () => {
+                if (songs.length > 1)
+                    nextSong(1);
+            } }, pi('next', 30));
         const rates = [1, 1.25, 1.5, 2, 0.75];
         const chip = (icon, label, run) => { const b = h('button', { class: 'mvp-chip' }, pi(icon, 16), h('span', null, label)); b.addEventListener('click', () => run(b)); return b; };
         const speed = chip('speed', `${playMode.rate}×`.replace('.', ','), (b) => { playMode.rate = rates[(rates.indexOf(playMode.rate) + 1) % rates.length]; song.playbackRate = playMode.rate; saveMode(); b.lastElementChild.textContent = `${playMode.rate}×`.replace('.', ','); b.classList.toggle('on', playMode.rate !== 1); });
@@ -452,23 +502,29 @@ function phoneViewer(ctx, items, at) {
                 ms.metadata = new MediaMetadata({ title, artist: place || 'Nook', album: place.split(' › ').pop() ?? '', artwork: [{ src: new URL('icon-512.png', location.href).href, sizes: '512x512', type: 'image/png' }] });
                 ms.setActionHandler('play', () => void song.play());
                 ms.setActionHandler('pause', () => song.pause());
-                ms.setActionHandler('previoustrack', () => { if (song.currentTime > 3 || songs.length < 2)
-                    song.currentTime = 0;
-                else
-                    nextSong(-1); });
+                ms.setActionHandler('previoustrack', () => {
+                    if (song.currentTime > 3 || songs.length < 2)
+                        song.currentTime = 0;
+                    else
+                        nextSong(-1);
+                });
                 ms.setActionHandler('nexttrack', songs.length > 1 ? () => nextSong(1) : null);
-                ms.setActionHandler('seekto', (d) => { if (d.seekTime != null)
-                    song.currentTime = d.seekTime; });
+                ms.setActionHandler('seekto', (d) => {
+                    if (d.seekTime != null)
+                        song.currentTime = d.seekTime;
+                });
                 ms.setActionHandler('seekbackward', null);
                 ms.setActionHandler('seekforward', null);
             }
             catch { /* an older iOS: only play / pause */ }
         }
-        const pos = () => { try {
-            if (ms && song.duration)
-                ms.setPositionState({ duration: song.duration, position: Math.min(song.currentTime, song.duration), playbackRate: song.playbackRate });
-        }
-        catch { /* fine */ } };
+        const pos = () => {
+            try {
+                if (ms && song.duration)
+                    ms.setPositionState({ duration: song.duration, position: Math.min(song.currentTime, song.duration), playbackRate: song.playbackRate });
+            }
+            catch { /* fine */ }
+        };
         song.addEventListener('loadedmetadata', pos);
         song.addEventListener('seeked', pos);
         song.addEventListener('ratechange', pos);
@@ -480,10 +536,14 @@ function phoneViewer(ctx, items, at) {
         on();
         cleanup = () => { song.removeEventListener('timeupdate', paint); song.removeEventListener('play', paintPlay); song.removeEventListener('pause', paintPlay); song.removeEventListener('loadedmetadata', paint); };
     };
-    const step = (n) => { if (mediaType(items[i].path) === 'audio' && songs.length > 1) {
-        nextSong(n > 0 ? 1 : -1);
-        return;
-    } i = (i + n + items.length) % items.length; show(); };
+    const step = (n) => {
+        if (mediaType(items[i].path) === 'audio' && songs.length > 1) {
+            nextSong(n > 0 ? 1 : -1);
+            return;
+        }
+        i = (i + n + items.length) % items.length;
+        show();
+    };
     // touch: pinch / pan / double tap on photos, swipe sideways for the next one, down to close, tap for the bars
     let start = null, pinch = null;
     let pan = null, lastTap = 0, moved = false, tapTimer = 0;
@@ -594,36 +654,49 @@ function phoneViewer(ctx, items, at) {
         else if (dy > 110 && dy > Math.abs(dx) * 1.5)
             close();
     });
-    const key = (e) => { if (e.key === 'Escape') {
-        if (document.querySelector('.pop'))
-            return; /* a menu over it (pulled down) closes, not the player */
-        e.preventDefault();
-        e.stopPropagation();
-        close();
-    } };
-    function close() { cleanup?.(); song.pause(); song.removeAttribute('src'); try {
-        const m = navigator.mediaSession;
-        if (m) {
-            m.metadata = null;
-            for (const a of ['play', 'pause', 'previoustrack', 'nexttrack', 'seekto'])
-                m.setActionHandler(a, null);
+    const key = (e) => {
+        if (e.key === 'Escape') {
+            if (document.querySelector('.pop'))
+                return; /* a menu over it (pulled down) closes, not the player */
+            e.preventDefault();
+            e.stopPropagation();
+            close();
         }
+    };
+    function close() {
+        cleanup?.();
+        song.pause();
+        song.removeAttribute('src');
+        try {
+            const m = navigator.mediaSession;
+            if (m) {
+                m.metadata = null;
+                for (const a of ['play', 'pause', 'previoustrack', 'nexttrack', 'seekto'])
+                    m.setActionHandler(a, null);
+            }
+        }
+        catch { /* fine */ }
+        box.remove();
+        document.removeEventListener('keydown', key, true);
     }
-    catch { /* fine */ } box.remove(); document.removeEventListener('keydown', key, true); }
     document.body.append(box);
     document.addEventListener('keydown', key, true);
     show();
 }
 // ---------- songs: shuffle, repeat and speed stay as you left them; the waveform of each song once ----------
 const MODE = 'nook:play-mode';
-const playMode = (() => { try {
-    return { shuffle: false, repeat: 'off', rate: 1, ...JSON.parse(localStorage.getItem(MODE) ?? '{}') };
-}
-catch {
-    return { shuffle: false, repeat: 'off', rate: 1 };
-} })();
-const saveMode = () => { try {
-    localStorage.setItem(MODE, JSON.stringify(playMode));
-}
-catch { /* only a convenience */ } };
+const playMode = (() => {
+    try {
+        return { shuffle: false, repeat: 'off', rate: 1, ...JSON.parse(localStorage.getItem(MODE) ?? '{}') };
+    }
+    catch {
+        return { shuffle: false, repeat: 'off', rate: 1 };
+    }
+})();
+const saveMode = () => {
+    try {
+        localStorage.setItem(MODE, JSON.stringify(playMode));
+    }
+    catch { /* only a convenience */ }
+};
 //# sourceMappingURL=viewer.js.map
